@@ -1,72 +1,217 @@
 <!DOCTYPE html>
-<html lang="en-us">
+<html lang="en">
 
 <head>
-  <title>Liquid Wallet Kit in the browser</title>
-  <meta name="description" content="A proof of concept of the LWK (Liquid Wallet Kit) running in the browser.">
-  <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/x-icon"
-    href="https://d2y5h3osumboay.cloudfront.net/8bjx2lpmkubsx5vodqpcdt7tqm20?=4064512645361149302" />
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <link rel="stylesheet" href="pico.min.css" />
+    <link rel="icon" type="image/x-icon"
+        href="https://d2y5h3osumboay.cloudfront.net/8bjx2lpmkubsx5vodqpcdt7tqm20?=4064512645361149302" />
 </head>
 
 <body>
-  <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
-  <script src="./bootstrap.js"></script>
 
-  <p>
-    This is a proof of concept of <a href="https://github.com/blockstream/lwk">LWK</a> (Liquid Wallet Kit) running in
-    the browser via WASM.
-  </p>
-  <p>
-    Scan a confidential transaction descriptor
-    <a href="https://github.com/ElementsProject/ELIPs/blob/main/elip-0150.mediawiki">[ELIP150]</a> and prints the
-    balance.
-  </p>
+    <!-- Main page -->
+    <header class="container">
+        <hgroup>
+            <h1>Liquid Wallet</h1>
+            <p>Jade companion app in the browser</p>
+        </hgroup>
 
-  <p>
-    Works on Liquid Mainnet and Liquid Testnet.
-  </p>
+        <my-nav></my-nav>
 
-  <div>
-    <label for="descriptor">CT descriptor:</label>
-    <br />
-    <textarea id="descriptor" name="descriptor" rows="4"
-      cols="80">ct(slip77(0371e66dde8ab9f3cb19d2c20c8fa2d7bd1ddc73454e6b7ef15f0c5f624d4a86),elsh(wpkh([75ea4a43/49'/1'/0']tpubDDRMQzj8FGnDXxAhr8zgM22VT7BT2H2cPUdCRDSi3ima15TRUZEkT32zExr1feVReMYvBEm21drG1qKryjHf3cD6iD4j1nkPkbPDuQxCJG4/<0;1>/*)))#utnwh7dr</textarea>
-  </div>
+    </header>
 
-  <button disabled id="scan-button" type="button">Scan</button>
+    <main id="app" class="container">
 
-  <p>
-    Balance:
+        <wallet-home></wallet-home>
 
-  <div id="balance" style="word-break: break-word;"></div>
-  </p>
+        <br><br>
+        <textarea placeholder="CT Descriptor">
+        </textarea>
+        <button>Use watch-only descriptor</button>
 
-  <br /><br /><br />
-  <p>
-    Known issues:
-  <ul>
-    <li>WASM file size is huge (the scan button is disabled until it is fully loaded)</li>
-    <li>The scan takes time, network calls to <a href="https://github.com/Blockstream/esplora">esplora</a> are
-      sequential but
-      concurrent requests would hit rate limiting</li>
-    <li>Some more calls than the needed gap limit size (20) are made</li>
-  </ul>
-  </p>
+        <br><br><br>
+        <section>
+            <p> Notes </p>
+            <ul>
+                <li>This is only a mockup and there is no actual connection to the Jade nor network calls</li>
+                <li>Calls in the mocked API are asyncronous and have delays to simulate hww interactions or network
+                    calls</li>
+                <li>Should we allow watch-only descriptors? It's not jade specific, but allows to show and use LWK
+                    features without a jade (and its security)</li>
+                <li>This is a MVP trying to keep it as simple as possible and without inputs from design/product</li>
+            </ul>
+        </section>
+    </main>
 
-  <p>
-    Jade
-  </p>
-  <label for="network-select">Liquid network:</label>
+    <br>
+    <footer class="container">
+        <network-selected></network-selected>
+        <jade-identifier></jade-identifier>
+        <wallet-selected></wallet-selected>
+    </footer>
 
-  <select name="network-select" id="network-select">
-    <option value="mainnet">Mainnet</option>
-    <option value="testnet" selected>Testnet</option>
-  </select>
-  <button disabled id="jade-button" type="button">Ask Jade master xpub</button>
-  <div id="jade-text"></div>
+    <!-- Templates -->
+    <template id="home-template">
+        <network-selector></network-selector>
+        <connect-jade></connect-jade>
+    </template>
 
+    <template id="network-selector-template">
+        <fieldset>
+            <legend><strong>Network</strong></legend>
+            <label for="radio-1">
+                <input type="radio" id="radio-1" name="radio" value="Liquid" checked="">
+                Liquid
+            </label>
+            <label for="radio-2">
+                <input type="radio" id="radio-2" name="radio" value="LiquidTestnet">
+                LiquidTestnet
+            </label>
+        </fieldset>
+    </template>
+
+    <template id="wallets-selector-template">
+        <select>
+            <option>Select wallet</option>
+            <option value="Wpkh">Wpkh</option>
+            <option value="ShWpkh">ShWpkh</option>
+        </select>
+    </template>
+
+    <!-- Pages Templates -->
+    <template id="wallets-page-template">
+        <h2>Wallets</h2>
+        <wallet-selector></wallet-selector>
+
+        <br><br><br>
+        <section>
+            <p> Notes </p>
+            <ul>
+                <li>The list will show also multisig registered wallets in the jade</li>
+                <li>Will allow to register new multisig wallets with jade as a signer</li>
+            </ul>
+        </section>
+
+    </template>
+
+    <template id="balance-page-template">
+        <h2>Balance</h2>
+        <wallet-balance></wallet-balance>
+
+        <br><br><br>
+        <section>
+            <p> Notes </p>
+            <ul>
+                <li>Ideally we should show tickers/names/icons instead of hexes, should we query the registry directly
+                    or keep a list of major assets locally?</li>
+                <li>This always simulate a wait, however, if the transactions are already loaded, this is instant</li>
+
+                <li>How to refresh data after the first? Simply a refresh link?</li>
+
+            </ul>
+        </section>
+
+
+    </template>
+
+    <template id="transactions-page-template">
+        <h2>Transactions</h2>
+        <wallet-transactions></wallet-transactions>
+
+        <br><br><br>
+        <section>
+            <p> Notes </p>
+            <ul>
+                <li>Which fields should the table have, should we show full txid?</li>
+                <li>This always simulate a wait, however, if the balance is already loaded, this is instant</li>
+
+            </ul>
+        </section>
+
+    </template>
+
+    <template id="create-page-template">
+        <h2>Create transaction</h2>
+
+        <section>
+
+            <fieldset role="group">
+                <input name="address" type="text" placeholder="Address">
+                <input name="satoshis" type="number" placeholder="Satoshis">
+                <select name="asset">
+                    <option>Select Asset</option>
+                    <option value="LBTC">LBTC</option>
+                    <option value="hex">38fca2d939696061a8f76d4e6b5eecd54e3b4221c846f24a6b279e79952850a5</option>
+                </select>
+
+                <input type="submit" value="+" id="create-transaction-button">
+            </fieldset>
+
+            <div id="create-transaction-row"></div>
+
+            <button>Create</button>
+
+
+        </section>
+
+        <br><br><br>
+        <section>
+            <p> Notes </p>
+            <ul>
+                <li>Clicking "+" will add a recipient, multiple recipients are possible</li>
+                <li>Asset dropdown will show only wallet-owned assets</li>
+                <li>Use "burn" as address to burn coins</li>
+                <li>clicking "Create" will bring the PSET in the sign/analyze tab</li>
+
+            </ul>
+        </section>
+
+    </template>
+
+    <template id="sign-page-template">
+        <h2>Sign</h2>
+
+        <textarea placeholder="PSET"></textarea>
+        <button>Analyze</button>
+        <button>Sign</button>
+
+
+        <br><br><br>
+        <section>
+            <p> Notes </p>
+            <ul>
+                <li>Analyze would show useful information about the pset such as:
+                    <ul>
+                        <li>net balance according to selected wallet</li>
+                        <li>signatures already present in the pset and missing signatures from participants</li>
+                    </ul>
+                </li>
+                <li>Sign will try to sign the PSET and update the textarea with the signed one</li>
+
+            </ul>
+        </section>
+
+    </template>
+
+    <template id="receive-page-template">
+        <h2>Receive</h2>
+        <ask-address></ask-address>
+        <receive-address></receive-address>
+
+        <br><br><br>
+        <section>
+            <p> Notes </p>
+            <ul>
+                <li>If we are in watch-only mode the button label should be different </li>
+            </ul>
+        </section>
+    </template>
+
+    <script type="module" src="./bootstrap.js"></script>
 </body>
 
 </html>

@@ -9,7 +9,7 @@ module.exports = {
   },
   mode: "development",
   plugins: [
-    new CopyWebpackPlugin({ patterns: ["index.html"] })
+    new CopyWebpackPlugin({ patterns: ["index.html", "pico.min.css"] })
   ],
   experiments: {
     asyncWebAssembly: true,
