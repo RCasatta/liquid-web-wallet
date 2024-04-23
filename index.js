@@ -15,6 +15,8 @@ var transactionsFor = {}
 //     jade: 
 // }
 
+document.getElementById("loading-wasm").remove()
+
 class WalletHome extends HTMLElement {
     constructor() {
         super()
@@ -79,7 +81,7 @@ class NetworkSelected extends HTMLElement {
 
     render() {
         this.innerHTML = `
-            <span>${network}</span>
+            <span> | </span><span>${network}</span>
         `
     }
 }
@@ -130,7 +132,7 @@ class JadeIdentifier extends HTMLElement {
 
     render() {
         this.innerHTML = `
-            <code>${jadeIdentifier}</code>
+            <span> | </span><code>${jadeIdentifier}</code>
         `
     }
 }
@@ -237,7 +239,7 @@ class WalletSelected extends HTMLElement {
     render() {
         if (wallet != null) {
             this.innerHTML = `
-                    <span>${wallet}</span>
+                <span> | </span> <span>${wallet}</span>
             `
         }
     }

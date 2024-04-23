@@ -25,6 +25,7 @@
     </header>
 
     <main id="app" class="container">
+        <progress id="loading-wasm"></progress>
 
         <wallet-home></wallet-home>
 
@@ -38,6 +39,8 @@
             <p> Notes </p>
             <ul>
                 <li>This is only a mockup and there is no actual connection to the Jade nor network calls</li>
+                <li>However, a big wasm file is loaded containing what is needed to communicate with jade (noticeable
+                    waiting time on first try with slow connections)</li>
                 <li>Calls in the mocked API are asyncronous and have delays to simulate hww interactions or network
                     calls</li>
                 <li>Should we allow watch-only descriptors? It's not jade specific, but allows to show and use LWK
@@ -49,6 +52,7 @@
 
     <br>
     <footer class="container">
+        <a href="https://github.com/RCasatta/liquid-web-wallet">Source</a>
         <network-selected></network-selected>
         <jade-identifier></jade-identifier>
         <wallet-selected></wallet-selected>
@@ -108,10 +112,7 @@
             <ul>
                 <li>Ideally we should show tickers/names/icons instead of hexes, should we query the registry directly
                     or keep a list of major assets locally?</li>
-                <li>This always simulate a wait, however, if the transactions are already loaded, this is instant</li>
-
                 <li>How to refresh data after the first? Simply a refresh link?</li>
-
             </ul>
         </section>
 
@@ -127,8 +128,6 @@
             <p> Notes </p>
             <ul>
                 <li>Which fields should the table have, should we show full txid?</li>
-                <li>This always simulate a wait, however, if the balance is already loaded, this is instant</li>
-
             </ul>
         </section>
 
