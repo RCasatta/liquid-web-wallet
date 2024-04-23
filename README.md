@@ -1,3 +1,44 @@
+
+# Liquid web wallet
+
+**NOTE: only a mock up for now**
+
+A [Liquid](https://liquid.net) web wallet that runs in the browser (works on chrome, chromium, edge).
+
+Based on [LWK wasm](https://github.com/Blockstream/lwk/tree/master/lwk_wasm)
+
+
+
+## Try locally
+
+Requirements:
+
+* npm
+* wasm-pack
+
+With nix install those with `nix-shell`
+
+Execute once (and every time to update lwk_wasm dep):
+
+```shell
+$ npm install
+```
+
+Then
+
+```shell
+$ npm run start
+```
+
+## Deploy
+
+
+```shell
+$ npm run build
+```
+
+Copy `dist` folder to the web server
+
 ## ADR
 
 - Avoid js frameworks, use vanilla JS and web standards
