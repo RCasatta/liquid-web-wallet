@@ -117,11 +117,14 @@ class JadeFingerprint extends HTMLElement {
         super()
 
         document.addEventListener('jade-initialized', async (event) => {
+            this.innerHTML = `
+                <span> | </span><mark>Unlock Jade</mark>
+            `
             const xpub = await jade.getMasterXpub();
             const jadeIdentifier = xpub.fingerprint()
             this.innerHTML = `
-            <span> | </span><code>${jadeIdentifier}</code>
-        `
+                <span> | </span><code>${jadeIdentifier}</code>
+            `
         })
     }
 }
@@ -257,17 +260,21 @@ class AskAddress extends HTMLElement {
         button.addEventListener("click", async (event) => {
             button.disabled = true
             button.setAttribute("aria-busy", true)
-            let wolletAddress = wollet[wolletSelected].address(null)
-            let index = wolletAddress.index()
+            address[wolletSelected] = wollet[wolletSelected].address(null)
+            let index = address[wolletSelected].index()
+            let fullPath = wollet[wolletSelected].addressFullPath(index)
+            let variant = lwk.Singlesig.from(wolletSelected)
 
-            address[wolletSelected] = jade.getR
-            // TODO ask jade
-
-            button.setAttribute("aria-busy", false)
-            button.disabled = false
             this.dispatchEvent(new CustomEvent('address-asked', {
                 bubbles: true,
             }))
+
+            let jadeAddress = await jade.getReceiveAddressSingle(variant, fullPath)
+
+            console.assert(jadeAddress == address[wolletSelected].address().toString(), "local and jade address are different!")
+
+            button.setAttribute("aria-busy", false)
+            button.disabled = false
         })
     }
 
@@ -288,10 +295,8 @@ class ReceiveAddress extends HTMLElement {
     }
 
     render() {
-        var addr = address[wolletSelected]
-        if (addr != null && !(addr instanceof Promise)) {
-            addr = addr.address()
-            // use template
+        if (address[wolletSelected] != null) {
+            let addr = address[wolletSelected].address()
             this.innerHTML = `
                 <div style="word-break: break-word"><code>${addr.toString()}</code></div><br>
                 <img src="${addr.QRCodeUri(null)}" width="250px" style="image-rendering: pixelated; border: 20px solid white;"></img>
