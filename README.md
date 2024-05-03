@@ -39,6 +39,18 @@ $ npm run build
 
 Copy `dist` folder to the web server
 
+## Naming html components
+
+A convention is used for naming html components:
+
+- prefix: page name like "create-transaction"
+- infix: html component name like "button"
+- suffix: symbolic name of the component like "create"
+
+```html
+ <button id="create-transaction-button-create"></button>
+```
+
 ## ADR
 
 - Avoid js frameworks, use vanilla JS and web standards

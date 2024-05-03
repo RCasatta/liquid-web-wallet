@@ -32,7 +32,7 @@
         <br><br>
         <textarea placeholder="CT Descriptor">
         </textarea>
-        <button onclick="alert('not implemented')">Use watch-only descriptor</button>
+        <button onclick="alert('not yet implemented')">Use watch-only descriptor</button>
 
         <br><br><br>
         <section>
@@ -83,129 +83,87 @@
         </select>
     </template>
 
+
+    <template id="insert-pin-template">
+        <textarea aria-invalid="true" readonly="true">
+            Insert the PIN on the Jade
+        </textarea>
+    </template>
+
+
     <!-- Pages Templates -->
     <template id="wallets-page-template">
         <h2>Wallets</h2>
         <wallet-selector></wallet-selector>
-
-        <br><br><br>
-        <section>
-            <p> Notes </p>
-            <ul>
-                <li>The list will show also multisig registered wallets in the jade</li>
-                <li>Will allow to register new multisig wallets with jade as a signer</li>
-            </ul>
-        </section>
-
     </template>
 
     <template id="balance-page-template">
-        <h2>Balance</h2>
-        <wallet-balance></wallet-balance>
-
-        <br><br><br>
         <section>
-            <p> Notes </p>
-            <ul>
-                <li>Ideally we should show tickers/names/icons instead of hexes, should we query the registry directly
-                    or keep a list of major assets locally?</li>
-                <li>How to refresh data after the first? Simply a refresh link?</li>
-            </ul>
+            <h2>Balance</h2>
+            <wallet-balance></wallet-balance>
         </section>
-
-
     </template>
 
     <template id="transactions-page-template">
-        <h2>Transactions</h2>
-        <wallet-transactions></wallet-transactions>
-
-        <br><br><br>
         <section>
-            <p> Notes </p>
-            <ul>
-                <li>Which fields should the table have, should we show full txid?</li>
-            </ul>
+            <h2>Transactions</h2>
+            <wallet-transactions></wallet-transactions>
         </section>
-
     </template>
 
     <template id="create-page-template">
-        <h2>Create transaction - TODO</h2>
-
         <section>
-
-            <fieldset role="group">
-                <input name="address" type="text" placeholder="Address">
-                <input name="satoshis" type="number" placeholder="Satoshis">
-                <select name="asset">
-                    <option>Select Asset</option>
-                    <option value="LBTC">LBTC</option>
-                    <option value="hex">38fca2d939696061a8f76d4e6b5eecd54e3b4221c846f24a6b279e79952850a5</option>
-                </select>
-
-                <input type="submit" value="+" id="create-transaction-button">
-            </fieldset>
-
-            <div id="create-transaction-row"></div>
-
-            <button>Create</button>
-
-
+            <h2>Create transaction</h2>
+            <create-transaction></create-transaction>
         </section>
-
-        <br><br><br>
-        <section>
-            <p> Notes </p>
-            <ul>
-                <li>Clicking "+" will add a recipient, multiple recipients are possible</li>
-                <li>Asset dropdown will show only wallet-owned assets</li>
-                <li>Use "burn" as address to burn coins</li>
-                <li>clicking "Create" will bring the PSET in the sign/analyze tab</li>
-
-            </ul>
-        </section>
-
     </template>
 
     <template id="sign-page-template">
-        <h2>Sign - TODO</h2>
-
-        <textarea placeholder="PSET"></textarea>
-        <button>Analyze</button>
-        <button>Sign</button>
-
-
-        <br><br><br>
         <section>
-            <p> Notes </p>
-            <ul>
-                <li>Analyze would show useful information about the pset such as:
-                    <ul>
-                        <li>net balance according to selected wallet</li>
-                        <li>signatures already present in the pset and missing signatures from participants</li>
-                    </ul>
-                </li>
-                <li>Sign will try to sign the PSET and update the textarea with the signed one</li>
-
-            </ul>
+            <h2>Sign</h2>
+            <sign-transaction></sign-transaction>
         </section>
-
     </template>
 
     <template id="receive-page-template">
-        <h2>Receive</h2>
-        <ask-address></ask-address>
-        <receive-address></receive-address>
-
-        <br><br><br>
         <section>
-            <p> Notes </p>
-            <ul>
-                <li>If we are in watch-only mode the button label should be different </li>
-            </ul>
+            <h2>Receive</h2>
+            <ask-address></ask-address>
+            <receive-address></receive-address>
         </section>
     </template>
+
+    <template id="create-transaction-form-template">
+        <fieldset role="group">
+            <input id="create-transaction-input-address" type="text" placeholder="Address">
+            <input id="create-transaction-input-satoshis" type="number" placeholder="Satoshis">
+            <div id="create-transaction-div-select-asset"></div>
+
+            <input type="submit" value="+" id="create-transaction-button-add"
+                onclick="alert('multiple recipients not yet implemented')">
+        </fieldset>
+
+        <button id="create-transaction-button-create">Create</button>
+    </template>
+
+    <template id="sign-transaction-template">
+
+        <textarea placeholder="PSET" id="sign-transaction-textarea"></textarea>
+        <button id="sign-transaction-button-analyze">Analyze</button>
+        <button id="sign-transaction-button-sign">Sign</button>
+        <button id="sign-transaction-button-broadcast">Broadcast</button>
+
+
+        <br><br>
+
+        <div id="sign-transaction-div-broadcast"></div>
+
+
+        <div id="sign-transaction-div-analyze"></div>
+
+
+    </template>
+
 
     <script type="module" src="./bootstrap.js"></script>
 </body>
