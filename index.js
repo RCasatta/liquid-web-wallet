@@ -8,7 +8,7 @@ var wolletSelected /*string*/
 var pset
 
 var wollet = {}
-var scan = {} /*never running finish*/
+var scan = {} /*never first-running running finish*/
 var address = {}
 
 
@@ -96,7 +96,7 @@ class MyNav extends HTMLElement {
                 return
             }
             if (id == "refresh") {
-                if (scan[wolletSelected] === "running") {
+                if (scan[wolletSelected].includes("running")) {
                     alert("Scan is running")
                 } else {
                     await fullScanAndApply()
@@ -304,7 +304,7 @@ class WalletBalance extends HTMLElement {
     }
 
     render() {
-        if (scan[wolletSelected] == "never") {
+        if (scan[wolletSelected] == "never" || scan[wolletSelected] == "first-running") {
             this.innerHTML = "<article aria-busy=\"true\"></article>"
         } else {
             let balance = wollet[wolletSelected].balance()
@@ -329,7 +329,7 @@ class WalletTransactions extends HTMLElement {
     }
 
     render() {
-        if (scan[wolletSelected] == "never") {
+        if (scan[wolletSelected] == "never" || scan[wolletSelected] == "first-running") {
             this.innerHTML = "<article aria-busy=\"true\"></article>"
         } else {
             let transactions = wollet[wolletSelected].transactions()
@@ -387,7 +387,7 @@ class CreateTransaction extends HTMLElement {
     }
 
     render() {
-        if (scan[wolletSelected] == "never") {
+        if (scan[wolletSelected] == "never" || scan[wolletSelected] == "first-running") {
             this.innerHTML = "<article aria-busy=\"true\"></article>"
         } else {
 
@@ -459,8 +459,12 @@ class CreateTransaction extends HTMLElement {
 
             })
 
-            cleanChilds(this.querySelector("div"))
-            this.querySelector("div").appendChild(template)
+            const createDiv = this.querySelector("div")
+            if (createDiv) {
+                cleanChilds(createDiv)
+                createDiv.appendChild(template)
+            }
+
         }
     }
 }
@@ -630,8 +634,12 @@ function mapToTable(map) {
 
 
 async function fullScanAndApply() {
-    if (scan[wolletSelected] != "running") {
-        scan[wolletSelected] = "running"
+    if (!scan[wolletSelected].includes("running")) {
+        if (scan[wolletSelected] == "never") {
+            scan[wolletSelected] = "first-running"
+        } else {
+            scan[wolletSelected] = "running"
+        }
         let client = network.defaultEsploraClient()
 
         const update = await client.fullScan(wollet[wolletSelected])
@@ -643,8 +651,10 @@ async function fullScanAndApply() {
 }
 
 function cleanChilds(comp) {
-    while (comp.firstChild) {
-        comp.firstChild.remove()
+    if (comp) {
+        while (comp.firstChild) {
+            comp.firstChild.remove()
+        }
     }
 }
 
