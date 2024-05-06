@@ -1,7 +1,7 @@
 {
   "scripts": {
     "start": "webpack-dev-server",
-    "build": "webpack --config webpack.config.js"
+    "build": "rm -rf ./dist && webpack --config webpack.config.js --mode=production"
   },
   "dependencies": {
     "lwk_wasm": "0.5.0"

@@ -14,5 +14,9 @@ module.exports = {
   experiments: {
     asyncWebAssembly: true,
     syncWebAssembly: true
-  }
+  },
+  optimization: {
+    minimize: false,
+  },
+
 };
