@@ -13,21 +13,6 @@ var address = {}
 
 document.getElementById("loading-wasm").remove()
 
-class WalletHome extends HTMLElement {
-    constructor() {
-        super()
-        this.innerHTML = "<div></div>"
-    }
-
-    connectedCallback() {
-        const template = document.getElementById(
-            "home-template",
-        ).content.cloneNode(true)
-        this.querySelector("div").appendChild(template)
-
-    }
-}
-
 
 class NetworkSelector extends HTMLElement {
     constructor() {
@@ -576,7 +561,6 @@ class SignTransaction extends HTMLElement {
 
 
 customElements.define("my-nav", MyNav)
-customElements.define("wallet-home", WalletHome)
 customElements.define("network-selector", NetworkSelector)
 customElements.define("network-selected", NetworkSelected)
 customElements.define("connect-jade", ConnectJade)

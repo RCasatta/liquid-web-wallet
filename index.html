@@ -27,7 +27,8 @@
     <main id="app" class="container">
         <progress id="loading-wasm"></progress>
 
-        <wallet-home></wallet-home>
+        <network-selector></network-selector>
+        <connect-jade></connect-jade>
 
         <br><br>
         <textarea placeholder="CT Descriptor">
@@ -56,10 +57,6 @@
     </footer>
 
     <!-- Templates -->
-    <template id="home-template">
-        <network-selector></network-selector>
-        <connect-jade></connect-jade>
-    </template>
 
     <template id="network-selector-template">
         <fieldset>
