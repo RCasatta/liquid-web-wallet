@@ -25,27 +25,32 @@
     </header>
 
     <main id="app" class="container">
+
         <progress id="loading-wasm"></progress>
 
-        <network-selector></network-selector>
-        <connect-jade></connect-jade>
+        <fieldset id="network-selector-fieldset">
+            <legend><strong>Network</strong></legend>
+            <label for="network-selector-radio-0">
+                <input type="radio" id="network-selector-radio-0" name="radio" value="Liquid" checked>
+                Liquid
+            </label>
+            <label for="network-selector-radio-1">
+                <input type="radio" id="network-selector-radio-1" name="radio" value="LiquidTestnet">
+                LiquidTestnet
+            </label>
+        </fieldset>
+
+        <p><button id="connect-jade-button" disabled="true">Connect to Jade</button></p>
+        <div id="connect-jade-message"></div>
 
         <br><br>
         <textarea placeholder="CT Descriptor">
         </textarea>
-        <button onclick="alert('not yet implemented')">Use watch-only descriptor</button>
+        <button id="watch-only-button" onclick="alert('not yet implemented')" disabled="true">Use watch-only
+            descriptor</button>
 
-        <br><br><br>
-        <section>
-            <p> Notes </p>
-            <ul>
-                <li>A big wasm file needs to be loaded (noticeable
-                    waiting time on first try with slow connections)</li>
-                <li>Should we allow watch-only descriptors? It's not jade specific, but allows to show and use LWK
-                    features without a jade (and its security)</li>
-                <li>This is a MVP trying to keep it as simple as possible and without inputs from design/product</li>
-            </ul>
-        </section>
+        <br><br>
+
     </main>
 
     <br>
@@ -57,20 +62,6 @@
     </footer>
 
     <!-- Templates -->
-
-    <template id="network-selector-template">
-        <fieldset>
-            <legend><strong>Network</strong></legend>
-            <label for="radio-1">
-                <input type="radio" id="radio-1" name="radio" value="Liquid" checked="">
-                Liquid
-            </label>
-            <label for="radio-2">
-                <input type="radio" id="radio-2" name="radio" value="LiquidTestnet">
-                LiquidTestnet
-            </label>
-        </fieldset>
-    </template>
 
     <template id="wallets-selector-template">
         <select>
@@ -92,6 +83,7 @@
     <template id="wallets-page-template">
         <h2>Wallets</h2>
         <wallet-selector></wallet-selector>
+        <progress id="wallets-page-progress" hidden="true"></progress>
     </template>
 
     <template id="balance-page-template">

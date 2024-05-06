@@ -2,7 +2,7 @@ import * as lwk from "lwk_wasm"
 
 // Global state
 
-var network = lwk.Network.mainnet()
+var network
 var jade
 var wolletSelected /*string*/
 var pset
@@ -11,41 +11,41 @@ var wollet = {}
 var scan = {}
 var address = {}
 
-document.getElementById("loading-wasm").remove()
 
-
-class NetworkSelector extends HTMLElement {
-    constructor() {
-        super()
-        this.innerHTML = "<div></div>"
-    }
-
-    connectedCallback() {
-        const template = document.getElementById(
-            "network-selector-template",
-        ).content.cloneNode(true)
-        this.querySelector("div").appendChild(template)
-
-        const radios = ["#radio-1", "#radio-2"]
-        for (var i = 0, max = radios.length; i < max; i++) {
-            let radio = this.querySelector(radios[i])
-            radio.addEventListener('input', (event) => {
-                if (radio.checked && radio.value == "Liquid") {
-                    network = lwk.Network.mainnet()
-                } else if (radio.checked && radio.value == "LiquidTestnet") {
-                    network = lwk.Network.testnet()
-                }
-                this.dispatchEvent(new CustomEvent('network-change', {
-                    bubbles: true,
-                }))
-            })
-            document.addEventListener('jade-initialized', (event) => {
-                this.remove()
-            })
+/// Re-enables initially disabled buttons, and add listener to buttons on the first page
+/// First page doesn't use components because we want to be loaded before the wasm is loaded, which takes time
+function init() {
+    let connectJade = document.getElementById("connect-jade-button")
+    connectJade.addEventListener("click", async (_e) => {
+        for (var i = 0; i < 2; i++) {
+            let radio = document.getElementById("network-selector-radio-" + 1)
+            if (radio.checked && radio.value == "Liquid") {
+                network = lwk.Network.mainnet()
+            } else if (radio.checked && radio.value == "LiquidTestnet") {
+                network = lwk.Network.testnet()
+            }
         }
-    }
+        connectJade.setAttribute("aria-busy", true)
+        connectJade.disabled = true
+        jade = await new lwk.Jade(network, true) // pass false if you don't see your DYI Jade
+
+        let connectJadeMessage = document.getElementById("connect-jade-message")
+        const insertPinMessage = document.getElementById("insert-pin-template").content.cloneNode(true)
+        connectJadeMessage.appendChild(insertPinMessage)
+        const _xpub = await jade.getMasterXpub(); // asking something that requires unlock
+
+        document.dispatchEvent(new CustomEvent('jade-initialized'))
+    })
+    connectJade.disabled = false
+
+    let watchOnly = document.getElementById("watch-only-button")
+    watchOnly.disabled = false
+
+    document.getElementById("loading-wasm").setAttribute("style", "visibility: hidden;") // by using visibility we avoid layout shifts
+
 }
 
+init()
 
 class NetworkSelected extends HTMLElement {
     constructor() {
@@ -53,50 +53,17 @@ class NetworkSelected extends HTMLElement {
 
         this.render()
 
-        document.addEventListener('network-change', (event) => {
+        document.addEventListener('jade-initialized', (event) => {
             this.render()
         })
     }
 
     render() {
-        this.innerHTML = `
-            <span> | </span><span>${network}</span>
-        `
-    }
-}
-
-
-class ConnectJade extends HTMLElement {
-    constructor() {
-        super()
-
-        this.render()
-        let connectJade = this.querySelector("button")
-
-        connectJade.addEventListener("click", async (event) => {
-            if (jade == null) {
-                connectJade.setAttribute("aria-busy", true)
-                connectJade.disabled = true
-                jade = await new lwk.Jade(network, true) // pass false if you don't see your DYI Jade
-
-                const insertPinMessage = document.getElementById("insert-pin-template").content.cloneNode(true)
-                this.appendChild(insertPinMessage)
-                const _xpub = await jade.getMasterXpub(); // asking something that requires unlock
-
-                this.dispatchEvent(new CustomEvent('jade-initialized', {
-                    bubbles: true,
-                }))
-
-                this.remove()
-            } else {
-                alert("Jade already connected")
-            }
-
-        }, false)
-    }
-
-    render() {
-        this.innerHTML = "<p><button>Connect to Jade</button></p>"
+        if (network != null) {
+            this.innerHTML = `
+                <span> | </span><span>${network}</span>
+            `
+        }
     }
 }
 
@@ -161,9 +128,7 @@ class MyNav extends HTMLElement {
 
     render() {
 
-        if (jade == null) {
-            this.innerHTML = "<br><br>"
-        } else {
+        if (jade != null) {
 
             if (wolletSelected == null) {
                 this.innerHTML = `
@@ -205,6 +170,8 @@ class WalletSelector extends HTMLElement {
         let walletSelector = this.querySelector("select")
 
         walletSelector.onchange = async () => {
+            document.getElementById("wallets-page-progress").hidden = false
+
             wolletSelected = walletSelector.value
             var descriptor
             if (wolletSelected == "Wpkh") {
@@ -561,9 +528,7 @@ class SignTransaction extends HTMLElement {
 
 
 customElements.define("my-nav", MyNav)
-customElements.define("network-selector", NetworkSelector)
 customElements.define("network-selected", NetworkSelected)
-customElements.define("connect-jade", ConnectJade)
 customElements.define("jade-fingerprint", JadeFingerprint)
 customElements.define("wallet-selected", WalletSelected)
 customElements.define("wallet-selector", WalletSelector)
