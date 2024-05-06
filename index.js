@@ -8,7 +8,7 @@ var wolletSelected /*string*/
 var pset
 
 var wollet = {}
-var scan = {}
+var scan = {} /*never running finish*/
 var address = {}
 
 
@@ -89,10 +89,22 @@ class MyNav extends HTMLElement {
 
         this.render()
 
-        this.addEventListener("click", (event) => {
+        this.addEventListener("click", async (event) => {
             let id = event.target.id
             if (id == "disconnect") {
                 location.reload()
+                return
+            }
+            if (id == "refresh") {
+                if (scan[wolletSelected] === "running") {
+                    alert("Scan is running")
+                } else {
+                    await fullScanAndApply()
+                    this.dispatchEvent(new CustomEvent('wallet-sync-end', {
+                        bubbles: true,
+                    }))
+                }
+
                 return
             }
             if (id == "") {
@@ -143,6 +155,7 @@ class MyNav extends HTMLElement {
                     <a href="#" id="create-page">Create</a> |
                     <a href="#" id="sign-page">Sign</a> |
                     <a href="#" id="receive-page">Receive</a> |
+                    <a href="#" id="refresh">Refresh</a> |
                     <a href="#" id="disconnect">Disconnect</a>
 
                     <br><br>
@@ -182,6 +195,7 @@ class WalletSelector extends HTMLElement {
                 throw new Error('Unexpected wallet selector value!');
             }
             wollet[wolletSelected] = new lwk.Wollet(network, descriptor)
+            scan[wolletSelected] = "never"
             this.dispatchEvent(new CustomEvent('wallet-selected', {
                 bubbles: true,
             }))
@@ -196,9 +210,8 @@ class WalletSelected extends HTMLElement {
 
         document.addEventListener('wallet-selected', async (event) => {
             this.render()
-            if (scan[wolletSelected] == null) {
-                await fullScanAndApply()
-            }
+            await fullScanAndApply()
+
             this.dispatchEvent(new CustomEvent('wallet-sync-end', {
                 bubbles: true,
             }))
@@ -231,6 +244,10 @@ class AskAddress extends HTMLElement {
             let fullPath = wollet[wolletSelected].addressFullPath(index)
             let variant = lwk.Singlesig.from(wolletSelected)
 
+            let checkAddressDiv = document.getElementById("check-address-jade-message")
+            const checkAddress = document.getElementById("check-address-jade-template").content.cloneNode(true)
+            checkAddressDiv.appendChild(checkAddress)
+
             this.dispatchEvent(new CustomEvent('address-asked', {
                 bubbles: true,
             }))
@@ -241,6 +258,7 @@ class AskAddress extends HTMLElement {
 
             button.setAttribute("aria-busy", false)
             button.disabled = false
+            cleanChilds(checkAddressDiv)
         })
     }
 
@@ -286,14 +304,12 @@ class WalletBalance extends HTMLElement {
     }
 
     render() {
-        let ready = scan[wolletSelected]
-
-        if (ready != null && !(ready instanceof Promise)) {
+        if (scan[wolletSelected] == "never") {
+            this.innerHTML = "<article aria-busy=\"true\"></article>"
+        } else {
             let balance = wollet[wolletSelected].balance()
             this.innerHTML = ""
             this.appendChild(mapToTable(balance))
-        } else {
-            this.innerHTML = "<article aria-busy=\"true\"></article>"
         }
     }
 }
@@ -313,8 +329,9 @@ class WalletTransactions extends HTMLElement {
     }
 
     render() {
-        let ready = scan[wolletSelected]
-        if (ready != null && !(ready instanceof Promise)) {
+        if (scan[wolletSelected] == "never") {
+            this.innerHTML = "<article aria-busy=\"true\"></article>"
+        } else {
             let transactions = wollet[wolletSelected].transactions()
             this.innerHTML = ""
 
@@ -336,19 +353,19 @@ class WalletTransactions extends HTMLElement {
                 txType.innerHTML = `
                     <span>${val.txType()}</span>
                 `
-                let height = document.createElement("td")
-                height.innerHTML = `
-                    <span>${val.height()}</span>
+                let heightCell = document.createElement("td")
+
+                var height = (typeof val.height() === 'undefined') ? "unconfirmed" : val.height();
+                heightCell.innerHTML = `
+                    <span>${height}</span>
                 `
-                height.setAttribute("style", "text-align:right")
+                heightCell.setAttribute("style", "text-align:right")
 
                 newRow.appendChild(txid)
                 newRow.appendChild(txType)
-                newRow.appendChild(height)
+                newRow.appendChild(heightCell)
             });
             this.appendChild(div)
-        } else {
-            this.innerHTML = "<article aria-busy=\"true\"></article>"
         }
     }
 }
@@ -370,8 +387,9 @@ class CreateTransaction extends HTMLElement {
     }
 
     render() {
-        let ready = scan[wolletSelected]
-        if (ready != null && !(ready instanceof Promise)) {
+        if (scan[wolletSelected] == "never") {
+            this.innerHTML = "<article aria-busy=\"true\"></article>"
+        } else {
 
             let balance = wollet[wolletSelected].balance()
             const template = document.getElementById(
@@ -443,9 +461,6 @@ class CreateTransaction extends HTMLElement {
 
             cleanChilds(this.querySelector("div"))
             this.querySelector("div").appendChild(template)
-
-        } else {
-            this.querySelector("div").innerHTML = "<article aria-busy=\"true\"></article>"
         }
     }
 }
@@ -467,6 +482,7 @@ class SignTransaction extends HTMLElement {
 
         if (pset != null) {
             template.getElementById('sign-transaction-textarea').textContent = pset.toString()
+            pset = null
         }
 
         const analyzeButton = template.getElementById('sign-transaction-button-analyze')
@@ -481,15 +497,28 @@ class SignTransaction extends HTMLElement {
             let pset = new lwk.Pset(psetString)
             signButton.setAttribute("aria-busy", true)
             signButton.disabled = true
+
+            let signWarnDiv = document.getElementById("sign-transaction-div-jade-sign")
+            const signWarn = document.getElementById("sign-jade-template").content.cloneNode(true)
+            signWarnDiv.appendChild(signWarn)
+
             let signedPset = await jade.sign(pset)
             signButton.setAttribute("aria-busy", false)
             signButton.disabled = false
+
+            cleanChilds(signWarnDiv)
+            const signDone = document.getElementById("signed-jade-template").content.cloneNode(true)
+            signWarnDiv.appendChild(signDone)
+
             document.getElementById('sign-transaction-textarea').textContent = signedPset
             this.renderAnalyze()
         })
 
         const broadcastButton = template.getElementById('sign-transaction-button-broadcast')
         broadcastButton.addEventListener("click", async (_e) => {
+            let signWarnDiv = document.getElementById("sign-transaction-div-jade-sign")
+            cleanChilds(signWarnDiv)
+
             let psetString = document.getElementById('sign-transaction-textarea').textContent
             let pset = new lwk.Pset(psetString)
             let psetFinalized = wollet[wolletSelected].finalize(pset)
@@ -601,12 +630,16 @@ function mapToTable(map) {
 
 
 async function fullScanAndApply() {
-    let client = network.defaultEsploraClient()
+    if (scan[wolletSelected] != "running") {
+        scan[wolletSelected] = "running"
+        let client = network.defaultEsploraClient()
 
-    scan[wolletSelected] = client.fullScan(wollet[wolletSelected])
-    scan[wolletSelected] = await scan[wolletSelected]
-    wollet[wolletSelected].applyUpdate(scan[wolletSelected])
-
+        const update = await client.fullScan(wollet[wolletSelected])
+        if (update instanceof lwk.Update) {
+            wollet[wolletSelected].applyUpdate(update)
+        }
+        scan[wolletSelected] = "finish"
+    }
 }
 
 function cleanChilds(comp) {
