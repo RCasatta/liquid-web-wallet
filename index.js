@@ -1,6 +1,6 @@
 import * as lwk from "lwk_wasm"
 
-// Global state
+// Global state, TODO at least encapsulate it a bit
 
 var network
 var jade
@@ -18,7 +18,7 @@ function init() {
     let connectJade = document.getElementById("connect-jade-button")
     connectJade.addEventListener("click", async (_e) => {
         for (var i = 0; i < 2; i++) {
-            let radio = document.getElementById("network-selector-radio-" + 1)
+            let radio = document.getElementById("network-selector-radio-" + i)
             if (radio.checked && radio.value == "Liquid") {
                 network = lwk.Network.mainnet()
             } else if (radio.checked && radio.value == "LiquidTestnet") {
@@ -394,18 +394,44 @@ class CreateTransaction extends HTMLElement {
 
             const createButton = template.getElementById('create-transaction-button-create')
 
-            createButton.addEventListener("click", (_event) => {
-                let addressInput = document.getElementById("create-transaction-input-address").value
-                let satoshisInput = document.getElementById("create-transaction-input-satoshis").value
-                let assetInput = document.getElementById("create-transaction-input-asset").value
+            createButton.addEventListener("click", (_e) => {
+                var valid = true; // inputs are valid
 
-                // TODO validation of inputs
+                let addressInput = document.getElementById("create-transaction-input-address")
+                addressInput.setAttribute("aria-invalid", false)
+                var recipientAddress
+                try {
+                    recipientAddress = new lwk.Address(addressInput.value)
+                    // TODO check right network
+                } catch (_e) {
+                    addressInput.setAttribute("aria-invalid", true)
+                    valid = false
+                }
 
-                let recipientAddress = new lwk.Address(addressInput)
-                let recipientAsset = new lwk.AssetId(assetInput)
+                let satoshisInput = document.getElementById("create-transaction-input-satoshis")
+                satoshisInput.setAttribute("aria-invalid", false)
+                var satoshis = satoshisInput.value
+                if (!satoshis) {
+                    satoshisInput.setAttribute("aria-invalid", true)
+                    valid = false
+                }
+
+                let assetInput = document.getElementById("create-transaction-input-asset")
+                assetInput.setAttribute("aria-invalid", false)
+                var recipientAsset
+                try {
+                    recipientAsset = new lwk.AssetId(assetInput.value)
+                } catch (_e) {
+                    assetInput.setAttribute("aria-invalid", true)
+                    valid = false
+                }
+
+                if (!valid) {
+                    return
+                }
 
                 var builder = new lwk.TxBuilder(network);
-                builder = builder.addRecipient(recipientAddress, satoshisInput, recipientAsset)
+                builder = builder.addRecipient(recipientAddress, satoshis, recipientAsset)
 
                 pset = builder.finish(wollet[wolletSelected])
 
@@ -444,13 +470,13 @@ class SignTransaction extends HTMLElement {
         }
 
         const analyzeButton = template.getElementById('sign-transaction-button-analyze')
-        analyzeButton.addEventListener("click", (_event) => {
+        analyzeButton.addEventListener("click", (_e) => {
             this.renderAnalyze()
 
         })
 
         const signButton = template.getElementById('sign-transaction-button-sign')
-        signButton.addEventListener("click", async (_event) => {
+        signButton.addEventListener("click", async (_e) => {
             let psetString = document.getElementById('sign-transaction-textarea').textContent
             let pset = new lwk.Pset(psetString)
             signButton.setAttribute("aria-busy", true)
@@ -463,7 +489,7 @@ class SignTransaction extends HTMLElement {
         })
 
         const broadcastButton = template.getElementById('sign-transaction-button-broadcast')
-        broadcastButton.addEventListener("click", async (_event) => {
+        broadcastButton.addEventListener("click", async (_e) => {
             let psetString = document.getElementById('sign-transaction-textarea').textContent
             let pset = new lwk.Pset(psetString)
             let psetFinalized = wollet[wolletSelected].finalize(pset)
@@ -473,7 +499,15 @@ class SignTransaction extends HTMLElement {
             let txid = await client.broadcast(psetFinalized)
             broadcastButton.setAttribute("aria-busy", false)
             broadcastButton.disabled = false
-            document.getElementById('sign-transaction-div-broadcast').textContent = "tx broadcasted: " + txid
+
+
+            document.getElementById('sign-transaction-div-broadcast').innerHTML = `
+                <div>
+                    <input aria-invalid="false" aria-describedby="broadcasted-description" readonly="true" value="${txid}">
+                    <small id="broadcasted-description">Tx broadcasted!</small>
+                </div>
+                <br><br>
+            `
         })
 
         cleanChilds(this)

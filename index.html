@@ -5,10 +5,11 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Jade companion app for Liquid running in the browser">
     <title>Home</title>
-    <link rel="stylesheet" href="pico.min.css" />
+    <link rel="stylesheet" href="pico.min.css">
     <link rel="icon" type="image/x-icon"
-        href="https://d2y5h3osumboay.cloudfront.net/8bjx2lpmkubsx5vodqpcdt7tqm20?=4064512645361149302" />
+        href="https://d2y5h3osumboay.cloudfront.net/8bjx2lpmkubsx5vodqpcdt7tqm20?=4064512645361149302">
 </head>
 
 <body>
@@ -40,13 +41,13 @@
             </label>
         </fieldset>
 
-        <p><button id="connect-jade-button" disabled="true">Connect to Jade</button></p>
+        <p><button id="connect-jade-button" disabled>Connect to Jade</button></p>
         <div id="connect-jade-message"></div>
 
         <br><br>
         <textarea placeholder="CT Descriptor">
         </textarea>
-        <button id="watch-only-button" onclick="alert('not yet implemented')" disabled="true">Use watch-only
+        <button id="watch-only-button" onclick="alert('not yet implemented')" disabled>Use watch-only
             descriptor</button>
 
         <br><br>
@@ -73,9 +74,7 @@
 
 
     <template id="insert-pin-template">
-        <textarea aria-invalid="true" readonly="true">
-            Insert the PIN on the Jade
-        </textarea>
+        <input aria-invalid="true" readonly="true" value="Insert the PIN on the Jade">
     </template>
 
 
