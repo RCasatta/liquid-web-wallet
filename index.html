@@ -55,12 +55,10 @@
     </main>
 
     <br>
-    <footer class="container">
-        <a href="https://github.com/RCasatta/liquid-web-wallet">Source</a>
-        <network-selected></network-selected>
-        <jade-fingerprint></jade-fingerprint>
-        <wallet-selected></wallet-selected>
-    </footer>
+    <my-footer>
+        <footer class="container">
+        </footer>
+    </my-footer>
 
 
     <!-- Templates -->
@@ -92,7 +90,9 @@
     <!-- Pages Templates -->
     <template id="wallets-page-template">
         <h2>Wallets</h2>
-        <wallet-selector></wallet-selector>
+        <wallet-selector>
+            <div></div>
+        </wallet-selector>
         <progress id="wallets-page-progress" hidden></progress>
     </template>
 

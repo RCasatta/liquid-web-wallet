@@ -46,38 +46,29 @@ function init() {
 
 init()
 
-class NetworkSelected extends HTMLElement {
+class MyFooter extends HTMLElement {
     constructor() {
         super()
-
+        this.footer = this.querySelector('footer')
+        document.addEventListener('jade-initialized', this.render)
+        document.addEventListener('wallet-selected', this.render)
         this.render()
-
-        document.addEventListener('jade-initialized', (event) => {
-            this.render()
-        })
     }
 
-    render() {
+    render = async () => {
+        var footer = '<a href="https://github.com/RCasatta/liquid-web-wallet">Source</a>'
         if (network != null) {
-            this.innerHTML = `
-                <span> | </span><span>${network}</span>
-            `
+            footer += `<span> | </span><span>${network}</span>`
         }
-    }
-}
-
-
-class JadeFingerprint extends HTMLElement {
-    constructor() {
-        super()
-
-        document.addEventListener('jade-initialized', async (event) => {
+        if (jade != null) {
             const xpub = await jade.getMasterXpub();
             const jadeIdentifier = xpub.fingerprint()
-            this.innerHTML = `
-                <span> | </span><code>${jadeIdentifier}</code>
-            `
-        })
+            footer += `<span> | </span><span><code>${jadeIdentifier}</code></span>`
+        }
+        if (wolletSelected != null) {
+            footer += `<span> | </span><span>${wolletSelected}</span>`
+        }
+        this.footer.innerHTML = footer
     }
 }
 
@@ -169,7 +160,6 @@ class MyNav extends HTMLElement {
 class WalletSelector extends HTMLElement {
     constructor() {
         super()
-        this.innerHTML = "<div></div>"
     }
 
     connectedCallback() {
@@ -203,30 +193,12 @@ class WalletSelector extends HTMLElement {
             this.dispatchEvent(new CustomEvent('wallet-selected', {
                 bubbles: true,
             }))
-        }
-    }
-}
 
-
-class WalletSelected extends HTMLElement {
-    constructor() {
-        super()
-
-        document.addEventListener('wallet-selected', async (event) => {
-            this.render()
             await fullScanAndApply(wollet[wolletSelected], scan[wolletSelected])
 
             this.dispatchEvent(new CustomEvent('wallet-sync-end', {
                 bubbles: true,
             }))
-        })
-    }
-
-    render() {
-        if (wollet != null) {
-            this.innerHTML = `
-                <span> | </span> <span>${wolletSelected}</span>
-            `
         }
     }
 }
@@ -600,11 +572,9 @@ class SignTransaction extends HTMLElement {
     }
 }
 
-
 customElements.define("my-nav", MyNav)
-customElements.define("network-selected", NetworkSelected)
-customElements.define("jade-fingerprint", JadeFingerprint)
-customElements.define("wallet-selected", WalletSelected)
+customElements.define("my-footer", MyFooter)
+
 customElements.define("wallet-selector", WalletSelector)
 customElements.define("receive-address", ReceiveAddress)
 customElements.define("ask-address", AskAddress)
