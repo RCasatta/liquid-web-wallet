@@ -95,7 +95,7 @@ class MyNav extends HTMLElement {
                 return
             }
             if (id == "refresh") {
-                if (scan[wolletSelected].includes("running")) {
+                if (scan[wolletSelected].status.includes("running")) {
                     alert("Scan is running")
                 } else {
                     await fullScanAndApply(wollet[wolletSelected], scan[wolletSelected])
@@ -173,7 +173,6 @@ class WalletSelector extends HTMLElement {
     }
 
     connectedCallback() {
-        // TODO hide until jade unlocked
         const template = document.getElementById(
             "wallets-selector-template",
         ).content.cloneNode(true)
@@ -194,10 +193,11 @@ class WalletSelector extends HTMLElement {
                 throw new Error('Unexpected wallet selector value!');
             }
             wollet[wolletSelected] = new lwk.Wollet(network, descriptor)
+            scan[wolletSelected] = {}
             if (loadPersisted(wollet[wolletSelected])) {
-                scan[wolletSelected] = "finish"
+                scan[wolletSelected].status = "finish"
             } else {
-                scan[wolletSelected] = "never"
+                scan[wolletSelected].status = "never"
             }
 
             this.dispatchEvent(new CustomEvent('wallet-selected', {
@@ -308,7 +308,7 @@ class WalletBalance extends HTMLElement {
     }
 
     render() {
-        if (scan[wolletSelected] == "never" || scan[wolletSelected] == "first-running") {
+        if (scan[wolletSelected].status == "never" || scan[wolletSelected].status == "first-running") {
             this.innerHTML = "<article aria-busy=\"true\"></article>"
         } else {
             let balance = wollet[wolletSelected].balance()
@@ -334,7 +334,7 @@ class WalletTransactions extends HTMLElement {
     }
 
     render() {
-        if (scan[wolletSelected] == "never" || scan[wolletSelected] == "first-running") {
+        if (scan[wolletSelected].status == "never" || scan[wolletSelected].status == "first-running") {
             this.innerHTML = "<article aria-busy=\"true\"></article>"
         } else {
             let transactions = wollet[wolletSelected].transactions()
@@ -394,7 +394,7 @@ class CreateTransaction extends HTMLElement {
     }
 
     render() {
-        if (scan[wolletSelected] == "never" || scan[wolletSelected] == "first-running") {
+        if (scan[wolletSelected].status == "never" || scan[wolletSelected].status == "first-running") {
             this.innerHTML = "<article aria-busy=\"true\"></article>"
         } else {
 
@@ -665,24 +665,31 @@ function updatedAt(wolletLocal, node) {
 }
 
 async function fullScanAndApply(wolletLocal, scanLocal) {
-    if (!scanLocal.includes("running")) {
-        if (scanLocal == "never") {
-            scanLocal = "first-running"
+
+    if (!scanLocal.status.includes("running")) {
+        if (scanLocal.status == "never") {
+            scanLocal.status = "first-running"
         } else {
-            scanLocal = "running"
+            scanLocal.status = "running"
         }
         let client = network.defaultEsploraClient()
 
         const update = await client.fullScan(wolletLocal)
         if (update instanceof lwk.Update) {
-            // TODO should skip only tip
-            const walletStatus = wolletLocal.status()
-            console.log("Saving persisted update " + walletStatus)
-            wolletLocal.applyUpdate(update)
-            const base64 = update.serializeEncryptedBase64(wolletLocal.descriptor())
-            localStorage.setItem(walletStatus, base64)
+            if (update.onlyTip()) {
+                // this is a shortcut, the UI won't see "updated at <most recent scan>" but "updated at <most recent scan with tx>".
+                // The latter is possible by deleting the previous update if both this and the previous are `onlyTip()` but the 
+                // more complex logic is avoided for now
+                console.log("avoid persisting only tip update")
+            } else {
+                const walletStatus = wolletLocal.status()
+                console.log("Saving persisted update " + walletStatus)
+                wolletLocal.applyUpdate(update)
+                const base64 = update.serializeEncryptedBase64(wolletLocal.descriptor())
+                localStorage.setItem(walletStatus, base64)
+            }
         }
-        scanLocal = "finish"
+        scanLocal.status = "finish"
     }
 }
 
