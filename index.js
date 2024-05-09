@@ -98,7 +98,7 @@ class MyNav extends HTMLElement {
                 if (scan[wolletSelected].includes("running")) {
                     alert("Scan is running")
                 } else {
-                    await fullScanAndApply()
+                    await fullScanAndApply(wollet[wolletSelected], scan[wolletSelected])
                     this.dispatchEvent(new CustomEvent('wallet-sync-end', {
                         bubbles: true,
                     }))
@@ -194,7 +194,7 @@ class WalletSelector extends HTMLElement {
                 throw new Error('Unexpected wallet selector value!');
             }
             wollet[wolletSelected] = new lwk.Wollet(network, descriptor)
-            if (loadPersisted()) {
+            if (loadPersisted(wollet[wolletSelected])) {
                 scan[wolletSelected] = "finish"
             } else {
                 scan[wolletSelected] = "never"
@@ -214,7 +214,7 @@ class WalletSelected extends HTMLElement {
 
         document.addEventListener('wallet-selected', async (event) => {
             this.render()
-            await fullScanAndApply()
+            await fullScanAndApply(wollet[wolletSelected], scan[wolletSelected])
 
             this.dispatchEvent(new CustomEvent('wallet-sync-end', {
                 bubbles: true,
@@ -312,7 +312,7 @@ class WalletBalance extends HTMLElement {
             this.innerHTML = "<article aria-busy=\"true\"></article>"
         } else {
             let balance = wollet[wolletSelected].balance()
-            updatedAt(document.getElementById("balance-page-updated-at"))
+            updatedAt(wollet[wolletSelected], document.getElementById("balance-page-updated-at"))
             this.innerHTML = ""
             this.appendChild(mapToTable(balance))
         }
@@ -371,7 +371,7 @@ class WalletTransactions extends HTMLElement {
                 newRow.appendChild(heightCell)
             });
             this.appendChild(div)
-            updatedAt(document.getElementById("transactions-page-updated-at"))
+            updatedAt(wollet[wolletSelected], document.getElementById("transactions-page-updated-at"))
 
         }
     }
@@ -640,16 +640,16 @@ function mapToTable(map) {
 }
 
 
-function loadPersisted() {
-    const descriptor = wollet[wolletSelected].descriptor()
+function loadPersisted(wolletLocal) {
+    const descriptor = wolletLocal.descriptor()
     var loaded = false
     while (true) {
-        const walletStatus = wollet[wolletSelected].status()
+        const walletStatus = wolletLocal.status()
         const retrievedUpdate = localStorage.getItem(walletStatus)
         if (retrievedUpdate) {
             console.log("Found persisted update, applying " + walletStatus)
             const update = lwk.Update.deserializeDecryptedBase64(retrievedUpdate, descriptor)
-            wollet[wolletSelected].applyUpdate(update)
+            wolletLocal.applyUpdate(update)
             loaded = true
         } else {
             return loaded
@@ -657,34 +657,32 @@ function loadPersisted() {
     }
 }
 
-function updatedAt(node) {
+function updatedAt(wolletLocal, node) {
     if (node) {
-        const unix_ts = wollet[wolletSelected].tip().timestamp()
+        const unix_ts = wolletLocal.tip().timestamp()
         node.innerText = "updated at " + new Date(unix_ts * 1000).toLocaleString()
     }
 }
 
-async function fullScanAndApply() {
-
-
-    if (!scan[wolletSelected].includes("running")) {
-        if (scan[wolletSelected] == "never") {
-            scan[wolletSelected] = "first-running"
+async function fullScanAndApply(wolletLocal, scanLocal) {
+    if (!scanLocal.includes("running")) {
+        if (scanLocal == "never") {
+            scanLocal = "first-running"
         } else {
-            scan[wolletSelected] = "running"
+            scanLocal = "running"
         }
         let client = network.defaultEsploraClient()
 
-        const update = await client.fullScan(wollet[wolletSelected])
+        const update = await client.fullScan(wolletLocal)
         if (update instanceof lwk.Update) {
             // TODO should skip only tip
-            const walletStatus = wollet[wolletSelected].status()
+            const walletStatus = wolletLocal.status()
             console.log("Saving persisted update " + walletStatus)
-            wollet[wolletSelected].applyUpdate(update)
-            const base64 = update.serializeEncryptedBase64(wollet[wolletSelected].descriptor())
+            wolletLocal.applyUpdate(update)
+            const base64 = update.serializeEncryptedBase64(wolletLocal.descriptor())
             localStorage.setItem(walletStatus, base64)
         }
-        scan[wolletSelected] = "finish"
+        scanLocal = "finish"
     }
 }
 
