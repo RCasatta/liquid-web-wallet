@@ -98,14 +98,21 @@
 
     <template id="balance-page-template">
         <section>
-            <h2>Balance</h2>
+            <hgroup>
+                <h2>Balance</h2>
+                <p id="balance-page-updated-at"></p>
+            </hgroup>
             <wallet-balance></wallet-balance>
         </section>
     </template>
 
     <template id="transactions-page-template">
         <section>
-            <h2>Transactions</h2>
+            <hgroup>
+                <h2>Transactions</h2>
+                <p id="transactions-page-updated-at"></p>
+            </hgroup>
+
             <wallet-transactions></wallet-transactions>
         </section>
     </template>

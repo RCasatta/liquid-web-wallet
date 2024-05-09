@@ -42,7 +42,6 @@ function init() {
     watchOnly.disabled = false
 
     document.getElementById("loading-wasm").setAttribute("style", "visibility: hidden;") // by using visibility we avoid layout shifts
-
 }
 
 init()
@@ -195,7 +194,12 @@ class WalletSelector extends HTMLElement {
                 throw new Error('Unexpected wallet selector value!');
             }
             wollet[wolletSelected] = new lwk.Wollet(network, descriptor)
-            scan[wolletSelected] = "never"
+            if (loadPersisted()) {
+                scan[wolletSelected] = "finish"
+            } else {
+                scan[wolletSelected] = "never"
+            }
+
             this.dispatchEvent(new CustomEvent('wallet-selected', {
                 bubbles: true,
             }))
@@ -308,6 +312,7 @@ class WalletBalance extends HTMLElement {
             this.innerHTML = "<article aria-busy=\"true\"></article>"
         } else {
             let balance = wollet[wolletSelected].balance()
+            updatedAt(document.getElementById("balance-page-updated-at"))
             this.innerHTML = ""
             this.appendChild(mapToTable(balance))
         }
@@ -366,6 +371,8 @@ class WalletTransactions extends HTMLElement {
                 newRow.appendChild(heightCell)
             });
             this.appendChild(div)
+            updatedAt(document.getElementById("transactions-page-updated-at"))
+
         }
     }
 }
@@ -633,7 +640,33 @@ function mapToTable(map) {
 }
 
 
+function loadPersisted() {
+    const descriptor = wollet[wolletSelected].descriptor()
+    var loaded = false
+    while (true) {
+        const walletStatus = wollet[wolletSelected].status()
+        const retrievedUpdate = localStorage.getItem(walletStatus)
+        if (retrievedUpdate) {
+            console.log("Found persisted update, applying " + walletStatus)
+            const update = lwk.Update.deserializeDecryptedBase64(retrievedUpdate, descriptor)
+            wollet[wolletSelected].applyUpdate(update)
+            loaded = true
+        } else {
+            return loaded
+        }
+    }
+}
+
+function updatedAt(node) {
+    if (node) {
+        const unix_ts = wollet[wolletSelected].tip().timestamp()
+        node.innerText = "updated at " + new Date(unix_ts * 1000).toLocaleString()
+    }
+}
+
 async function fullScanAndApply() {
+
+
     if (!scan[wolletSelected].includes("running")) {
         if (scan[wolletSelected] == "never") {
             scan[wolletSelected] = "first-running"
@@ -644,7 +677,12 @@ async function fullScanAndApply() {
 
         const update = await client.fullScan(wollet[wolletSelected])
         if (update instanceof lwk.Update) {
+            // TODO should skip only tip
+            const walletStatus = wollet[wolletSelected].status()
+            console.log("Saving persisted update " + walletStatus)
             wollet[wolletSelected].applyUpdate(update)
+            const base64 = update.serializeEncryptedBase64(wollet[wolletSelected].descriptor())
+            localStorage.setItem(walletStatus, base64)
         }
         scan[wolletSelected] = "finish"
     }

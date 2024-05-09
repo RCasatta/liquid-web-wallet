@@ -4,7 +4,7 @@
     "build": "rm -rf ./dist && webpack --config webpack.config.js --mode=production"
   },
   "dependencies": {
-    "lwk_wasm": "0.5.0"
+    "lwk_wasm": "file:../lwk/lwk_wasm/pkg"
   },
   "devDependencies": {
     "copy-webpack-plugin": "^11.0.0",
