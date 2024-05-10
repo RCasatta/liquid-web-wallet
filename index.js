@@ -83,12 +83,10 @@ class MyNav extends HTMLElement {
             this.render()
         })
 
-
         document.addEventListener('wallet-selected', (event) => {
             this.render()
             this.renderPage("balance-page")
         })
-
 
         document.addEventListener('pset-ready', (event) => {
             this.renderPage("sign-page")
@@ -159,46 +157,39 @@ class MyNav extends HTMLElement {
 class WalletSelector extends HTMLElement {
     constructor() {
         super()
+        this.walletSelector = this.querySelector("select")
+        this.walletProgress = this.querySelector("progress")
+        this.walletSelector.onchange = this.handleSelect  // not sure why I can't addEventListener
     }
 
-    connectedCallback() {
-        const template = document.getElementById(
-            "wallets-selector-template",
-        ).content.cloneNode(true)
-        this.querySelector("div").appendChild(template)
+    handleSelect = async () => {
+        this.walletProgress.hidden = false
 
-        let walletSelector = this.querySelector("select")
-
-        walletSelector.onchange = async () => {
-            document.getElementById("wallets-page-progress").hidden = false
-
-            STATE.wolletSelected = walletSelector.value
-            var descriptor
-            if (STATE.wolletSelected == "Wpkh") {
-                descriptor = await STATE.jade.wpkh()
-            } else if (STATE.wolletSelected == "ShWpkh") {
-                descriptor = await STATE.jade.shWpkh()
-            } else {
-                throw new Error('Unexpected wallet selector value!');
-            }
-            STATE.wollet = new lwk.Wollet(STATE.network, descriptor)
-            STATE.scan = {}
-            if (loadPersisted(STATE.wollet)) {
-                STATE.scan.status = "finish"
-            } else {
-                STATE.scan.status = "never"
-            }
-
-            this.dispatchEvent(new CustomEvent('wallet-selected', {
-                bubbles: true,
-            }))
-
-            await fullScanAndApply(STATE.wollet, STATE.scan)
-            console.log("finish fullScanAndApply")
-            document.dispatchEvent(new CustomEvent('wallet-sync-end', {
-                bubbles: true,
-            }))
+        STATE.wolletSelected = this.walletSelector.value
+        var descriptor
+        if (STATE.wolletSelected == "Wpkh") {
+            descriptor = await STATE.jade.wpkh()
+        } else if (STATE.wolletSelected == "ShWpkh") {
+            descriptor = await STATE.jade.shWpkh()
+        } else {
+            throw new Error('Unexpected wallet selector value!');
         }
+        STATE.wollet = new lwk.Wollet(STATE.network, descriptor)
+        STATE.scan = {}
+        if (loadPersisted(STATE.wollet)) {
+            STATE.scan.status = "finish"
+        } else {
+            STATE.scan.status = "never"
+        }
+
+        this.dispatchEvent(new CustomEvent('wallet-selected', {
+            bubbles: true,
+        }))
+
+        await fullScanAndApply(STATE.wollet, STATE.scan)
+        document.dispatchEvent(new CustomEvent('wallet-sync-end', {
+            bubbles: true,
+        }))
     }
 }
 
@@ -207,39 +198,34 @@ class AskAddress extends HTMLElement {
     constructor() {
         super()
 
-        this.render()
-
-        let button = this.querySelector("button")
-
-        button.addEventListener("click", async (event) => {
-            button.disabled = true
-            button.setAttribute("aria-busy", true)
-            let address = STATE.wollet.address(null)
-            let index = address.index()
-            let fullPath = STATE.wollet.addressFullPath(index)
-            let variant = lwk.Singlesig.from(STATE.wolletSelected)
-
-            let checkAddressDiv = document.getElementById("check-address-jade-message")
-            const checkAddress = document.getElementById("check-address-jade-template").content.cloneNode(true)
-            checkAddressDiv.appendChild(checkAddress)
-
-            this.dispatchEvent(new CustomEvent('address-asked', {
-                bubbles: true,
-                detail: address
-            }))
-
-            let jadeAddress = await STATE.jade.getReceiveAddressSingle(variant, fullPath)
-
-            console.assert(jadeAddress == address.address().toString(), "local and jade address are different!")
-
-            button.setAttribute("aria-busy", false)
-            button.disabled = false
-            cleanChilds(checkAddressDiv)
-        })
+        this.button = this.querySelector("button")
+        this.checkAddressDiv = this.querySelector("#check-address-jade-message")
+        this.checkAddressDiv.hidden = true
+        this.button.addEventListener("click", this.handleClick)
     }
 
-    render() {
-        this.innerHTML = "<p><button>Show on Jade</button></p>"
+    handleClick = async (_e) => {
+        this.button.disabled = true
+        this.button.setAttribute("aria-busy", true)
+        let address = STATE.wollet.address(null)
+        let index = address.index()
+        let fullPath = STATE.wollet.addressFullPath(index)
+        let variant = lwk.Singlesig.from(STATE.wolletSelected)
+
+        this.checkAddressDiv.hidden = false
+
+        this.dispatchEvent(new CustomEvent('address-asked', {
+            bubbles: true,
+            detail: address
+        }))
+
+        let jadeAddress = await STATE.jade.getReceiveAddressSingle(variant, fullPath)
+
+        console.assert(jadeAddress == address.address().toString(), "local and jade address are different!")
+
+        this.button.setAttribute("aria-busy", false)
+        this.button.disabled = false
+        this.checkAddressDiv.hidden = true
     }
 }
 
@@ -247,16 +233,17 @@ class ReceiveAddress extends HTMLElement {
     constructor() {
         super()
 
-        document.addEventListener('address-asked', (event) => {
-            this.render(event.detail)
-        })
+        document.addEventListener('address-asked', this.render)
     }
 
-    render(address) {
-        let addr = address.address()
+    render = (event) => {
+        let addr = event.detail.address()
+        let addrString = addr.toString()
         this.innerHTML = `
-            <div style="word-break: break-word"><code>${addr.toString()}</code></div><br>
-            <img src="${addr.QRCodeUri(null)}" width="250px" style="image-rendering: pixelated; border: 20px solid white;"></img>
+            <div style="word-break: break-word"><code>${addrString}</code></div><br>
+            <a href="liquidnetwork:${addrString}">
+                <img src="${addr.QRCodeUri(null)}" width="250px" style="image-rendering: pixelated; border: 20px solid white;"></img>
+            </a>
         `
     }
 }
@@ -264,26 +251,18 @@ class ReceiveAddress extends HTMLElement {
 class WalletBalance extends HTMLElement {
     constructor() {
         super()
-    }
-    connectedCallback() {
+        this.subtitle = this.querySelector("p")
+        this.div = this.querySelector("div")
+        document.addEventListener('wallet-sync-end', this.render)
         this.render()
-
-        console.log("adding wallet-sync-end listener WalletBalance")
-        document.addEventListener('wallet-sync-end', (event) => {
-            console.log("wallet-sync-end WalletBalance")
-
-            this.render()
-        })
     }
 
-    render() {
-        if (STATE.scan.status == "never" || STATE.scan.status == "first-running") {
-            this.innerHTML = "<article aria-busy=\"true\"></article>"
-        } else {
+    render = () => {
+        if (STATE.scan.status != "never" && STATE.scan.status != "first-running") {
             let balance = STATE.wollet.balance()
-            updatedAt(STATE.wollet, document.getElementById("balance-page-updated-at"))
-            this.innerHTML = ""
-            this.appendChild(mapToTable(balance))
+            updatedAt(STATE.wollet, this.subtitle)
+            cleanChilds(this.div)
+            this.div.appendChild(mapToTable(balance))
         }
     }
 }
@@ -292,26 +271,15 @@ class WalletBalance extends HTMLElement {
 class WalletTransactions extends HTMLElement {
     constructor() {
         super()
-    }
-
-    connectedCallback() {
+        this.subtitle = this.querySelector("p")
+        this.div = this.querySelector("div")
+        document.addEventListener('wallet-sync-end', this.render)
         this.render()
-
-        console.log("adding wallet-sync-end listener WalletTransactions")
-        document.addEventListener('wallet-sync-end', (event) => {
-            console.log("wallet-sync-end WalletTransactions")
-
-            this.render()
-        })
     }
 
-    render() {
-        if (STATE.scan.status == "never" || STATE.scan.status == "first-running") {
-            this.innerHTML = "<article aria-busy=\"true\"></article>"
-        } else {
+    render = () => {
+        if (STATE.scan.status != "never" && STATE.scan.status != "first-running") {
             let transactions = STATE.wollet.transactions()
-            this.innerHTML = ""
-
             let div = document.createElement("div")
             div.setAttribute("class", "overflow-auto")
             let table = document.createElement("table")
@@ -342,9 +310,10 @@ class WalletTransactions extends HTMLElement {
                 newRow.appendChild(txType)
                 newRow.appendChild(heightCell)
             });
-            this.appendChild(div)
-            updatedAt(STATE.wollet, document.getElementById("transactions-page-updated-at"))
 
+            updatedAt(STATE.wollet, this.subtitle)
+            cleanChilds(this.div)
+            this.div.appendChild(div)
         }
     }
 }
@@ -353,25 +322,14 @@ class WalletTransactions extends HTMLElement {
 class CreateTransaction extends HTMLElement {
     constructor() {
         super()
-
-        this.innerHTML = "<div></div>"
-    }
-
-    connectedCallback() {
+        document.addEventListener('wallet-sync-end', this.render)
         this.render()
 
-        console.log("adding wallet-sync-end listener CreateTransaction")
-        document.addEventListener('wallet-sync-end', (event) => {
-            console.log("wallet-sync-end CreateTransaction")
-
-            this.render()
-        })
     }
 
-    render() {
-        if (STATE.scan.status == "never" || STATE.scan.status == "first-running") {
-            this.innerHTML = "<article aria-busy=\"true\"></article>"
-        } else {
+    render = () => {
+        if (STATE.scan.status != "never" && STATE.scan.status != "first-running") {
+            this.innerHTML = ""
 
             let balance = STATE.wollet.balance()
             const template = document.getElementById(
@@ -441,11 +399,7 @@ class CreateTransaction extends HTMLElement {
 
             })
 
-            const createDiv = this.querySelector("div")
-            if (createDiv) {
-                cleanChilds(createDiv)
-                createDiv.appendChild(template)
-            }
+            this.appendChild(template)
 
         }
     }
@@ -631,10 +585,10 @@ function loadPersisted(wolletLocal) {
 }
 
 function updatedAt(wolletLocal, node) {
-    // if (node) {
-    //     const unix_ts = wolletLocal.tip().timestamp()
-    //     node.innerText = "updated at " + new Date(unix_ts * 1000).toLocaleString()
-    // }
+    if (node) {
+        const unix_ts = 0 // CHANGE with `const unix_ts = wolletLocal.tip().timestamp()` once merged in lwk
+        node.innerText = "updated at " + new Date(unix_ts * 1000).toLocaleString()
+    }
 }
 
 async function fullScanAndApply(wolletLocal, scanLocal) {

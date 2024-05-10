@@ -62,14 +62,6 @@
 
 
     <!-- Templates -->
-    <template id="wallets-selector-template">
-        <select>
-            <option>Select wallet</option>
-            <option value="Wpkh">Wpkh</option>
-            <option value="ShWpkh">ShWpkh</option>
-        </select>
-    </template>
-
     <template id="insert-pin-template">
         <input aria-invalid="true" readonly value="Insert the PIN on the Jade">
     </template>
@@ -82,45 +74,55 @@
         <input aria-invalid="false" readonly value="Transaction signed!">
     </template>
 
-    <template id="check-address-jade-template">
-        <input aria-invalid="true" readonly value="Check the address on the Jade!">
-    </template>
-
-
     <!-- Pages Templates -->
     <template id="wallets-page-template">
         <h2>Wallets</h2>
         <wallet-selector>
-            <div></div>
+            <div>
+                <select>
+                    <option>Select wallet</option>
+                    <option value="Wpkh">Wpkh</option>
+                    <option value="ShWpkh">ShWpkh</option>
+                </select>
+            </div>
+            <progress id="wallets-page-progress" hidden></progress>
         </wallet-selector>
-        <progress id="wallets-page-progress" hidden></progress>
     </template>
 
     <template id="balance-page-template">
-        <section>
-            <hgroup>
-                <h2>Balance</h2>
-                <p id="balance-page-updated-at"></p>
-            </hgroup>
-            <wallet-balance></wallet-balance>
-        </section>
+        <wallet-balance>
+            <section>
+                <hgroup>
+                    <h2>Balance</h2>
+                    <p></p>
+                </hgroup>
+                <div>
+                    <article aria-busy="true"></article>
+                </div>
+            </section>
+        </wallet-balance>
     </template>
 
     <template id="transactions-page-template">
-        <section>
-            <hgroup>
-                <h2>Transactions</h2>
-                <p id="transactions-page-updated-at"></p>
-            </hgroup>
-
-            <wallet-transactions></wallet-transactions>
-        </section>
+        <wallet-transactions>
+            <section>
+                <hgroup>
+                    <h2>Transactions</h2>
+                    <p></p>
+                </hgroup>
+                <div>
+                    <article aria-busy="true"></article>
+                </div>
+            </section>
+        </wallet-transactions>
     </template>
 
     <template id="create-page-template">
         <section>
             <h2>Create transaction</h2>
-            <create-transaction></create-transaction>
+            <create-transaction>
+                <article aria-busy="true"></article>
+            </create-transaction>
         </section>
     </template>
 
@@ -134,8 +136,12 @@
     <template id="receive-page-template">
         <section>
             <h2>Receive</h2>
-            <ask-address></ask-address>
-            <div id="check-address-jade-message"></div>
+            <ask-address>
+                <p><button>Show on Jade</button></p>
+                <div id="check-address-jade-message" hidden>
+                    <input aria-invalid="true" readonly value="Check the address on the Jade!">
+                </div>
+            </ask-address>
             <receive-address>
                 <p>&nbsp;</p>
             </receive-address>
