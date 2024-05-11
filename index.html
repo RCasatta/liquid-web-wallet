@@ -122,6 +122,19 @@
             <h2>Create transaction</h2>
             <create-transaction>
                 <article aria-busy="true"></article>
+
+                <div hidden>
+                    <fieldset role="group">
+                        <input id="create-transaction-input-address" type="text" placeholder="Address">
+                        <input id="create-transaction-input-satoshis" type="number" placeholder="Satoshis">
+                        <select id="create-transaction-input-asset"></select>
+
+                        <input type="submit" value="+" id="create-transaction-button-add"
+                            onclick="alert('multiple recipients not yet implemented')">
+                    </fieldset>
+
+                    <button id="create-transaction-button-create">Create</button>
+                </div>
             </create-transaction>
         </section>
     </template>
@@ -146,19 +159,6 @@
                 <p>&nbsp;</p>
             </receive-address>
         </section>
-    </template>
-
-    <template id="create-transaction-form-template">
-        <fieldset role="group">
-            <input id="create-transaction-input-address" type="text" placeholder="Address">
-            <input id="create-transaction-input-satoshis" type="number" placeholder="Satoshis">
-            <div id="create-transaction-div-select-asset"></div>
-
-            <input type="submit" value="+" id="create-transaction-button-add"
-                onclick="alert('multiple recipients not yet implemented')">
-        </fieldset>
-
-        <button id="create-transaction-button-create">Create</button>
     </template>
 
     <template id="sign-transaction-template">

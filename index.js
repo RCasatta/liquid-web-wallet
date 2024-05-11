@@ -322,87 +322,82 @@ class WalletTransactions extends HTMLElement {
 class CreateTransaction extends HTMLElement {
     constructor() {
         super()
+        this.selectAssetDiv = this.querySelector("#create-transaction-div-select-asset")
+        this.createButton = this.querySelector("#create-transaction-button-create")
+        this.createButton.addEventListener("click", this.handleCreate)
+        this.busy = this.querySelector("article")
+        this.select = this.querySelector("select")
+        this.div = this.querySelector("div")
         document.addEventListener('wallet-sync-end', this.render)
         this.render()
-
     }
 
     render = () => {
         if (STATE.scan.status != "never" && STATE.scan.status != "first-running") {
-            this.innerHTML = ""
-
             let balance = STATE.wollet.balance()
-            const template = document.getElementById(
-                "create-transaction-form-template",
-            ).content.cloneNode(true)
 
-            const selectAsset = template.getElementById('create-transaction-div-select-asset')
-            let select = document.createElement("select")
-            select.setAttribute("id", "create-transaction-input-asset")
+            cleanChilds(this.select)
             let option = document.createElement("option")
             option.innerText = "Select Asset"
-            select.appendChild(option)
+            this.select.appendChild(option)
             balance.forEach((_val, key) => {
                 let option = document.createElement("option")
                 option.innerText = mapAssetHex(key)
                 option.setAttribute("value", key)
-                select.appendChild(option)
-            })
-            selectAsset.appendChild(select)
-
-            const createButton = template.getElementById('create-transaction-button-create')
-
-            createButton.addEventListener("click", (_e) => {
-                var valid = true; // inputs are valid
-
-                let addressInput = document.getElementById("create-transaction-input-address")
-                addressInput.setAttribute("aria-invalid", false)
-                var recipientAddress
-                try {
-                    recipientAddress = new lwk.Address(addressInput.value)
-                    // TODO check right network
-                } catch (_e) {
-                    addressInput.setAttribute("aria-invalid", true)
-                    valid = false
-                }
-
-                let satoshisInput = document.getElementById("create-transaction-input-satoshis")
-                satoshisInput.setAttribute("aria-invalid", false)
-                var satoshis = satoshisInput.value
-                if (!satoshis) {
-                    satoshisInput.setAttribute("aria-invalid", true)
-                    valid = false
-                }
-
-                let assetInput = document.getElementById("create-transaction-input-asset")
-                assetInput.setAttribute("aria-invalid", false)
-                var recipientAsset
-                try {
-                    recipientAsset = new lwk.AssetId(assetInput.value)
-                } catch (_e) {
-                    assetInput.setAttribute("aria-invalid", true)
-                    valid = false
-                }
-
-                if (!valid) {
-                    return
-                }
-
-                var builder = new lwk.TxBuilder(STATE.network);
-                builder = builder.addRecipient(recipientAddress, satoshis, recipientAsset)
-
-                STATE.pset = builder.finish(STATE.wollet)
-
-                this.dispatchEvent(new CustomEvent('pset-ready', {
-                    bubbles: true,
-                }))
-
+                this.select.appendChild(option)
             })
 
-            this.appendChild(template)
-
+            this.busy.hidden = true
+            this.div.hidden = false
         }
     }
+
+    handleCreate = (_e) => {
+        var valid = true; // inputs are valid
+
+        let addressInput = document.getElementById("create-transaction-input-address")
+        addressInput.setAttribute("aria-invalid", false)
+        var recipientAddress
+        try {
+            recipientAddress = new lwk.Address(addressInput.value)
+            // TODO check right network
+        } catch (_e) {
+            addressInput.setAttribute("aria-invalid", true)
+            valid = false
+        }
+
+        let satoshisInput = document.getElementById("create-transaction-input-satoshis")
+        satoshisInput.setAttribute("aria-invalid", false)
+        var satoshis = satoshisInput.value
+        if (!satoshis) {
+            satoshisInput.setAttribute("aria-invalid", true)
+            valid = false
+        }
+
+        let assetInput = document.getElementById("create-transaction-input-asset")
+        assetInput.setAttribute("aria-invalid", false)
+        var recipientAsset
+        try {
+            recipientAsset = new lwk.AssetId(assetInput.value)
+        } catch (_e) {
+            assetInput.setAttribute("aria-invalid", true)
+            valid = false
+        }
+
+        if (!valid) {
+            return
+        }
+
+        var builder = new lwk.TxBuilder(STATE.network);
+        builder = builder.addRecipient(recipientAddress, satoshis, recipientAsset)
+
+        STATE.pset = builder.finish(STATE.wollet)
+
+        this.dispatchEvent(new CustomEvent('pset-ready', {
+            bubbles: true,
+        }))
+
+    };
 }
 
 
