@@ -66,13 +66,6 @@
         <input aria-invalid="true" readonly value="Insert the PIN on the Jade">
     </template>
 
-    <template id="sign-jade-template">
-        <input aria-invalid="true" readonly value="Check the transactions on the Jade">
-    </template>
-
-    <template id="signed-jade-template">
-        <input aria-invalid="false" readonly value="Transaction signed!">
-    </template>
 
     <!-- Pages Templates -->
     <template id="wallets-page-template">
@@ -141,7 +134,28 @@
     <template id="sign-page-template">
         <section>
             <h2>Sign</h2>
-            <sign-transaction></sign-transaction>
+            <sign-transaction>
+                <textarea placeholder="PSET" id="sign-transaction-textarea"></textarea>
+                <button id="sign-transaction-button-analyze">Analyze</button>
+                <button id="sign-transaction-button-sign">Sign</button>
+                <button id="sign-transaction-button-broadcast">Broadcast</button>
+
+                <br><br>
+
+                <div id="sign-transaction-div-jade-sign"></div>
+
+                <div id="sign-transaction-div-broadcast"></div>
+
+                <div id="sign-transaction-div-analyze"></div>
+
+                <template id="sign-jade-template">
+                    <input aria-invalid="true" readonly value="Check the transactions on the Jade">
+                </template>
+
+                <template id="signed-jade-template">
+                    <input aria-invalid="false" readonly value="Transaction signed!">
+                </template>
+            </sign-transaction>
         </section>
     </template>
 
@@ -160,23 +174,6 @@
         </section>
     </template>
 
-    <template id="sign-transaction-template">
-
-        <textarea placeholder="PSET" id="sign-transaction-textarea"></textarea>
-        <button id="sign-transaction-button-analyze">Analyze</button>
-        <button id="sign-transaction-button-sign">Sign</button>
-        <button id="sign-transaction-button-broadcast">Broadcast</button>
-
-
-        <br><br>
-
-        <div id="sign-transaction-div-jade-sign"></div>
-
-        <div id="sign-transaction-div-broadcast"></div>
-
-        <div id="sign-transaction-div-analyze"></div>
-
-    </template>
 
 
     <script type="module" src="./bootstrap.js"></script>

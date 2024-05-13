@@ -5,7 +5,7 @@ import * as lwk from "lwk_wasm"
 STATE.network = lwk.Network
 STATE.wollet = lwk.Wollet
 STATE.wolletSelected possible values: ShWpkh Wpkh
-STATE.scan.status possible values: never first-running running finish
+STATE.scan.running bool
 STATE.jade = lwk.Jade
 */
 const STATE = {}
@@ -103,7 +103,7 @@ class MyNav extends HTMLElement {
             return
         }
         if (id == "refresh") {
-            if (STATE.scan.status.includes("running")) {
+            if (STATE.scan.running) {
                 alert("Scan is running")
             } else {
 
@@ -137,14 +137,13 @@ class MyNav extends HTMLElement {
                 `
                 this.renderPage("wallets-page")
             } else {
-                let running = STATE.scan.status.includes("running")
                 this.innerHTML = `
                     <a href="#" id="balance-page">Balance</a> |
                     <a href="#" id="transactions-page">Transactions</a> |
                     <a href="#" id="create-page">Create</a> |
                     <a href="#" id="sign-page">Sign</a> |
                     <a href="#" id="receive-page">Receive</a> |
-                    <a href="#" id="refresh" aria-busy="${running}" >Refresh</a> |
+                    <a href="#" id="refresh" aria-busy="${STATE.scan.running}" >Refresh</a> |
                     <a href="#" id="disconnect">Disconnect</a>
 
                     <br><br>
@@ -177,12 +176,8 @@ class WalletSelector extends HTMLElement {
             throw new Error('Unexpected wallet selector value!');
         }
         STATE.wollet = new lwk.Wollet(STATE.network, descriptor)
-        STATE.scan = {}
-        if (loadPersisted(STATE.wollet)) {
-            STATE.scan.status = "finish"
-        } else {
-            STATE.scan.status = "never"
-        }
+        STATE.scan = { running: false }
+        loadPersisted(STATE.wollet)
 
         this.dispatchEvent(new CustomEvent('wallet-selected', {
             bubbles: true,
@@ -260,14 +255,16 @@ class WalletBalance extends HTMLElement {
     }
 
     render = () => {
-        if (STATE.scan.status != "never" && STATE.scan.status != "first-running") {
-            var balance = STATE.wollet.balance()
-            balance = new Map([...balance.entries()].sort());
-
-            updatedAt(STATE.wollet, this.subtitle)
-            cleanChilds(this.div)
-            this.div.appendChild(mapToTable(balance))
+        if (STATE.wollet.neverScanned()) {
+            return
         }
+        var balance = STATE.wollet.balance()
+        balance = new Map([...balance.entries()].sort());
+
+        updatedAt(STATE.wollet, this.subtitle)
+        cleanChilds(this.div)
+        this.div.appendChild(mapToTable(balance))
+
     }
 }
 
@@ -282,43 +279,45 @@ class WalletTransactions extends HTMLElement {
     }
 
     render = () => {
-        if (STATE.scan.status != "never" && STATE.scan.status != "first-running") {
-            let transactions = STATE.wollet.transactions()
-            let div = document.createElement("div")
-            div.setAttribute("class", "overflow-auto")
-            let table = document.createElement("table")
-            table.setAttribute("class", "striped")
-            div.appendChild(table)
-            transactions.forEach((val) => {
+        if (STATE.wollet.neverScanned()) {
+            return
+        }
+        let transactions = STATE.wollet.transactions()
+        let div = document.createElement("div")
+        div.setAttribute("class", "overflow-auto")
+        let table = document.createElement("table")
+        table.setAttribute("class", "striped")
+        div.appendChild(table)
+        transactions.forEach((val) => {
 
-                let newRow = document.createElement("tr")
-                table.appendChild(newRow)
+            let newRow = document.createElement("tr")
+            table.appendChild(newRow)
 
-                let txid = document.createElement("td")
-                txid.innerHTML = `
+            let txid = document.createElement("td")
+            txid.innerHTML = `
                     <code><a href="${val.unblindedUrl(STATE.network.defaultExplorerUrl())}" target="_blank">${val.txid()}</a></code>
                 `
-                let txType = document.createElement("td")
-                txType.innerHTML = `
+            let txType = document.createElement("td")
+            txType.innerHTML = `
                     <span>${val.txType()}</span>
                 `
-                let heightCell = document.createElement("td")
+            let heightCell = document.createElement("td")
 
-                var height = (typeof val.height() === 'undefined') ? "unconfirmed" : val.height();
-                heightCell.innerHTML = `
+            var height = (typeof val.height() === 'undefined') ? "unconfirmed" : val.height();
+            heightCell.innerHTML = `
                     <span>${height}</span>
                 `
-                heightCell.setAttribute("style", "text-align:right")
+            heightCell.setAttribute("style", "text-align:right")
 
-                newRow.appendChild(txid)
-                newRow.appendChild(txType)
-                newRow.appendChild(heightCell)
-            });
+            newRow.appendChild(txid)
+            newRow.appendChild(txType)
+            newRow.appendChild(heightCell)
+        });
 
-            updatedAt(STATE.wollet, this.subtitle)
-            cleanChilds(this.div)
-            this.div.appendChild(div)
-        }
+        updatedAt(STATE.wollet, this.subtitle)
+        cleanChilds(this.div)
+        this.div.appendChild(div)
+
     }
 }
 
@@ -337,23 +336,25 @@ class CreateTransaction extends HTMLElement {
     }
 
     render = () => {
-        if (STATE.scan.status != "never" && STATE.scan.status != "first-running") {
-            let balance = STATE.wollet.balance()
-
-            cleanChilds(this.select)
-            let option = document.createElement("option")
-            option.innerText = "Select Asset"
-            this.select.appendChild(option)
-            balance.forEach((_val, key) => {
-                let option = document.createElement("option")
-                option.innerText = mapAssetHex(key)
-                option.setAttribute("value", key)
-                this.select.appendChild(option)
-            })
-
-            this.busy.hidden = true
-            this.div.hidden = false
+        if (STATE.wollet.neverScanned()) {
+            return
         }
+        let balance = STATE.wollet.balance()
+
+        cleanChilds(this.select)
+        let option = document.createElement("option")
+        option.innerText = "Select Asset"
+        this.select.appendChild(option)
+        balance.forEach((_val, key) => {
+            let option = document.createElement("option")
+            option.innerText = mapAssetHex(key)
+            option.setAttribute("value", key)
+            this.select.appendChild(option)
+        })
+
+        this.busy.hidden = true
+        this.div.hidden = false
+
     }
 
     handleCreate = (_e) => {
@@ -410,121 +411,114 @@ class SignTransaction extends HTMLElement {
     constructor() {
         super()
 
-    }
+        this.textarea = this.querySelector("#sign-transaction-textarea")
+        this.analyzeButton = this.querySelector("#sign-transaction-button-analyze")
+        this.signButton = this.querySelector("#sign-transaction-button-sign")
+        this.broadcastButton = this.querySelector("#sign-transaction-button-broadcast")
+        this.signWarnDiv = this.querySelector("#sign-transaction-div-jade-sign")
+        this.signDivBroadcast = this.querySelector("#sign-transaction-div-broadcast")
+        this.signJadeTemplate = this.querySelector("#sign-jade-template")
+        this.signedJadeTemplate = this.querySelector("#signed-jade-template")
+        this.signDivAnalyze = this.querySelector("#sign-transaction-div-analyze")
 
-    connectedCallback() {
-        this.render()
-    }
+        this.analyzeButton.addEventListener("click", (_e) => {
+            this.renderAnalyze()
+        })
+        this.signButton.addEventListener("click", this.handleSignClick)
 
-    render() {
-        const template = document.getElementById("sign-transaction-template").content.cloneNode(true)
+        this.broadcastButton.addEventListener("click", this.handleBroadcastClick)
 
         if (STATE.pset != null) {
-            template.getElementById('sign-transaction-textarea').textContent = STATE.pset.toString()
+            this.textarea.textContent = STATE.pset.toString()
             STATE.pset = null
         }
 
-        const analyzeButton = template.getElementById('sign-transaction-button-analyze')
-        analyzeButton.addEventListener("click", (_e) => {
-            this.renderAnalyze()
+        this.renderAnalyze()
+    }
 
-        })
+    handleBroadcastClick = async (_e) => {
+        cleanChilds(this.signWarnDiv)
 
-        const signButton = template.getElementById('sign-transaction-button-sign')
-        signButton.addEventListener("click", async (_e) => {
-            let psetString = document.getElementById('sign-transaction-textarea').textContent
-            let pset = new lwk.Pset(psetString)
-            signButton.setAttribute("aria-busy", true)
-            signButton.disabled = true
+        let psetString = this.textarea.textContent
+        let pset = new lwk.Pset(psetString)
+        let psetFinalized = STATE.wollet.finalize(pset)
+        this.broadcastButton.setAttribute("aria-busy", true)
+        this.broadcastButton.disabled = true
+        let client = STATE.network.defaultEsploraClient()
+        let txid = await client.broadcast(psetFinalized)
+        this.broadcastButton.setAttribute("aria-busy", false)
+        this.broadcastButton.disabled = false
 
-            let signWarnDiv = document.getElementById("sign-transaction-div-jade-sign")
-            const signWarn = document.getElementById("sign-jade-template").content.cloneNode(true)
-            signWarnDiv.appendChild(signWarn)
-
-            let signedPset = await STATE.jade.sign(pset)
-            signButton.setAttribute("aria-busy", false)
-            signButton.disabled = false
-
-            cleanChilds(signWarnDiv)
-            const signDone = document.getElementById("signed-jade-template").content.cloneNode(true)
-            signWarnDiv.appendChild(signDone)
-
-            document.getElementById('sign-transaction-textarea').textContent = signedPset
-            this.renderAnalyze()
-        })
-
-        const broadcastButton = template.getElementById('sign-transaction-button-broadcast')
-        broadcastButton.addEventListener("click", async (_e) => {
-            let signWarnDiv = document.getElementById("sign-transaction-div-jade-sign")
-            cleanChilds(signWarnDiv)
-
-            let psetString = document.getElementById('sign-transaction-textarea').textContent
-            let pset = new lwk.Pset(psetString)
-            let psetFinalized = STATE.wollet.finalize(pset)
-            broadcastButton.setAttribute("aria-busy", true)
-            broadcastButton.disabled = true
-            let client = STATE.network.defaultEsploraClient()
-            let txid = await client.broadcast(psetFinalized)
-            broadcastButton.setAttribute("aria-busy", false)
-            broadcastButton.disabled = false
-
-
-            document.getElementById('sign-transaction-div-broadcast').innerHTML = `
+        this.signDivBroadcast.innerHTML = `
                 <div>
                     <input aria-invalid="false" aria-describedby="broadcasted-description" readonly="true" value="${txid}">
                     <small id="broadcasted-description">Tx broadcasted!</small>
                 </div>
                 <br><br>
             `
-        })
+    }
 
-        cleanChilds(this)
-        this.appendChild(template)
+    handleSignClick = async (_e) => {
+        let psetString = this.textarea.textContent
+        let pset = new lwk.Pset(psetString)
+        this.signButton.setAttribute("aria-busy", true)
+        this.signButton.disabled = true
+
+        const signWarn = this.signJadeTemplate.content.cloneNode(true)
+        this.signWarnDiv.appendChild(signWarn)
+
+        let signedPset = await STATE.jade.sign(pset)
+        this.signButton.setAttribute("aria-busy", false)
+        this.signButton.disabled = false
+
+        cleanChilds(this.signWarnDiv)
+        const signDone = this.signedJadeTemplate.content.cloneNode(true)
+        this.signWarnDiv.appendChild(signDone)
+
+        this.textarea.textContent = signedPset
         this.renderAnalyze()
-
     }
 
     renderAnalyze() {
-        let psetString = document.getElementById('sign-transaction-textarea').textContent
-        if (psetString) {
-            let pset = new lwk.Pset(psetString)
-            let details = STATE.wollet.psetDetails(pset)
+        let psetString = this.textarea.textContent
+        if (!psetString) {
+            return
+        }
+        let pset = new lwk.Pset(psetString)
+        let details = STATE.wollet.psetDetails(pset)
 
-            let div = document.getElementById('sign-transaction-div-analyze')
-            cleanChilds(div)
-            let hgroup = document.createElement("hgroup");
-            hgroup.innerHTML = `
+        cleanChilds(this.signDivAnalyze)
+        let hgroup = document.createElement("hgroup");
+        hgroup.innerHTML = `
                 <h3>Net balance</h3><p>From the perspective of ${STATE.wolletSelected}</p>
             `
-            div.appendChild(hgroup)
+        this.signDivAnalyze.appendChild(hgroup)
 
-            var psetBalance = details.balance().balances();
-            psetBalance.set("fee", details.balance().fee());
-            div.appendChild(mapToTable(psetBalance))
+        var psetBalance = details.balance().balances();
+        psetBalance.set("fee", details.balance().fee());
+        this.signDivAnalyze.appendChild(mapToTable(psetBalance))
 
-            let h3 = document.createElement("h3");
-            h3.innerText = "Signatures"
-            div.appendChild(h3)
-            const sigMap = new Map();
-            let signatures = details.signatures()
-            for (let i = 0; i < signatures.length; i++) {
-                let sig = signatures[i]
+        let h3 = document.createElement("h3");
+        h3.innerText = "Signatures"
+        this.signDivAnalyze.appendChild(h3)
+        const sigMap = new Map();
+        let signatures = details.signatures()
+        for (let i = 0; i < signatures.length; i++) {
+            let sig = signatures[i]
 
-                var msg
-                if (sig.hasSignature().length == 0) {
-                    msg = `missing ${sig.missingSignature().map(x => x[1])}`
-                } else if (sig.missingSignature().length == 0) {
-                    msg = `has ${sig.hasSignature().map(x => x[1])}`
-                } else {
-                    msg = `missing ${sig.missingSignature().map(x => x[1])} has ${sig.hasSignature().map(x => x[1])}`
-                }
-
-                sigMap.set("input #" + i, msg)
+            var msg
+            if (sig.hasSignature().length == 0) {
+                msg = `missing ${sig.missingSignature().map(x => x[1])}`
+            } else if (sig.missingSignature().length == 0) {
+                msg = `has ${sig.hasSignature().map(x => x[1])}`
+            } else {
+                msg = `missing ${sig.missingSignature().map(x => x[1])} has ${sig.hasSignature().map(x => x[1])}`
             }
-            div.appendChild(mapToTable(sigMap))
-            // TODO issuances
 
+            sigMap.set("input #" + i, msg)
         }
+        this.signDivAnalyze.appendChild(mapToTable(sigMap))
+        // TODO issuances
     }
 }
 
@@ -585,19 +579,16 @@ function loadPersisted(wolletLocal) {
 
 function updatedAt(wolletLocal, node) {
     if (node) {
-        const unix_ts = 0 // CHANGE with `const unix_ts = wolletLocal.tip().timestamp()` once merged in lwk
+        const unix_ts = wolletLocal.tip().timestamp()
         node.innerText = "updated at " + new Date(unix_ts * 1000).toLocaleString()
     }
 }
 
 async function fullScanAndApply(wolletLocal, scanLocal) {
 
-    if (!scanLocal.status.includes("running")) {
-        if (scanLocal.status == "never") {
-            scanLocal.status = "first-running"
-        } else {
-            scanLocal.status = "running"
-        }
+    if (!scanLocal.running) {
+        scanLocal.running = true
+
         document.dispatchEvent(new CustomEvent('wallet-sync-start', {
             bubbles: true,
         }))
@@ -605,6 +596,7 @@ async function fullScanAndApply(wolletLocal, scanLocal) {
 
         const update = await client.fullScan(wolletLocal)
         if (update instanceof lwk.Update) {
+            wolletLocal.applyUpdate(update)
             if (update.onlyTip()) {
                 // this is a shortcut, the UI won't see "updated at <most recent scan>" but "updated at <most recent scan with tx>".
                 // The latter is possible by deleting the previous update if both this and the previous are `onlyTip()` but the 
@@ -613,12 +605,12 @@ async function fullScanAndApply(wolletLocal, scanLocal) {
             } else {
                 const walletStatus = wolletLocal.status()
                 console.log("Saving persisted update " + walletStatus)
-                wolletLocal.applyUpdate(update)
+
                 const base64 = update.serializeEncryptedBase64(wolletLocal.descriptor())
                 localStorage.setItem(walletStatus, base64)
             }
         }
-        scanLocal.status = "finish"
+        scanLocal.running = false
     }
 }
 
@@ -630,10 +622,20 @@ function cleanChilds(comp) {
     }
 }
 
+/// returns the Ticker if the asset id maps to featured ones
 function mapAssetHex(assetHex) {
     switch (assetHex) {
         case "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d": return "L-BTC"
         case "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49": return "tL-BTC"
+        case "ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2": return "USDt"
+        case "0e99c1a6da379d1f4151fb9df90449d40d0608f6cb33a5bcbfc8c265f42bab0a": return "LCAD"
+        case "18729918ab4bca843656f08d4dd877bed6641fbd596a0a963abbf199cfeb3cec": return "EURx"
+        case "78557eb89ea8439dc1a519f4eb0267c86b261068648a0f84a5c6b55ca39b66f1": return "B-JDE"
+        case "11f91cb5edd5d0822997ad81f068ed35002daec33986da173461a8427ac857e1": return "BMN1"
+        case "52d77159096eed69c73862a30b0d4012b88cedf92d518f98bc5fc8d34b6c27c9": return "EXOeu"
+        case "9c11715c79783d7ba09ecece1e82c652eccbb8d019aec50cf913f540310724a6": return "EXOus"
+        case "38fca2d939696061a8f76d4e6b5eecd54e3b4221c846f24a6b279e79952850a5": return "TEST"
+
         default: return assetHex
     }
 }
