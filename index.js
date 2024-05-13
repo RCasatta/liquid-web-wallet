@@ -79,9 +79,9 @@ class MyNav extends HTMLElement {
 
         this.addEventListener("click", this.handleClick)
 
-        document.addEventListener('jade-initialized', (event) => {
-            this.render()
-        })
+        document.addEventListener('jade-initialized', this.render)
+        document.addEventListener('wallet-sync-end', this.render)
+        document.addEventListener('wallet-sync-start', this.render)
 
         document.addEventListener('wallet-selected', (event) => {
             this.render()
@@ -95,6 +95,9 @@ class MyNav extends HTMLElement {
 
     async handleClick(event) {
         let id = event.target.id
+        if (id === "") {
+            return
+        }
         if (id == "disconnect") {
             location.reload()
             return
@@ -103,6 +106,7 @@ class MyNav extends HTMLElement {
             if (STATE.scan.status.includes("running")) {
                 alert("Scan is running")
             } else {
+
                 await fullScanAndApply(STATE.wollet, STATE.scan)
                 document.dispatchEvent(new CustomEvent('wallet-sync-end', {
                     bubbles: true,
@@ -110,9 +114,6 @@ class MyNav extends HTMLElement {
             }
 
             return
-        }
-        if (id == "") {
-            id = "wallets-page"
         }
 
         this.renderPage(id)
@@ -125,7 +126,7 @@ class MyNav extends HTMLElement {
         app.appendChild(template)
     }
 
-    render() {
+    render = async (_e) => {
 
         if (STATE.jade != null) {
 
@@ -134,15 +135,16 @@ class MyNav extends HTMLElement {
                     <a href="#" id="disconnect">Disconnect</a>
                     <br><br>
                 `
-                this.dispatchEvent(new Event("click"))
+                this.renderPage("wallets-page")
             } else {
+                let running = STATE.scan.status.includes("running")
                 this.innerHTML = `
                     <a href="#" id="balance-page">Balance</a> |
                     <a href="#" id="transactions-page">Transactions</a> |
                     <a href="#" id="create-page">Create</a> |
                     <a href="#" id="sign-page">Sign</a> |
                     <a href="#" id="receive-page">Receive</a> |
-                    <a href="#" id="refresh">Refresh</a> |
+                    <a href="#" id="refresh" aria-busy="${running}" >Refresh</a> |
                     <a href="#" id="disconnect">Disconnect</a>
 
                     <br><br>
@@ -259,7 +261,9 @@ class WalletBalance extends HTMLElement {
 
     render = () => {
         if (STATE.scan.status != "never" && STATE.scan.status != "first-running") {
-            let balance = STATE.wollet.balance()
+            var balance = STATE.wollet.balance()
+            balance = new Map([...balance.entries()].sort());
+
             updatedAt(STATE.wollet, this.subtitle)
             cleanChilds(this.div)
             this.div.appendChild(mapToTable(balance))
@@ -594,6 +598,9 @@ async function fullScanAndApply(wolletLocal, scanLocal) {
         } else {
             scanLocal.status = "running"
         }
+        document.dispatchEvent(new CustomEvent('wallet-sync-start', {
+            bubbles: true,
+        }))
         let client = STATE.network.defaultEsploraClient()
 
         const update = await client.fullScan(wolletLocal)
