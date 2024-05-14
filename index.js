@@ -4,15 +4,17 @@ import * as lwk from "lwk_wasm"
 /* 
 STATE.network = lwk.Network
 STATE.wollet = lwk.Wollet
-STATE.wolletSelected possible values: ShWpkh Wpkh
+STATE.wolletSelected possible values: ShWpkh Wpkh, <multisig wallets>
 STATE.scan.running bool
 STATE.jade = lwk.Jade
+STATE.xpub = String
+STATE.multiWallets = [String]
 */
 const STATE = {}
 
 /// Re-enables initially disabled buttons, and add listener to buttons on the first page
 /// First page doesn't use components because we want to be loaded before the wasm is loaded, which takes time
-function init() {
+async function init() {
     let connectJade = document.getElementById("connect-jade-button")
     connectJade.addEventListener("click", async (_e) => {
         for (var i = 0; i < 2; i++) {
@@ -30,7 +32,8 @@ function init() {
         let connectJadeMessage = document.getElementById("connect-jade-message")
         const insertPinMessage = document.getElementById("insert-pin-template").content.cloneNode(true)
         connectJadeMessage.appendChild(insertPinMessage)
-        const _xpub = await STATE.jade.getMasterXpub(); // asking something that requires unlock
+        STATE.xpub = await STATE.jade.getMasterXpub(); // asking something that requires unlock
+        STATE.multiWallets = await STATE.jade.getRegisteredMultisigs(); // so that it become cached
 
         document.dispatchEvent(new CustomEvent('jade-initialized'))
     })
@@ -42,7 +45,7 @@ function init() {
     document.getElementById("loading-wasm").setAttribute("style", "visibility: hidden;") // by using visibility we avoid layout shifts
 }
 
-init()
+await init()
 
 class MyFooter extends HTMLElement {
     constructor() {
@@ -50,21 +53,28 @@ class MyFooter extends HTMLElement {
         this.footer = this.querySelector('footer')
         document.addEventListener('jade-initialized', this.render)
         document.addEventListener('wallet-selected', this.render)
+        this.addEventListener("click", this.handleClick)
+
         this.render()
     }
 
-    render = async () => {
+    handleClick = (_event) => {
+        this.dispatchEvent(new CustomEvent('wallet-clicked', {
+            bubbles: true,
+        }))
+    }
+
+    render = () => {
         var footer = '<a href="https://github.com/RCasatta/liquid-web-wallet">Source</a>'
         if (STATE.network != null) {
             footer += `<span> | </span><span>${STATE.network}</span>`
         }
         if (STATE.jade != null) {
-            const xpub = await STATE.jade.getMasterXpub();
-            const jadeIdentifier = xpub.fingerprint()
+            const jadeIdentifier = STATE.xpub.fingerprint()
             footer += `<span> | </span><span><code>${jadeIdentifier}</code></span>`
         }
         if (STATE.wolletSelected != null) {
-            footer += `<span> | </span><span>${STATE.wolletSelected}</span>`
+            footer += `<span> | </span><a href="#" id="wallet">${STATE.wolletSelected}</a>`
         }
         this.footer.innerHTML = footer
     }
@@ -91,9 +101,13 @@ class MyNav extends HTMLElement {
         document.addEventListener('pset-ready', (event) => {
             this.renderPage("sign-page")
         })
+
+        document.addEventListener('wallet-clicked', (event) => {
+            this.renderPage("wallet-page")
+        })
     }
 
-    async handleClick(event) {
+    handleClick = async (event) => {
         let id = event.target.id
         if (id === "") {
             return
@@ -102,17 +116,15 @@ class MyNav extends HTMLElement {
             location.reload()
             return
         }
-        if (id == "refresh") {
+        if (id == "scan") {
             if (STATE.scan.running) {
                 alert("Scan is running")
             } else {
-
                 await fullScanAndApply(STATE.wollet, STATE.scan)
                 document.dispatchEvent(new CustomEvent('wallet-sync-end', {
                     bubbles: true,
                 }))
             }
-
             return
         }
 
@@ -143,7 +155,7 @@ class MyNav extends HTMLElement {
                     <a href="#" id="create-page">Create</a> |
                     <a href="#" id="sign-page">Sign</a> |
                     <a href="#" id="receive-page">Receive</a> |
-                    <a href="#" id="refresh" aria-busy="${STATE.scan.running}" >Refresh</a> |
+                    <a href="#" id="scan" aria-busy="${STATE.scan.running}" >Scan</a> |
                     <a href="#" id="disconnect">Disconnect</a>
 
                     <br><br>
@@ -161,6 +173,17 @@ class WalletSelector extends HTMLElement {
         this.walletSelector = this.querySelector("select")
         this.walletProgress = this.querySelector("progress")
         this.walletSelector.onchange = this.handleSelect  // not sure why I can't addEventListener
+
+        this.addMulti()
+    }
+
+    addMulti = () => {
+        STATE.multiWallets.forEach((w) => {
+            let option = document.createElement("option")
+            option.innerText = w + " (multisig)"
+            option.setAttribute("value", w)
+            this.walletSelector.appendChild(option)
+        })
     }
 
     handleSelect = async () => {
@@ -173,8 +196,9 @@ class WalletSelector extends HTMLElement {
         } else if (STATE.wolletSelected == "ShWpkh") {
             descriptor = await STATE.jade.shWpkh()
         } else {
-            throw new Error('Unexpected wallet selector value!');
+            descriptor = await STATE.jade.multi(STATE.wolletSelected)
         }
+        console.log(descriptor.toString())
         STATE.wollet = new lwk.Wollet(STATE.network, descriptor)
         STATE.scan = { running: false }
         loadPersisted(STATE.wollet)
@@ -206,9 +230,7 @@ class AskAddress extends HTMLElement {
         this.button.setAttribute("aria-busy", true)
         let address = STATE.wollet.address(null)
         let index = address.index()
-        let fullPath = STATE.wollet.addressFullPath(index)
-        let variant = lwk.Singlesig.from(STATE.wolletSelected)
-
+        console.log(address.address().toString())
         this.checkAddressDiv.hidden = false
 
         this.dispatchEvent(new CustomEvent('address-asked', {
@@ -216,7 +238,17 @@ class AskAddress extends HTMLElement {
             detail: address
         }))
 
-        let jadeAddress = await STATE.jade.getReceiveAddressSingle(variant, fullPath)
+        var jadeAddress
+        if (STATE.wolletSelected === "Wpkh" || STATE.wolletSelected === "ShWpkh") {
+            // FIXME it breakes if someone call his registered wallet "Wpkh" or "ShWpkh"
+            let fullPath = STATE.wollet.addressFullPath(index)
+            let variant = lwk.Singlesig.from(STATE.wolletSelected)
+            jadeAddress = await STATE.jade.getReceiveAddressSingle(variant, fullPath)
+        } else {
+            // FIXME number of mutlisig participants not fixed
+            jadeAddress = await STATE.jade.getReceiveAddressMulti(STATE.wolletSelected, [0, index], 2);
+        }
+
 
         console.assert(jadeAddress == address.address().toString(), "local and jade address are different!")
 
@@ -234,12 +266,13 @@ class ReceiveAddress extends HTMLElement {
     }
 
     render = (event) => {
+        console.log("Receive Address render")
         let addr = event.detail.address()
         let addrString = addr.toString()
         this.innerHTML = `
             <div style="word-break: break-word"><code>${addrString}</code></div><br>
             <a href="liquidnetwork:${addrString}">
-                <img src="${addr.QRCodeUri(null)}" width="250px" style="image-rendering: pixelated; border: 20px solid white;"></img>
+                <img src="${addr.QRCodeUri(null)}" width="300px" style="image-rendering: pixelated; border: 20px solid white;"></img>
             </a>
         `
     }
@@ -522,12 +555,22 @@ class SignTransaction extends HTMLElement {
     }
 }
 
+
+class WalletDescriptor extends HTMLElement {
+    constructor() {
+        super()
+        this.textarea = this.querySelector("textarea")
+        this.textarea.innerText = STATE.wollet.descriptor().toString()
+    }
+}
+
 customElements.define("my-nav", MyNav)
 customElements.define("my-footer", MyFooter)
 
 customElements.define("wallet-selector", WalletSelector)
 customElements.define("receive-address", ReceiveAddress)
 customElements.define("ask-address", AskAddress)
+customElements.define("wallet-descriptor", WalletDescriptor)
 customElements.define("wallet-balance", WalletBalance)
 customElements.define("wallet-transactions", WalletTransactions)
 customElements.define("create-transaction", CreateTransaction)
@@ -596,16 +639,15 @@ async function fullScanAndApply(wolletLocal, scanLocal) {
 
         const update = await client.fullScan(wolletLocal)
         if (update instanceof lwk.Update) {
+            const walletStatus = wolletLocal.status()
             wolletLocal.applyUpdate(update)
             if (update.onlyTip()) {
-                // this is a shortcut, the UI won't see "updated at <most recent scan>" but "updated at <most recent scan with tx>".
+                // this is a shortcut, the restored from persisted state UI won't see "updated at <most recent scan>" but "updated at <most recent scan with tx>".
                 // The latter is possible by deleting the previous update if both this and the previous are `onlyTip()` but the 
                 // more complex logic is avoided for now
                 console.log("avoid persisting only tip update")
             } else {
-                const walletStatus = wolletLocal.status()
                 console.log("Saving persisted update " + walletStatus)
-
                 const base64 = update.serializeEncryptedBase64(wolletLocal.descriptor())
                 localStorage.setItem(walletStatus, base64)
             }
