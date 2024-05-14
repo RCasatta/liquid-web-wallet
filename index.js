@@ -74,9 +74,7 @@ async function init() {
 
 
     connectJade.disabled = false
-
-    let watchOnly = document.getElementById("watch-only-button")
-    watchOnly.disabled = false
+    watchOnlyButton.disabled = false
 
     document.getElementById("loading-wasm").setAttribute("style", "visibility: hidden;") // by using visibility we avoid layout shifts
 }
@@ -256,6 +254,7 @@ class AskAddress extends HTMLElement {
         this.checkAddressDiv = this.querySelector("#check-address-jade-message")
         this.checkAddressDiv.hidden = true
         this.shouldCheckAddressDiv = this.querySelector("#should-check-address-jade-message")
+        this.claimTestnetCoins = this.querySelector("#claim-testnet-coin-message")
 
         this.button.addEventListener("click", this.handleClick)
         if (STATE.jade == null) {
@@ -274,6 +273,10 @@ class AskAddress extends HTMLElement {
             bubbles: true,
             detail: address
         }))
+
+        if (!STATE.network.isMainnet()) {
+            this.claimTestnetCoins.hidden = false
+        }
 
         if (STATE.jade == null) {
             setBusyDisabled(this.button, false)

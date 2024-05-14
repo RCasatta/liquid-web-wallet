@@ -17,7 +17,7 @@
     <!-- Main page -->
     <header class="container">
         <hgroup>
-            <h1>Liquid Wallet</h1>
+            <h1>Liquid Web Wallet</h1>
             <p>Jade companion app in the browser - DEMO</p>
         </hgroup>
 
@@ -25,48 +25,40 @@
 
     </header>
 
-    <section>
+    <main id="app" class="container">
+        <progress id="loading-wasm"></progress>
 
-        <main id="app" class="container">
+        <fieldset id="network-selector-fieldset">
+            <legend><strong>Network</strong></legend>
+            <label for="network-selector-radio-0">
+                <input type="radio" id="network-selector-radio-0" name="radio" value="Liquid" checked>
+                Liquid
+            </label>
+            <label for="network-selector-radio-1">
+                <input type="radio" id="network-selector-radio-1" name="radio" value="LiquidTestnet">
+                LiquidTestnet
+            </label>
+        </fieldset>
 
-            <progress id="loading-wasm"></progress>
+        <p><button id="connect-jade-button" disabled>Connect to Jade</button></p>
+        <div id="connect-jade-message"></div>
 
-            <fieldset id="network-selector-fieldset">
-                <legend><strong>Network</strong></legend>
-                <label for="network-selector-radio-0">
-                    <input type="radio" id="network-selector-radio-0" name="radio" value="Liquid" checked>
-                    Liquid
-                </label>
-                <label for="network-selector-radio-1">
-                    <input type="radio" id="network-selector-radio-1" name="radio" value="LiquidTestnet">
-                    LiquidTestnet
-                </label>
-            </fieldset>
-
-            <p><button id="connect-jade-button" disabled>Connect to Jade</button></p>
-            <div id="connect-jade-message"></div>
-
-            <br><br>
-            <textarea placeholder="CT Descriptor" id="descriptor-textarea"></textarea>
-            <button id="watch-only-button">Use watch-only descriptor</button>
-            <br><br>
-            <p>
-                <a href="#" id="example-descriptor-link">Example</a>
-            </p>
-            <br><br>
-
-        </main>
-    </section>
+        <br><br>
+        <textarea placeholder="CT Descriptor" id="descriptor-textarea"></textarea>
+        <button id="watch-only-button" disabled>Use watch-only descriptor</button>
+        <br><br>
+        <p>
+            <a href="#" id="example-descriptor-link">Example</a>
+        </p>
+        <br><br>
+    </main>
 
     <br>
-    <section>
-        <my-footer>
-
-            <footer class="container">
-            </footer>
-
-        </my-footer>
-    </section>
+    <my-footer>
+        <footer class="container">
+        </footer>
+    </my-footer>
+    <br><br>
 
     <!-- Templates -->
     <template id="insert-pin-template">
@@ -178,10 +170,17 @@
                     <input aria-invalid="true" readonly
                         value="Address generated without double checking with the Jade are risky!">
                 </div>
+                <p id="claim-testnet-coin-message" hidden>
+                    Claim testnet coins from the liquid testnet <a href="https://liquidtestnet.com/faucet"
+                        target="_blank">faucet</a>
+                </p>
             </ask-address>
             <receive-address>
                 <p>&nbsp;</p>
             </receive-address>
+
+
+
         </section>
     </template>
 
