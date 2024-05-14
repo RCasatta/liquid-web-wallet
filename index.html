@@ -25,42 +25,48 @@
 
     </header>
 
-    <main id="app" class="container">
+    <section>
 
-        <progress id="loading-wasm"></progress>
+        <main id="app" class="container">
 
-        <fieldset id="network-selector-fieldset">
-            <legend><strong>Network</strong></legend>
-            <label for="network-selector-radio-0">
-                <input type="radio" id="network-selector-radio-0" name="radio" value="Liquid" checked>
-                Liquid
-            </label>
-            <label for="network-selector-radio-1">
-                <input type="radio" id="network-selector-radio-1" name="radio" value="LiquidTestnet">
-                LiquidTestnet
-            </label>
-        </fieldset>
+            <progress id="loading-wasm"></progress>
 
-        <p><button id="connect-jade-button" disabled>Connect to Jade</button></p>
-        <div id="connect-jade-message"></div>
+            <fieldset id="network-selector-fieldset">
+                <legend><strong>Network</strong></legend>
+                <label for="network-selector-radio-0">
+                    <input type="radio" id="network-selector-radio-0" name="radio" value="Liquid" checked>
+                    Liquid
+                </label>
+                <label for="network-selector-radio-1">
+                    <input type="radio" id="network-selector-radio-1" name="radio" value="LiquidTestnet">
+                    LiquidTestnet
+                </label>
+            </fieldset>
 
-        <br><br>
-        <textarea placeholder="CT Descriptor" id="descriptor-textarea"></textarea>
-        <button id="watch-only-button">Use watch-only descriptor</button>
-        <br><br>
-        <p>
-            <a href="#" id="example-descriptor-link">Example</a>
-        </p>
-        <br><br>
+            <p><button id="connect-jade-button" disabled>Connect to Jade</button></p>
+            <div id="connect-jade-message"></div>
 
-    </main>
+            <br><br>
+            <textarea placeholder="CT Descriptor" id="descriptor-textarea"></textarea>
+            <button id="watch-only-button">Use watch-only descriptor</button>
+            <br><br>
+            <p>
+                <a href="#" id="example-descriptor-link">Example</a>
+            </p>
+            <br><br>
+
+        </main>
+    </section>
 
     <br>
-    <my-footer>
-        <footer class="container">
-        </footer>
-    </my-footer>
+    <section>
+        <my-footer>
 
+            <footer class="container">
+            </footer>
+
+        </my-footer>
+    </section>
 
     <!-- Templates -->
     <template id="insert-pin-template">
