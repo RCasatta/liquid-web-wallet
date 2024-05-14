@@ -35,8 +35,40 @@ async function init() {
         STATE.xpub = await STATE.jade.getMasterXpub(); // asking something that requires unlock
         STATE.multiWallets = await STATE.jade.getRegisteredMultisigs(); // so that it become cached
 
+        console.log("dispatching jade-initialized")
         document.dispatchEvent(new CustomEvent('jade-initialized'))
     })
+
+    let descriptorTextarea = document.getElementById("descriptor-textarea")
+    let exampleDescriptor = document.getElementById("example-descriptor-link")
+    exampleDescriptor.addEventListener("click", (_e) => {
+        const example = "ct(slip77(ac53739ddde9fdf6bba3dbc51e989b09aa8c9cdce7b7d7eddd49cec86ddf71f7),elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))#u0y4axgs"
+        descriptorTextarea.value = example
+    })
+
+    let watchOnlyButton = document.getElementById("watch-only-button")
+    watchOnlyButton.addEventListener("click", (_e) => {
+        try {
+            const descriptorText = descriptorTextarea.value
+            console.log(descriptorText)
+            const descriptor = new lwk.WolletDescriptor(descriptorText)
+
+            // This is hacky...
+            let network = descriptorText.includes("xpub") ? lwk.Network.mainnet() : lwk.Network.testnet()
+
+            STATE.wollet = new lwk.Wollet(network, descriptor)
+            STATE.network = network
+            STATE.wolletSelected = "desc"
+
+            document.dispatchEvent(new CustomEvent('wallet-selected'))
+
+        } catch (e) {
+            // TODO show UI
+            console.log(e)
+        }
+    })
+
+
     connectJade.disabled = false
 
     let watchOnly = document.getElementById("watch-only-button")
@@ -245,8 +277,8 @@ class AskAddress extends HTMLElement {
             let variant = lwk.Singlesig.from(STATE.wolletSelected)
             jadeAddress = await STATE.jade.getReceiveAddressSingle(variant, fullPath)
         } else {
-            // FIXME number of mutlisig participants not fixed
-            jadeAddress = await STATE.jade.getReceiveAddressMulti(STATE.wolletSelected, [0, index], 2);
+            // 0 means external chain
+            jadeAddress = await STATE.jade.getReceiveAddressMulti(STATE.wolletSelected, [0, index]);
         }
 
 
