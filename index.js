@@ -25,8 +25,7 @@ async function init() {
                 STATE.network = lwk.Network.testnet()
             }
         }
-        connectJade.setAttribute("aria-busy", true)
-        connectJade.disabled = true
+        setBusyDisabled(connectJade, true)
         STATE.jade = await new lwk.Jade(STATE.network, true) // pass false if you don't see your DYI Jade
 
         let connectJadeMessage = document.getElementById("connect-jade-message")
@@ -47,7 +46,7 @@ async function init() {
     })
 
     let watchOnlyButton = document.getElementById("watch-only-button")
-    watchOnlyButton.addEventListener("click", (_e) => {
+    watchOnlyButton.addEventListener("click", async (_e) => {
         try {
             const descriptorText = descriptorTextarea.value
             console.log(descriptorText)
@@ -58,9 +57,14 @@ async function init() {
 
             STATE.wollet = new lwk.Wollet(network, descriptor)
             STATE.network = network
-            STATE.wolletSelected = "desc"
+            STATE.wolletSelected = "Descriptor"
+            STATE.scan = { running: false }
+            loadPersisted(STATE.wollet)
 
             document.dispatchEvent(new CustomEvent('wallet-selected'))
+
+            await fullScanAndApply(STATE.wollet, STATE.scan)
+            document.dispatchEvent(new CustomEvent('wallet-sync-end'))
 
         } catch (e) {
             // TODO show UI
@@ -172,29 +176,26 @@ class MyNav extends HTMLElement {
 
     render = async (_e) => {
 
-        if (STATE.jade != null) {
-
-            if (STATE.wolletSelected == null) {
-                this.innerHTML = `
+        if (STATE.jade != null && STATE.wolletSelected == null) {
+            this.innerHTML = `
                     <a href="#" id="disconnect">Disconnect</a>
                     <br><br>
                 `
-                this.renderPage("wallets-page")
-            } else {
-                this.innerHTML = `
+            this.renderPage("wallets-page")
+        } else if (STATE.scan) {
+            let signTitle = STATE.jade ? "Sign" : "Analyze"
+            this.innerHTML = `
                     <a href="#" id="balance-page">Balance</a> |
                     <a href="#" id="transactions-page">Transactions</a> |
                     <a href="#" id="create-page">Create</a> |
-                    <a href="#" id="sign-page">Sign</a> |
+                    <a href="#" id="sign-page">${signTitle}</a> |
                     <a href="#" id="receive-page">Receive</a> |
                     <a href="#" id="scan" aria-busy="${STATE.scan.running}" >Scan</a> |
                     <a href="#" id="disconnect">Disconnect</a>
 
                     <br><br>
                 `
-            }
         }
-
     }
 }
 
@@ -254,22 +255,32 @@ class AskAddress extends HTMLElement {
         this.button = this.querySelector("button")
         this.checkAddressDiv = this.querySelector("#check-address-jade-message")
         this.checkAddressDiv.hidden = true
+        this.shouldCheckAddressDiv = this.querySelector("#should-check-address-jade-message")
+
         this.button.addEventListener("click", this.handleClick)
+        if (STATE.jade == null) {
+            this.button.innerText = "Show"
+        }
+
     }
 
     handleClick = async (_e) => {
-        this.button.disabled = true
-        this.button.setAttribute("aria-busy", true)
+        setBusyDisabled(this.button, true)
         let address = STATE.wollet.address(null)
         let index = address.index()
         console.log(address.address().toString())
-        this.checkAddressDiv.hidden = false
 
         this.dispatchEvent(new CustomEvent('address-asked', {
             bubbles: true,
             detail: address
         }))
 
+        if (STATE.jade == null) {
+            setBusyDisabled(this.button, false)
+            this.shouldCheckAddressDiv.hidden = false
+            return
+        }
+        this.checkAddressDiv.hidden = false
         var jadeAddress
         if (STATE.wolletSelected === "Wpkh" || STATE.wolletSelected === "ShWpkh") {
             // FIXME it breakes if someone call his registered wallet "Wpkh" or "ShWpkh"
@@ -284,8 +295,7 @@ class AskAddress extends HTMLElement {
 
         console.assert(jadeAddress == address.address().toString(), "local and jade address are different!")
 
-        this.button.setAttribute("aria-busy", false)
-        this.button.disabled = false
+        setBusyDisabled(this.button, false)
         this.checkAddressDiv.hidden = true
     }
 }
@@ -498,6 +508,10 @@ class SignTransaction extends HTMLElement {
             STATE.pset = null
         }
 
+        if (STATE.jade == null) {
+            this.signButton.hidden = true
+        }
+
         this.renderAnalyze()
     }
 
@@ -507,12 +521,10 @@ class SignTransaction extends HTMLElement {
         let psetString = this.textarea.textContent
         let pset = new lwk.Pset(psetString)
         let psetFinalized = STATE.wollet.finalize(pset)
-        this.broadcastButton.setAttribute("aria-busy", true)
-        this.broadcastButton.disabled = true
+        setBusyDisabled(this.broadcastButton, true)
         let client = STATE.network.defaultEsploraClient()
         let txid = await client.broadcast(psetFinalized)
-        this.broadcastButton.setAttribute("aria-busy", false)
-        this.broadcastButton.disabled = false
+        setBusyDisabled(this.broadcastButton, false)
 
         this.signDivBroadcast.innerHTML = `
                 <div>
@@ -526,15 +538,13 @@ class SignTransaction extends HTMLElement {
     handleSignClick = async (_e) => {
         let psetString = this.textarea.textContent
         let pset = new lwk.Pset(psetString)
-        this.signButton.setAttribute("aria-busy", true)
-        this.signButton.disabled = true
+        setBusyDisabled(this.signButton, true)
 
         const signWarn = this.signJadeTemplate.content.cloneNode(true)
         this.signWarnDiv.appendChild(signWarn)
 
         let signedPset = await STATE.jade.sign(pset)
-        this.signButton.setAttribute("aria-busy", false)
-        this.signButton.disabled = false
+        setBusyDisabled(this.signButton, false)
 
         cleanChilds(this.signWarnDiv)
         const signDone = this.signedJadeTemplate.content.cloneNode(true)
@@ -686,6 +696,11 @@ async function fullScanAndApply(wolletLocal, scanLocal) {
         }
         scanLocal.running = false
     }
+}
+
+function setBusyDisabled(node, b) {
+    node.setAttribute("aria-busy", b)
+    node.disabled = b
 }
 
 function cleanChilds(comp) {
