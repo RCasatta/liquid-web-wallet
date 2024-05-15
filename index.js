@@ -336,13 +336,11 @@ class WalletBalance extends HTMLElement {
         if (STATE.wollet.neverScanned()) {
             return
         }
-        var balance = STATE.wollet.balance()
-        balance = new Map([...balance.entries()].sort());
+        const balance = STATE.wollet.balance()
 
         updatedAt(STATE.wollet, this.subtitle)
         cleanChilds(this.div)
         this.div.appendChild(mapToTable(balance))
-
     }
 }
 
