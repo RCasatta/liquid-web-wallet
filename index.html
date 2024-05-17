@@ -62,7 +62,7 @@
                     <option value="ShWpkh">ShWpkh (singlesig)</option>
                 </select>
             </div>
-            <progress id="wallets-page-progress" hidden></progress>
+            <progress hidden></progress>
             <br>
             <a href="#">New multisig wallet on Jade</a>
         </wallet-selector>
@@ -104,14 +104,14 @@
 
                 <div hidden>
                     <fieldset role="group">
-                        <input id="create-transaction-input-address" type="text" placeholder="Address">
-                        <input id="create-transaction-input-satoshis" type="number" placeholder="Satoshis">
-                        <select id="create-transaction-input-asset"></select>
+                        <input type="text" placeholder="Address">
+                        <input type="number" placeholder="Satoshis">
+                        <select></select>
                         <!-- <input type="submit" value="+" id="create-transaction-button-add"
                             onclick="alert('multiple recipients not yet implemented')"> -->
                     </fieldset>
 
-                    <button id="create-transaction-button-create">Create</button>
+                    <button class="create">Create</button>
                 </div>
             </create-transaction>
         </section>
@@ -121,22 +121,14 @@
         <section>
             <h2>Sign</h2>
             <sign-transaction>
-                <textarea placeholder="PSET" id="sign-transaction-textarea"></textarea>
-                <button id="sign-transaction-button-analyze">Analyze</button>
-                <button id="sign-transaction-button-sign">Sign</button>
-                <button id="sign-transaction-button-broadcast">Broadcast</button>
-
+                <textarea placeholder="PSET"></textarea>
+                <button class="analyze">Analyze</button>
+                <button class="sign">Sign</button>
+                <button class="broadcast">Broadcast</button>
                 <br><br>
 
-                <div id="sign-transaction-div-jade-sign"></div>
-
-                <div id="sign-transaction-div-broadcast"></div>
-
-                <div id="sign-transaction-div-analyze"></div>
-
-                <template id="signed-jade-template">
-                    <input aria-invalid="false" readonly value="Transaction signed!">
-                </template>
+                <div class="message"></div>
+                <div class="analyze"></div>
             </sign-transaction>
         </section>
     </template>
@@ -146,13 +138,10 @@
             <h2>Receive</h2>
             <ask-address>
                 <p><button>Show on Jade</button></p>
-                <div id="check-address-jade-message" hidden>
-                    <input aria-invalid="true" readonly value="Check the address on the Jade!">
+                <div class="message">
                 </div>
-                <div id="should-check-address-jade-message" hidden>
-                    <input aria-invalid="true" readonly
-                        value="Address generated without double checking with the Jade are risky!">
-                </div>
+
+                <!-- TODO Use API instead from balance if testnet && lbtc == 0 -->
                 <p id="claim-testnet-coin-message" hidden>
                     Claim testnet coins from the liquid testnet <a href="https://liquidtestnet.com/faucet"
                         target="_blank">faucet</a>
@@ -221,9 +210,7 @@
                 <button>Register</button>
                 <br><br>
 
-                <input type="text" value="Wallet registered on the Jade!" aria-invalid="false" readonly hidden>
-                <input type="text" value="Failed to register the wallet on the Jade" aria-invalid="true" readonly
-                    hidden>
+                <div class="message"></div>
 
             </section>
 

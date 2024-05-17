@@ -260,9 +260,7 @@ class AskAddress extends HTMLElement {
         super()
 
         this.button = this.querySelector("button")
-        this.checkAddressDiv = this.querySelector("#check-address-jade-message")
-        this.checkAddressDiv.hidden = true
-        this.shouldCheckAddressDiv = this.querySelector("#should-check-address-jade-message")
+        this.messageDiv = this.querySelector("div.message")
         this.claimTestnetCoins = this.querySelector("#claim-testnet-coin-message")
 
         this.button.addEventListener("click", this.handleClick)
@@ -289,10 +287,10 @@ class AskAddress extends HTMLElement {
 
         if (STATE.jade == null) {
             setBusyDisabled(this.button, false)
-            this.shouldCheckAddressDiv.hidden = false
+            this.messageDiv.innerHTML = warning("Address generated without double checking with the Jade are risky!")
             return
         }
-        this.checkAddressDiv.hidden = false
+        this.messageDiv.innerHTML = warning("Check the address on the Jade!")
         var jadeAddress
         if (STATE.wolletSelected === "Wpkh" || STATE.wolletSelected === "ShWpkh") {
             // FIXME it breakes if someone call his registered wallet "Wpkh" or "ShWpkh"
@@ -306,9 +304,8 @@ class AskAddress extends HTMLElement {
 
 
         console.assert(jadeAddress == address.address().toString(), "local and jade address are different!")
-
+        this.messageDiv.hidden = true
         setBusyDisabled(this.button, false)
-        this.checkAddressDiv.hidden = true
     }
 }
 
@@ -410,12 +407,16 @@ class WalletTransactions extends HTMLElement {
 class CreateTransaction extends HTMLElement {
     constructor() {
         super()
-        this.selectAssetDiv = this.querySelector("#create-transaction-div-select-asset")
-        this.createButton = this.querySelector("#create-transaction-button-create")
+        this.createButton = this.querySelector("button.create")
         this.createButton.addEventListener("click", this.handleCreate)
         this.busy = this.querySelector("article")
         this.select = this.querySelector("select")
         this.div = this.querySelector("div")
+        const inputs = this.querySelectorAll("input")
+        this.addressInput = inputs[0]
+        this.satoshisInput = inputs[1]
+        this.assetInput = this.querySelector("select")
+
         document.addEventListener('wallet-sync-end', this.render)
         this.render()
     }
@@ -443,38 +444,35 @@ class CreateTransaction extends HTMLElement {
     }
 
     handleCreate = (_e) => {
-        var valid = true; // inputs are valid
+        var validInputs = true;
 
-        let addressInput = document.getElementById("create-transaction-input-address")
-        addressInput.setAttribute("aria-invalid", false)
+        this.addressInput.setAttribute("aria-invalid", false)
         var recipientAddress
         try {
-            recipientAddress = new lwk.Address(addressInput.value)
+            recipientAddress = new lwk.Address(this.addressInput.value)
             // TODO check right network
         } catch (_e) {
-            addressInput.setAttribute("aria-invalid", true)
-            valid = false
+            this.addressInput.setAttribute("aria-invalid", true)
+            validInputs = false
         }
 
-        let satoshisInput = document.getElementById("create-transaction-input-satoshis")
-        satoshisInput.setAttribute("aria-invalid", false)
-        var satoshis = satoshisInput.value
+        this.satoshisInput.setAttribute("aria-invalid", false)
+        const satoshis = this.satoshisInput.value
         if (!satoshis) {
-            satoshisInput.setAttribute("aria-invalid", true)
-            valid = false
+            this.satoshisInput.setAttribute("aria-invalid", true)
+            validInputs = false
         }
 
-        let assetInput = document.getElementById("create-transaction-input-asset")
-        assetInput.setAttribute("aria-invalid", false)
+        this.assetInput.setAttribute("aria-invalid", false)
         var recipientAsset
         try {
-            recipientAsset = new lwk.AssetId(assetInput.value)
+            recipientAsset = new lwk.AssetId(this.assetInput.value)
         } catch (_e) {
-            assetInput.setAttribute("aria-invalid", true)
-            valid = false
+            this.assetInput.setAttribute("aria-invalid", true)
+            validInputs = false
         }
 
-        if (!valid) {
+        if (!validInputs) {
             return
         }
 
@@ -496,14 +494,12 @@ class SignTransaction extends HTMLElement {
     constructor() {
         super()
 
-        this.textarea = this.querySelector("#sign-transaction-textarea")
-        this.analyzeButton = this.querySelector("#sign-transaction-button-analyze")
-        this.signButton = this.querySelector("#sign-transaction-button-sign")
-        this.broadcastButton = this.querySelector("#sign-transaction-button-broadcast")
-        this.signWarnDiv = this.querySelector("#sign-transaction-div-jade-sign")
-        this.signDivBroadcast = this.querySelector("#sign-transaction-div-broadcast")
-        this.signedJadeTemplate = this.querySelector("#signed-jade-template")
-        this.signDivAnalyze = this.querySelector("#sign-transaction-div-analyze")
+        this.textarea = this.querySelector("textarea")
+        this.analyzeButton = this.querySelector("button.analyze")
+        this.signButton = this.querySelector("button.sign")
+        this.broadcastButton = this.querySelector("button.broadcast")
+        this.messageDiv = this.querySelector("div.message")
+        this.signDivAnalyze = this.querySelector("div.analyze")
 
         this.analyzeButton.addEventListener("click", (_e) => {
             this.renderAnalyze()
@@ -525,24 +521,21 @@ class SignTransaction extends HTMLElement {
     }
 
     handleBroadcastClick = async (_e) => {
-        cleanChilds(this.signWarnDiv)
+        try {
+            let psetString = this.textarea.textContent
+            let pset = new lwk.Pset(psetString)
+            let psetFinalized = STATE.wollet.finalize(pset)
+            setBusyDisabled(this.broadcastButton, true)
 
-        let psetString = this.textarea.textContent
-        let pset = new lwk.Pset(psetString)
-        let psetFinalized = STATE.wollet.finalize(pset)
-        setBusyDisabled(this.broadcastButton, true)
+            let client = esploraClient()
 
-        let client = esploraClient()
-        let txid = await client.broadcast(psetFinalized)
-        setBusyDisabled(this.broadcastButton, false)
+            let txid = await client.broadcast(psetFinalized)
+            setBusyDisabled(this.broadcastButton, false)
 
-        this.signDivBroadcast.innerHTML = `
-                <div>
-                    <input aria-invalid="false" aria-describedby="broadcasted-description" readonly="true" value="${txid}">
-                    <small id="broadcasted-description">Tx broadcasted!</small>
-                </div>
-                <br><br>
-            `
+            this.messageDiv.innerHTML = success(txid, "Tx broadcasted!")
+        } catch (e) {
+            this.messageDiv.innerHTML = warning("Cannot broadcast tx, is it signed?")
+        }
     }
 
     handleSignClick = async (_e) => {
@@ -550,15 +543,12 @@ class SignTransaction extends HTMLElement {
         let pset = new lwk.Pset(psetString)
         setBusyDisabled(this.signButton, true)
 
-        const signWarn = warning("Check the transactions on the Jade")
-        this.signWarnDiv.appendChild(signWarn)
+        this.messageDiv.innerHTML = warning("Check the transactions on the Jade")
 
         let signedPset = await STATE.jade.sign(pset)
         setBusyDisabled(this.signButton, false)
 
-        cleanChilds(this.signWarnDiv)
-        const signDone = this.signedJadeTemplate.content.cloneNode(true)
-        this.signWarnDiv.appendChild(signDone)
+        this.messageDiv.innerHTML = success("Transaction signed!")
 
         this.textarea.textContent = signedPset
         this.renderAnalyze()
@@ -621,8 +611,6 @@ class RegisterWallet extends HTMLElement {
         this.keyoriginXpub = inputs[1]  // html node in template doesn't count
         this.addParticipant = inputs[2]
         this.jadeName = inputs[3]
-        this.jadeRegisterSuccess = inputs[4]
-        this.jadeRegisterFail = inputs[5]
         const buttons = this.querySelectorAll("button")
         this.create = buttons[0]
         this.addJade = buttons[1]
@@ -664,9 +652,9 @@ class RegisterWallet extends HTMLElement {
         setBusyDisabled(this.register, false)
 
         if (result) {
-            this.jadeRegisterSuccess.hidden = false
+            this.messageDiv.innerHTML = success("Wallet registered on the Jade!")
         } else {
-            this.jadeRegisterFail.hidden = false
+            this.messageDiv.innerHTML = warning("Failed to register the wallet on the Jade")
         }
 
         console.log(result)
@@ -796,16 +784,22 @@ function loadPersisted(wolletLocal) {
     }
 }
 
-function warning(message) {
-    return createMessage(message, true)
+function warning(message, helper = "") {
+    return createMessage(message, true, helper)
 }
 
-function success(message) {
-    return createMessage(message, false)
+function success(message, helper = "") {
+    return createMessage(message, false, helper)
 }
 
-function createMessage(message, invalid) {
-    return `<input type="text" value="${message}" aria-invalid="${invalid}" readonly>`
+function createMessage(message, invalid, helper) {
+    if (helper) {
+        const id = Math.random().toString()
+        return `<input type="text" value="${message}" aria-invalid="${invalid}" aria-describedby="${id}" readonly><small id="${id}">${helper}</small>`
+    } else {
+        return `<input type="text" value="${message}" aria-invalid="${invalid}" readonly>`
+
+    }
 }
 
 function updatedAt(wolletLocal, node) {
