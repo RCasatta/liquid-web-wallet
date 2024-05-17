@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Jade companion app for Liquid running in the browser">
     <title>Home</title>
-    <link rel="stylesheet" href="pico.min.css">
+    <link rel="stylesheet" href="/pico.min.css">
     <link rel="icon" type="image/x-icon"
         href="https://d2y5h3osumboay.cloudfront.net/8bjx2lpmkubsx5vodqpcdt7tqm20?=4064512645361149302">
 </head>
@@ -28,28 +28,20 @@
     <main id="app" class="container">
         <progress id="loading-wasm"></progress>
 
-        <fieldset id="network-selector-fieldset">
-            <legend><strong>Network</strong></legend>
-            <label for="network-selector-radio-0">
-                <input type="radio" id="network-selector-radio-0" name="radio" value="Liquid" checked>
-                Liquid
-            </label>
-            <label for="network-selector-radio-1">
-                <input type="radio" id="network-selector-radio-1" name="radio" value="LiquidTestnet">
-                LiquidTestnet
-            </label>
-        </fieldset>
-
-        <p><button id="connect-jade-button" disabled>Connect to Jade</button></p>
+        <p><input type="button" id="connect-jade-button" disabled value="Connect to Jade"></p>
         <div id="connect-jade-message"></div>
 
+
         <br><br>
-        <textarea placeholder="CT Descriptor" id="descriptor-textarea"></textarea>
-        <button id="watch-only-button" disabled>Use watch-only descriptor</button>
-        <br><br>
-        <p>
-            <a href="#" id="example-descriptor-link">Example</a>
-        </p>
+        <details>
+            <summary role="button" class="secondary">Watch-only</summary>
+            <textarea placeholder="CT Descriptor" id="descriptor-textarea"></textarea>
+            <p>
+                <button id="watch-only-button" disabled>Use watch-only descriptor</button>
+                <button id="example-descriptor-link" class="secondary">Try example</button>
+            </p>
+        </details>
+
         <br><br>
 
     </main>

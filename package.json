@@ -1,7 +1,14 @@
 {
   "scripts": {
     "start": "webpack-dev-server",
-    "build": "rm -rf ./dist && webpack --config webpack.config.js --mode=production"
+    "build": "rm -rf ./dist && webpack --config webpack.config.js --mode=production",
+    "mainnet": "sed -i 's/const network = lwk.Network.testnet()/const network = lwk.Network.mainnet()/g' index.js",
+    "testnet": "sed -i 's/const network = lwk.Network.mainnet()/const network = lwk.Network.testnet()/g' index.js",
+    "publish-mainnet": "npm run mainnet && npm run build && npm run sync-mainnet",
+    "publish-testnet": "npm run testnet && npm run build && npm run sync-testnet",
+    "publish": "npm run publish-mainnet && npm run publish-testnet",
+    "sync-mainnet": "rsync -avh dist/ root@praga:/var/www/liquidwebwallet.org/ && rsync -avh dist/ root@gandi:/var/www/liquidwebwallet.org/",
+    "sync-testnet": "rsync -avh dist/ root@praga:/var/www/liquidwebwallet.org/testnet/ && rsync -avh dist/ root@gandi:/var/www/liquidwebwallet.org/testnet/"
   },
   "dependencies": {
     "lwk_wasm": "file:../lwk/lwk_wasm/pkg"

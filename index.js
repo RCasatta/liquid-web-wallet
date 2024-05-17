@@ -2,7 +2,6 @@ import * as lwk from "lwk_wasm"
 
 // Global state
 /* 
-STATE.network = lwk.Network
 STATE.wollet = lwk.Wollet
 STATE.wolletSelected possible values: ShWpkh Wpkh, <multisig wallets>
 STATE.scan.running bool
@@ -11,22 +10,15 @@ STATE.xpub = String
 STATE.multiWallets = [String]
 */
 const STATE = {}
+const network = lwk.Network.testnet()
 
 /// Re-enables initially disabled buttons, and add listener to buttons on the first page
 /// First page doesn't use components because we want to be loaded before the wasm is loaded, which takes time
 async function init() {
     let connectJade = document.getElementById("connect-jade-button")
     connectJade.addEventListener("click", async (_e) => {
-        for (var i = 0; i < 2; i++) {
-            let radio = document.getElementById("network-selector-radio-" + i)
-            if (radio.checked && radio.value == "Liquid") {
-                STATE.network = lwk.Network.mainnet()
-            } else if (radio.checked && radio.value == "LiquidTestnet") {
-                STATE.network = lwk.Network.testnet()
-            }
-        }
         setBusyDisabled(connectJade, true)
-        STATE.jade = await new lwk.Jade(STATE.network, true) // pass false if you don't see your DYI Jade
+        STATE.jade = await new lwk.Jade(network, true) // pass false if you don't see your DYI Jade
 
         let connectJadeMessage = document.getElementById("connect-jade-message")
         const insertPinMessage = document.getElementById("insert-pin-template").content.cloneNode(true)
@@ -41,41 +33,43 @@ async function init() {
     let descriptorTextarea = document.getElementById("descriptor-textarea")
     let exampleDescriptor = document.getElementById("example-descriptor-link")
     exampleDescriptor.addEventListener("click", (_e) => {
-        const example = "ct(slip77(ac53739ddde9fdf6bba3dbc51e989b09aa8c9cdce7b7d7eddd49cec86ddf71f7),elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))#u0y4axgs"
+        const exampleTestnet = "ct(slip77(ac53739ddde9fdf6bba3dbc51e989b09aa8c9cdce7b7d7eddd49cec86ddf71f7),elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))#u0y4axgs"
+        const exampleMainnet = "ct(elip151,elwpkh([a8874235/84h/1776h/0h]xpub6DLHCiTPg67KE9ksCjNVpVHTRDHzhCSmoBTKzp2K4FxLQwQvvdNzuqxhK2f9gFVCN6Dori7j2JMLeDoB4VqswG7Et9tjqauAvbDmzF8NEPH/<0;1>/*))#e5ttknaj";
+        const example = network.isMainnet() ? exampleMainnet : exampleTestnet;
         descriptorTextarea.value = example
+        handleWatchOnlyClick()
     })
 
     let watchOnlyButton = document.getElementById("watch-only-button")
-    watchOnlyButton.addEventListener("click", async (_e) => {
-        try {
-            const descriptorText = descriptorTextarea.value
-            console.log(descriptorText)
-            const descriptor = new lwk.WolletDescriptor(descriptorText)
-
-            // This is hacky...
-            let network = descriptorText.includes("xpub") ? lwk.Network.mainnet() : lwk.Network.testnet()
-
-            STATE.wollet = new lwk.Wollet(network, descriptor)
-            STATE.network = network
-            STATE.wolletSelected = "Descriptor"
-            STATE.scan = { running: false }
-            loadPersisted(STATE.wollet)
-
-            document.dispatchEvent(new CustomEvent('wallet-selected'))
-
-            await fullScanAndApply(STATE.wollet, STATE.scan)
-
-        } catch (e) {
-            // TODO show UI
-            console.log(e)
-        }
-    })
+    watchOnlyButton.addEventListener("click", handleWatchOnlyClick)
 
 
     connectJade.disabled = false
     watchOnlyButton.disabled = false
 
     document.getElementById("loading-wasm").setAttribute("style", "visibility: hidden;") // by using visibility we avoid layout shifts
+}
+
+async function handleWatchOnlyClick(_e) {
+    try {
+        let descriptorTextarea = document.getElementById("descriptor-textarea")
+        const descriptorText = descriptorTextarea.value
+        console.log(descriptorText)
+        const descriptor = new lwk.WolletDescriptor(descriptorText)
+
+        STATE.wollet = new lwk.Wollet(network, descriptor)
+        STATE.wolletSelected = "Descriptor"
+        STATE.scan = { running: false }
+        loadPersisted(STATE.wollet)
+
+        document.dispatchEvent(new CustomEvent('wallet-selected'))
+
+        await fullScanAndApply(STATE.wollet, STATE.scan)
+
+    } catch (e) {
+        // TODO show UI
+        console.log(e)
+    }
 }
 
 await init()
@@ -98,15 +92,19 @@ class MyFooter extends HTMLElement {
 
     render = () => {
         var footer = '<a href="https://github.com/RCasatta/liquid-web-wallet">Source</a>'
-        if (STATE.network != null) {
-            footer += `<span> | </span><span>${STATE.network}</span>`
-        }
+
+        footer += `<span> | </span><span>${network}</span>`
         if (STATE.jade != null) {
             const jadeIdentifier = STATE.xpub.fingerprint()
             footer += `<span> | </span><span><code>${jadeIdentifier}</code></span>`
         }
         if (STATE.wolletSelected != null) {
             footer += `<span> | </span><a href="#" id="wallet">${STATE.wolletSelected}</a>`
+        }
+        if (network.isMainnet()) {
+            footer += `<span> | </span><a href="/testnet">Testnet</a>`
+        } else {
+            footer += `<span> | </span><a href="/">Mainnet</a>`
         }
         this.footer.innerHTML = footer
         let id = this.querySelector("#wallet")
@@ -241,7 +239,7 @@ class WalletSelector extends HTMLElement {
             descriptor = await STATE.jade.multi(STATE.wolletSelected)
         }
         console.log(descriptor.toString())
-        STATE.wollet = new lwk.Wollet(STATE.network, descriptor)
+        STATE.wollet = new lwk.Wollet(network, descriptor)
         STATE.scan = { running: false }
         loadPersisted(STATE.wollet)
 
@@ -282,7 +280,7 @@ class AskAddress extends HTMLElement {
             detail: address
         }))
 
-        if (!STATE.network.isMainnet()) {
+        if (!network.isMainnet()) {
             this.claimTestnetCoins.hidden = false
         }
 
@@ -379,7 +377,7 @@ class WalletTransactions extends HTMLElement {
 
             let txid = document.createElement("td")
             txid.innerHTML = `
-                    <code><a href="${val.unblindedUrl(STATE.network.defaultExplorerUrl())}" target="_blank">${val.txid()}</a></code>
+                    <code><a href="${val.unblindedUrl(network.defaultExplorerUrl())}" target="_blank">${val.txid()}</a></code>
                 `
             let txType = document.createElement("td")
             txType.innerHTML = `
@@ -477,7 +475,7 @@ class CreateTransaction extends HTMLElement {
             return
         }
 
-        var builder = new lwk.TxBuilder(STATE.network);
+        var builder = new lwk.TxBuilder(network);
         builder = builder.addRecipient(recipientAddress, satoshis, recipientAsset)
 
         STATE.pset = builder.finish(STATE.wollet)
@@ -796,6 +794,18 @@ function loadPersisted(wolletLocal) {
     }
 }
 
+function warning(message) {
+    message(message, true)
+}
+
+function success(message) {
+    message(message, false)
+}
+
+function message(message, invalid) {
+    return `<input type="text" value="${message}" aria-invalid="${invalid}" readonly>`
+}
+
 function updatedAt(wolletLocal, node) {
     if (node) {
         const unix_ts = wolletLocal.tip().timestamp()
@@ -804,12 +814,10 @@ function updatedAt(wolletLocal, node) {
 }
 
 function esploraClient() {
-    var client
-    if (STATE.network.isMainnet()) {
-        client = new lwk.EsploraClient("https://esplora.blockstream.com/liquid/api")
-    } else {
-        client = new lwk.EsploraClient("https://esplora.blockstream.com/liquidtestnet/api")
-    }
+    const mainnetUrl = "https://esplora.blockstream.com/liquid/api"
+    const testnetUrl = "https://esplora.blockstream.com/liquidtestnet/api"
+    const url = network.isMainnet() ? mainnetUrl : testnetUrl
+    const client = new lwk.EsploraClient(url)
     return client
 }
 
