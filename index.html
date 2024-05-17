@@ -51,9 +51,12 @@
             <a href="#" id="example-descriptor-link">Example</a>
         </p>
         <br><br>
+
     </main>
 
-    <br>
+
+
+    <br><br>
     <my-footer>
         <footer class="container">
         </footer>
@@ -78,6 +81,8 @@
                 </select>
             </div>
             <progress id="wallets-page-progress" hidden></progress>
+            <br>
+            <a href="#">New multisig wallet on Jade</a>
         </wallet-selector>
     </template>
 
@@ -192,6 +197,59 @@
         <wallet-descriptor>
             <textarea></textarea>
         </wallet-descriptor>
+    </template>
+
+    <template id="register-multisig-page-template">
+        <hgroup>
+            <h2>New multisig wallet</h2>
+        </hgroup>
+        <br><br>
+        <register-wallet>
+            <section>
+                <hgroup>
+                    <h3>Create</h3>
+                    <p>Multisig descriptor</p>
+                </hgroup>
+                <input type="number" placeholder="Threshold">
+
+                <div>
+                    <template>
+                        <fieldset role="group">
+                            <input readonly class="participant">
+                            <input type="submit" value="Remove">
+                        </fieldset>
+                    </template>
+                </div>
+
+                <fieldset role="group">
+                    <input type="text" placeholder="Keyorigin Xpub">
+                    <input type="submit" value="Add">
+                </fieldset>
+
+                <button>Create</button>
+                <button>Add connected Jade</button>
+            </section>
+
+            <br><br>
+
+            <section>
+                <hgroup>
+                    <h3>Register</h3>
+                    <p>multisig on Jade</p>
+                </hgroup>
+
+                <input type="text" placeholder="Wallet name">
+                <textarea placeholder="Descriptor"></textarea>
+                <button>Register</button>
+                <br><br>
+
+                <input type="text" value="Wallet registered on the Jade!" aria-invalid="false" readonly hidden>
+                <input type="text" value="Failed to register the wallet on the Jade" aria-invalid="true" readonly
+                    hidden>
+
+            </section>
+
+        </register-wallet>
     </template>
 
     <script type="module" src="./bootstrap.js"></script>

@@ -39,17 +39,9 @@ $ npm run build
 
 Copy `dist` folder to the web server
 
-## Naming html components
+## Avoid ids
 
-A convention is used for naming html components:
-
-- prefix: page name like "create-transaction"
-- infix: html component name like "button"
-- suffix: symbolic name of the component like "create"
-
-```html
- <button id="create-transaction-button-create"></button>
-```
+When possible avoid ids, use web components as "namespace" and querySelector on html elements, in case of multiple elements use querySelectorAll and maps in the js class
 
 ## ADR
 

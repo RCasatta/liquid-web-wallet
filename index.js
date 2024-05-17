@@ -32,7 +32,7 @@ async function init() {
         const insertPinMessage = document.getElementById("insert-pin-template").content.cloneNode(true)
         connectJadeMessage.appendChild(insertPinMessage)
         STATE.xpub = await STATE.jade.getMasterXpub(); // asking something that requires unlock
-        STATE.multiWallets = await STATE.jade.getRegisteredMultisigs(); // so that it become cached
+        STATE.multiWallets = await STATE.jade.getRegisteredMultisigs();
 
         console.log("dispatching jade-initialized")
         document.dispatchEvent(new CustomEvent('jade-initialized'))
@@ -64,7 +64,6 @@ async function init() {
             document.dispatchEvent(new CustomEvent('wallet-selected'))
 
             await fullScanAndApply(STATE.wollet, STATE.scan)
-            document.dispatchEvent(new CustomEvent('wallet-sync-end'))
 
         } catch (e) {
             // TODO show UI
@@ -87,7 +86,6 @@ class MyFooter extends HTMLElement {
         this.footer = this.querySelector('footer')
         document.addEventListener('jade-initialized', this.render)
         document.addEventListener('wallet-selected', this.render)
-        this.addEventListener("click", this.handleClick)
 
         this.render()
     }
@@ -111,6 +109,10 @@ class MyFooter extends HTMLElement {
             footer += `<span> | </span><a href="#" id="wallet">${STATE.wolletSelected}</a>`
         }
         this.footer.innerHTML = footer
+        let id = this.querySelector("#wallet")
+        if (id) {
+            id.addEventListener("click", this.handleClick)
+        }
     }
 }
 
@@ -139,6 +141,10 @@ class MyNav extends HTMLElement {
         document.addEventListener('wallet-clicked', (event) => {
             this.renderPage("wallet-page")
         })
+
+        document.addEventListener('register-clicked', (event) => {
+            this.renderPage("register-multisig-page")
+        })
     }
 
     handleClick = async (event) => {
@@ -155,9 +161,6 @@ class MyNav extends HTMLElement {
                 alert("Scan is running")
             } else {
                 await fullScanAndApply(STATE.wollet, STATE.scan)
-                document.dispatchEvent(new CustomEvent('wallet-sync-end', {
-                    bubbles: true,
-                }))
             }
             return
         }
@@ -204,8 +207,16 @@ class WalletSelector extends HTMLElement {
         this.walletSelector = this.querySelector("select")
         this.walletProgress = this.querySelector("progress")
         this.walletSelector.onchange = this.handleSelect  // not sure why I can't addEventListener
+        this.registerMultisigLink = this.querySelector("a")
+        this.registerMultisigLink.addEventListener("click", this.handleClick)
 
         this.addMulti()
+    }
+
+    handleClick = async (_event) => {
+        this.dispatchEvent(new CustomEvent("register-clicked", {
+            bubbles: true,
+        }))
     }
 
     addMulti = () => {
@@ -239,9 +250,6 @@ class WalletSelector extends HTMLElement {
         }))
 
         await fullScanAndApply(STATE.wollet, STATE.scan)
-        document.dispatchEvent(new CustomEvent('wallet-sync-end', {
-            bubbles: true,
-        }))
     }
 }
 
@@ -523,7 +531,8 @@ class SignTransaction extends HTMLElement {
         let pset = new lwk.Pset(psetString)
         let psetFinalized = STATE.wollet.finalize(pset)
         setBusyDisabled(this.broadcastButton, true)
-        let client = STATE.network.defaultEsploraClient()
+
+        let client = esploraClient()
         let txid = await client.broadcast(psetFinalized)
         setBusyDisabled(this.broadcastButton, false)
 
@@ -578,22 +587,18 @@ class SignTransaction extends HTMLElement {
         h3.innerText = "Signatures"
         this.signDivAnalyze.appendChild(h3)
         const sigMap = new Map();
-        let signatures = details.signatures()
-        for (let i = 0; i < signatures.length; i++) {
-            let sig = signatures[i]
 
-            var msg
-            if (sig.hasSignature().length == 0) {
-                msg = `missing ${sig.missingSignature().map(x => x[1])}`
-            } else if (sig.missingSignature().length == 0) {
-                msg = `has ${sig.hasSignature().map(x => x[1])}`
-            } else {
-                msg = `missing ${sig.missingSignature().map(x => x[1])} has ${sig.hasSignature().map(x => x[1])}`
-            }
+        let has = details.fingerprintsHas()
+        let missing = details.fingerprintsMissing()
 
-            sigMap.set("input #" + i, msg)
+        if (has.length > 0) {
+            sigMap.set("Has", has)
         }
-        this.signDivAnalyze.appendChild(mapToTable(sigMap))
+        if (missing.length > 0) {
+            sigMap.set("Missing", missing)
+        }
+
+        this.signDivAnalyze.appendChild(mapToTable(sigMap, false, true))
         // TODO issuances
     }
 }
@@ -604,6 +609,127 @@ class WalletDescriptor extends HTMLElement {
         super()
         this.textarea = this.querySelector("textarea")
         this.textarea.innerText = STATE.wollet.descriptor().toString()
+    }
+}
+
+
+class RegisterWallet extends HTMLElement {
+    constructor() {
+        super()
+        const inputs = this.querySelectorAll("input")
+        this.threshold = inputs[0]
+        this.keyoriginXpub = inputs[1]  // html node in template doesn't count
+        this.addParticipant = inputs[2]
+        this.jadeName = inputs[3]
+        this.jadeRegisterSuccess = inputs[4]
+        this.jadeRegisterFail = inputs[5]
+        const buttons = this.querySelectorAll("button")
+        this.create = buttons[0]
+        this.addJade = buttons[1]
+        this.register = buttons[2]
+        this.listDiv = this.querySelector("div")
+        this.templatePart = this.querySelector("template")
+        this.descriptor = this.querySelector("textarea")
+
+        this.addParticipant.addEventListener("click", this.handleAdd)
+        this.addJade.addEventListener("click", this.handleAddJade)
+        this.create.addEventListener("click", this.handleCreate)
+        this.register.addEventListener("click", this.handleRegister)
+    }
+
+    handleRegister = async (_) => {
+        var inputsValid = true
+        const jadeName = this.jadeName.value
+        if (jadeName && jadeName.length > 0 && jadeName.length < 16) {
+            this.jadeName.removeAttribute("aria-invalid")
+        } else {
+            this.jadeName.setAttribute("aria-invalid", true)
+            inputsValid = false
+        }
+        var descriptor
+        try {
+            descriptor = new lwk.WolletDescriptor(this.descriptor.value)
+            this.descriptor.removeAttribute("aria-invalid")
+        } catch (e) {
+            console.log(e)
+            this.descriptor.setAttribute("aria-invalid", true)
+            inputsValid = false
+        }
+        if (!inputsValid) {
+            return
+        }
+
+        setBusyDisabled(this.register, true)
+        let result = await STATE.jade.registerDescriptor(jadeName, descriptor)
+        setBusyDisabled(this.register, false)
+
+        if (result) {
+            this.jadeRegisterSuccess.hidden = false
+        } else {
+            this.jadeRegisterFail.hidden = false
+        }
+
+        console.log(result)
+    }
+
+    handleCreate = (_) => {
+        var inputsValid = true
+        const thresholdVal = this.threshold.value
+        if (thresholdVal && thresholdVal > 0) {
+            this.threshold.removeAttribute("aria-invalid")
+        } else {
+            this.threshold.setAttribute("aria-invalid", true)
+            inputsValid = false
+        }
+
+        const participants = Array.from(this.querySelectorAll("input.participant")).map((s) => s.value)
+        if (participants.length > 0) {
+            this.keyoriginXpub.removeAttribute("aria-invalid")
+        } else {
+            this.keyoriginXpub.setAttribute("aria-invalid", true)
+            inputsValid = false
+        }
+        if (inputsValid && thresholdVal > participants.length) {
+            alert("Threshold cannot be higher than participant")
+            inputsValid = false
+        }
+        if (!inputsValid) {
+            return
+        }
+
+        const desc = lwk.WolletDescriptor.newMultiWshSlip77(thresholdVal, participants)
+
+        this.descriptor.value = desc.toString()
+    }
+
+    handleAdd = (_) => {
+        const keyoriginXpub = this.keyoriginXpub.value
+        if (lwk.Xpub.isValidWithKeyOrigin(keyoriginXpub)) {
+            this.addValidParticipant(keyoriginXpub)
+        } else {
+            this.keyoriginXpub.setAttribute("aria-invalid", true)
+        }
+    }
+
+    handleAddJade = async (_) => {
+        this.addJade.setAttribute("aria-busy", true)
+        const jadePart = await STATE.jade.keyoriginXpubBip87()
+        this.addValidParticipant(jadePart)
+        this.addJade.removeAttribute("aria-busy")
+    }
+
+    addValidParticipant = (keyoriginXpub) => {
+        const content = this.templatePart.content.cloneNode(true)
+        const el = content.querySelector("fieldset")
+        console.log(content)
+        const inputs = content.querySelectorAll("input")
+        inputs[0].value = keyoriginXpub
+        inputs[1].addEventListener("click", (_e) => {
+            this.listDiv.removeChild(el)
+        })
+        this.listDiv.appendChild(content)
+        this.keyoriginXpub.value = ""
+        this.keyoriginXpub.removeAttribute("aria-invalid")
     }
 }
 
@@ -618,9 +744,10 @@ customElements.define("wallet-balance", WalletBalance)
 customElements.define("wallet-transactions", WalletTransactions)
 customElements.define("create-transaction", CreateTransaction)
 customElements.define("sign-transaction", SignTransaction)
+customElements.define("register-wallet", RegisterWallet)
 
 
-function mapToTable(map) {
+function mapToTable(map, firstCode = true, secondCode = false) {
     let div = document.createElement("div")
     div.setAttribute("class", "overflow-auto")
     let table = document.createElement("table")
@@ -632,14 +759,20 @@ function mapToTable(map) {
         table.appendChild(newRow)
 
         let asset = document.createElement("td")
-        asset.innerHTML = `
-                        <code>${mapAssetHex(key)}</code>
-                    `
+        if (firstCode) {
+            asset.innerHTML = `<code>${mapAssetHex(key)}</code>`
+        } else {
+            asset.innerHTML = key
+        }
         newRow.appendChild(asset)
 
         let secondCell = document.createElement("td")
         secondCell.setAttribute("style", "text-align:right")
-        secondCell.textContent = val
+        if (secondCode) {
+            secondCell.innerHTML = `<code>${val}</code>`
+        } else {
+            secondCell.textContent = val
+        }
         newRow.appendChild(secondCell)
     })
     return div
@@ -670,15 +803,23 @@ function updatedAt(wolletLocal, node) {
     }
 }
 
+function esploraClient() {
+    var client
+    if (STATE.network.isMainnet()) {
+        client = new lwk.EsploraClient("https://esplora.blockstream.com/liquid/api")
+    } else {
+        client = new lwk.EsploraClient("https://esplora.blockstream.com/liquidtestnet/api")
+    }
+    return client
+}
+
 async function fullScanAndApply(wolletLocal, scanLocal) {
 
     if (!scanLocal.running) {
         scanLocal.running = true
 
-        document.dispatchEvent(new CustomEvent('wallet-sync-start', {
-            bubbles: true,
-        }))
-        let client = STATE.network.defaultEsploraClient()
+        document.dispatchEvent(new CustomEvent('wallet-sync-start'))
+        let client = esploraClient()
 
         const update = await client.fullScan(wolletLocal)
         if (update instanceof lwk.Update) {
@@ -696,6 +837,8 @@ async function fullScanAndApply(wolletLocal, scanLocal) {
             }
         }
         scanLocal.running = false
+        document.dispatchEvent(new CustomEvent('wallet-sync-end'))
+
     }
 }
 
