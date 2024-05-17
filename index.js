@@ -18,16 +18,19 @@ async function init() {
     let connectJade = document.getElementById("connect-jade-button")
     connectJade.addEventListener("click", async (_e) => {
         setBusyDisabled(connectJade, true)
-        STATE.jade = await new lwk.Jade(network, true) // pass false if you don't see your DYI Jade
-
         let connectJadeMessage = document.getElementById("connect-jade-message")
-        const insertPinMessage = document.getElementById("insert-pin-template").content.cloneNode(true)
-        connectJadeMessage.appendChild(insertPinMessage)
-        STATE.xpub = await STATE.jade.getMasterXpub(); // asking something that requires unlock
-        STATE.multiWallets = await STATE.jade.getRegisteredMultisigs();
 
-        console.log("dispatching jade-initialized")
-        document.dispatchEvent(new CustomEvent('jade-initialized'))
+        try {
+            STATE.jade = await new lwk.Jade(network, true) // pass false if you don't see your DYI Jade
+            connectJadeMessage.innerHTML = warning("Insert the PIN on the Jade")
+            STATE.xpub = await STATE.jade.getMasterXpub(); // asking something that requires unlock
+            STATE.multiWallets = await STATE.jade.getRegisteredMultisigs();
+            document.dispatchEvent(new CustomEvent('jade-initialized'))
+        } catch (e) {
+            // TODO network is the most common error but we can have other error,
+            // should indeed take the error message from e instead of a static value
+            connectJadeMessage.innerHTML = warning("Jade network inconsistent with prior usage, try switching network")
+        }
     })
 
     let descriptorTextarea = document.getElementById("descriptor-textarea")
@@ -499,7 +502,6 @@ class SignTransaction extends HTMLElement {
         this.broadcastButton = this.querySelector("#sign-transaction-button-broadcast")
         this.signWarnDiv = this.querySelector("#sign-transaction-div-jade-sign")
         this.signDivBroadcast = this.querySelector("#sign-transaction-div-broadcast")
-        this.signJadeTemplate = this.querySelector("#sign-jade-template")
         this.signedJadeTemplate = this.querySelector("#signed-jade-template")
         this.signDivAnalyze = this.querySelector("#sign-transaction-div-analyze")
 
@@ -548,7 +550,7 @@ class SignTransaction extends HTMLElement {
         let pset = new lwk.Pset(psetString)
         setBusyDisabled(this.signButton, true)
 
-        const signWarn = this.signJadeTemplate.content.cloneNode(true)
+        const signWarn = warning("Check the transactions on the Jade")
         this.signWarnDiv.appendChild(signWarn)
 
         let signedPset = await STATE.jade.sign(pset)
@@ -795,14 +797,14 @@ function loadPersisted(wolletLocal) {
 }
 
 function warning(message) {
-    message(message, true)
+    return createMessage(message, true)
 }
 
 function success(message) {
-    message(message, false)
+    return createMessage(message, false)
 }
 
-function message(message, invalid) {
+function createMessage(message, invalid) {
     return `<input type="text" value="${message}" aria-invalid="${invalid}" readonly>`
 }
 
