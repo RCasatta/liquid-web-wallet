@@ -17,10 +17,9 @@ const network = lwk.Network.testnet()
 async function init() {
     let connectJade = document.getElementById("connect-jade-button")
     connectJade.addEventListener("click", async (_e) => {
-        setBusyDisabled(connectJade, true)
         let connectJadeMessage = document.getElementById("connect-jade-message")
-
         try {
+            setBusyDisabled(connectJade, true)
             STATE.jade = await new lwk.Jade(network, true) // pass false if you don't see your DYI Jade
             connectJadeMessage.innerHTML = warning("Insert the PIN on the Jade")
             STATE.xpub = await STATE.jade.getMasterXpub(); // asking something that requires unlock
@@ -29,7 +28,8 @@ async function init() {
         } catch (e) {
             // TODO network is the most common error but we can have other error,
             // should indeed take the error message from e instead of a static value
-            connectJadeMessage.innerHTML = warning("Jade network inconsistent with prior usage, try switching network")
+            connectJadeMessage.innerHTML = warning(e)
+            setBusyDisabled(connectJade, false)
         }
     })
 
@@ -105,9 +105,9 @@ class MyFooter extends HTMLElement {
             footer += `<span> | </span><a href="#" id="wallet">${STATE.wolletSelected}</a>`
         }
         if (network.isMainnet()) {
-            footer += `<span> | </span><a href="/testnet">Testnet</a>`
+            footer += `<span> | </span><a href="/testnet">Switch to Testnet</a>`
         } else {
-            footer += `<span> | </span><a href="/">Mainnet</a>`
+            footer += `<span> | </span><a href="/">Switch to Mainnet</a>`
         }
         this.footer.innerHTML = footer
         let id = this.querySelector("#wallet")
@@ -159,7 +159,8 @@ class MyNav extends HTMLElement {
         }
         if (id == "scan") {
             if (STATE.scan.running) {
-                alert("Scan is running")
+                // unreachable since scan link is disable
+                throw new Error("Scan is running")
             } else {
                 await fullScanAndApply(STATE.wollet, STATE.scan)
             }
@@ -261,7 +262,6 @@ class AskAddress extends HTMLElement {
 
         this.button = this.querySelector("button")
         this.messageDiv = this.querySelector("div.message")
-        this.claimTestnetCoins = this.querySelector("#claim-testnet-coin-message")
 
         this.button.addEventListener("click", this.handleClick)
         if (STATE.jade == null) {
@@ -280,10 +280,6 @@ class AskAddress extends HTMLElement {
             bubbles: true,
             detail: address
         }))
-
-        if (!network.isMainnet()) {
-            this.claimTestnetCoins.hidden = false
-        }
 
         if (STATE.jade == null) {
             setBusyDisabled(this.button, false)
@@ -334,8 +330,24 @@ class WalletBalance extends HTMLElement {
         super()
         this.subtitle = this.querySelector("p")
         this.div = this.querySelector("div")
+        this.faucetRequest = this.querySelector("button")
         document.addEventListener('wallet-sync-end', this.render)
+        this.faucetRequest.addEventListener('click', this.handleFaucetRequest)
+        this.messageDiv = this.querySelector("div.message")
+
         this.render()
+    }
+
+    handleFaucetRequest = async () => {
+        this.faucetRequest.hidden = true
+        const address = STATE.wollet.address(null).address().toString()
+        const url = `https://liquidtestnet.com/api/faucet?address=${address}&action=lbtc`
+        console.log(url)
+        this.messageDiv.innerHTML = success("Sending request to the faucet...")
+        await fetch(url, { mode: "no-cors" })
+        this.messageDiv.innerHTML = success("Request sent to the faucet, click scan to update")
+
+
     }
 
     render = () => {
@@ -344,7 +356,13 @@ class WalletBalance extends HTMLElement {
         }
         const balance = STATE.wollet.balance()
 
+        const lbtc = balance.get(network.policyAsset().toString())
+        if (lbtc == 0 && !network.isMainnet()) {
+            this.faucetRequest.hidden = false
+        }
+
         updatedAt(STATE.wollet, this.subtitle)
+
         cleanChilds(this.div)
         this.div.appendChild(mapToTable(balance))
     }
@@ -416,6 +434,7 @@ class CreateTransaction extends HTMLElement {
         this.addressInput = inputs[0]
         this.satoshisInput = inputs[1]
         this.assetInput = this.querySelector("select")
+        this.message = this.querySelector("div.message")
 
         document.addEventListener('wallet-sync-end', this.render)
         this.render()
@@ -444,23 +463,31 @@ class CreateTransaction extends HTMLElement {
     }
 
     handleCreate = (_e) => {
-        var validInputs = true;
+        var inputsValid = "";
 
         this.addressInput.setAttribute("aria-invalid", false)
         var recipientAddress
         try {
+            if (this.addressInput.value === "") {
+                throw new Error('Address cannot be empty');
+            }
             recipientAddress = new lwk.Address(this.addressInput.value)
-            // TODO check right network
-        } catch (_e) {
+            if (!recipientAddress.isBlinded()) {
+                throw new Error('Address is not confidential');
+            }
+            if (network.isMainnet() != recipientAddress.isMainnet()) {
+                throw new Error("Invalid address network")
+            }
+        } catch (e) {
             this.addressInput.setAttribute("aria-invalid", true)
-            validInputs = false
+            inputsValid += e.toString() + ". "
         }
 
         this.satoshisInput.setAttribute("aria-invalid", false)
         const satoshis = this.satoshisInput.value
-        if (!satoshis) {
+        if (!satoshis || satoshis <= 0) {
             this.satoshisInput.setAttribute("aria-invalid", true)
-            validInputs = false
+            inputsValid += "Invalid satoshis. "
         }
 
         this.assetInput.setAttribute("aria-invalid", false)
@@ -469,17 +496,23 @@ class CreateTransaction extends HTMLElement {
             recipientAsset = new lwk.AssetId(this.assetInput.value)
         } catch (_e) {
             this.assetInput.setAttribute("aria-invalid", true)
-            validInputs = false
+            inputsValid += "Invalid asset. "
+
         }
 
-        if (!validInputs) {
+        if (inputsValid != "") {
+            this.message.innerHTML = warning(inputsValid)
             return
         }
 
-        var builder = new lwk.TxBuilder(network);
-        builder = builder.addRecipient(recipientAddress, satoshis, recipientAsset)
-
-        STATE.pset = builder.finish(STATE.wollet)
+        try {
+            var builder = new lwk.TxBuilder(network);
+            builder = builder.addRecipient(recipientAddress, satoshis, recipientAsset)
+            STATE.pset = builder.finish(STATE.wollet)
+        } catch (e) {
+            this.message.innerHTML = warning(e)
+            return
+        }
 
         this.dispatchEvent(new CustomEvent('pset-ready', {
             bubbles: true,
@@ -618,6 +651,9 @@ class RegisterWallet extends HTMLElement {
         this.listDiv = this.querySelector("div")
         this.templatePart = this.querySelector("template")
         this.descriptor = this.querySelector("textarea")
+        const messagDivs = this.querySelectorAll("div.message")
+        this.messageDivCreate = messagDivs[0]
+        this.messageDivRegister = messagDivs[1]
 
         this.addParticipant.addEventListener("click", this.handleAdd)
         this.addJade.addEventListener("click", this.handleAddJade)
@@ -647,20 +683,24 @@ class RegisterWallet extends HTMLElement {
             return
         }
 
-        setBusyDisabled(this.register, true)
-        let result = await STATE.jade.registerDescriptor(jadeName, descriptor)
-        setBusyDisabled(this.register, false)
-
-        if (result) {
-            this.messageDiv.innerHTML = success("Wallet registered on the Jade!")
-        } else {
-            this.messageDiv.innerHTML = warning("Failed to register the wallet on the Jade")
+        try {
+            setBusyDisabled(this.register, true)
+            this.messageDivRegister.innerHTML = warning("Check confirmation on Jade")
+            let result = await STATE.jade.registerDescriptor(jadeName, descriptor)
+            if (result) {
+                this.messageDivRegister.innerHTML = success("Wallet registered on the Jade!")
+            } else {
+                this.messageDivRegister.innerHTML = warning("Failed to register the wallet on the Jade")
+            }
+        } catch (e) {
+            this.messageDivRegister.innerHTML = warning(e)
+        } finally {
+            setBusyDisabled(this.register, false)
         }
-
-        console.log(result)
     }
 
     handleCreate = (_) => {
+        this.messageDivCreate.innerHTML = ""
         var inputsValid = true
         const thresholdVal = this.threshold.value
         if (thresholdVal && thresholdVal > 0) {
@@ -678,7 +718,7 @@ class RegisterWallet extends HTMLElement {
             inputsValid = false
         }
         if (inputsValid && thresholdVal > participants.length) {
-            alert("Threshold cannot be higher than participant")
+            this.messageDivCreate.innerHTML = warning("Threshold cannot be higher than participant")
             inputsValid = false
         }
         if (!inputsValid) {
@@ -791,6 +831,15 @@ function warning(message, helper = "") {
 function success(message, helper = "") {
     return createMessage(message, false, helper)
 }
+
+// function attachDescription(node, message, invalid = true) {
+//     const id = Math.random().toString()
+//     const desc = `<small id="${id}">${message}</small>`
+//     const el = document.createElement("div")
+//     el.innerHTML = desc
+//     node.setAttribute("aria-invalid", invalid)
+//     node.setAttribute("aria-describedby", id)
+// }
 
 function createMessage(message, invalid, helper) {
     if (helper) {

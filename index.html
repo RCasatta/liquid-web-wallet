@@ -78,6 +78,10 @@
                 <div>
                     <article aria-busy="true"></article>
                 </div>
+
+                <button hidden>Request testnet coins</button>
+                <br><br>
+                <div class="message"></div>
             </section>
         </wallet-balance>
     </template>
@@ -111,6 +115,8 @@
                             onclick="alert('multiple recipients not yet implemented')"> -->
                     </fieldset>
 
+                    <div class="message"></div>
+
                     <button class="create">Create</button>
                 </div>
             </create-transaction>
@@ -141,11 +147,6 @@
                 <div class="message">
                 </div>
 
-                <!-- TODO Use API instead from balance if testnet && lbtc == 0 -->
-                <p id="claim-testnet-coin-message" hidden>
-                    Claim testnet coins from the liquid testnet <a href="https://liquidtestnet.com/faucet"
-                        target="_blank">faucet</a>
-                </p>
             </ask-address>
             <receive-address>
                 <p>&nbsp;</p>
@@ -195,6 +196,9 @@
 
                 <button>Create</button>
                 <button class="secondary">Add connected Jade</button>
+                <br><br>
+
+                <div class="message"></div>
             </section>
 
             <br><br>
