@@ -56,7 +56,7 @@ async function init() {
 async function handleWatchOnlyClick(_e) {
     try {
         let descriptorTextarea = document.getElementById("descriptor-textarea")
-        const descriptorText = descriptorTextarea.value
+        const descriptorText = descriptorTextarea.value.trim()
         console.log(descriptorText)
         const descriptor = new lwk.WolletDescriptor(descriptorText)
 
