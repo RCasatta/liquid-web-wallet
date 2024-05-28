@@ -10,7 +10,7 @@ STATE.xpub = String
 STATE.multiWallets = [String]
 */
 const STATE = {}
-const network = lwk.Network.mainnet()
+const network = lwk.Network.testnet()
 
 /// Re-enables initially disabled buttons, and add listener to buttons on the first page
 /// First page doesn't use components because we want to be loaded before the wasm is loaded, which takes time
