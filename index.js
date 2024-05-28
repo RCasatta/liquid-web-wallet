@@ -10,7 +10,7 @@ STATE.xpub = String
 STATE.multiWallets = [String]
 */
 const STATE = {}
-const network = lwk.Network.testnet()
+const network = lwk.Network.mainnet()
 
 /// Re-enables initially disabled buttons, and add listener to buttons on the first page
 /// First page doesn't use components because we want to be loaded before the wasm is loaded, which takes time
@@ -22,8 +22,8 @@ async function init() {
             setBusyDisabled(connectJade, true)
             STATE.jade = await new lwk.Jade(network, true) // pass false if you don't see your DYI Jade
             connectJadeMessage.innerHTML = warning("Insert the PIN on the Jade")
-            STATE.xpub = await STATE.jade.getMasterXpub(); // asking something that requires unlock
-            STATE.multiWallets = await STATE.jade.getRegisteredMultisigs();
+            STATE.xpub = await STATE.jade.getMasterXpub() // asking something that requires unlock
+            STATE.multiWallets = await STATE.jade.getRegisteredMultisigs()
             document.dispatchEvent(new CustomEvent('jade-initialized'))
         } catch (e) {
             // TODO network is the most common error but we can have other error,
@@ -34,18 +34,22 @@ async function init() {
     })
 
     let descriptorTextarea = document.getElementById("descriptor-textarea")
+    let descriptorMessage = document.getElementById("descriptor-message")
     let exampleDescriptor = document.getElementById("example-descriptor-link")
     exampleDescriptor.addEventListener("click", (_e) => {
-        const exampleTestnet = "ct(slip77(ac53739ddde9fdf6bba3dbc51e989b09aa8c9cdce7b7d7eddd49cec86ddf71f7),elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))#u0y4axgs"
-        const exampleMainnet = "ct(elip151,elwpkh([a8874235/84h/1776h/0h]xpub6DLHCiTPg67KE9ksCjNVpVHTRDHzhCSmoBTKzp2K4FxLQwQvvdNzuqxhK2f9gFVCN6Dori7j2JMLeDoB4VqswG7Et9tjqauAvbDmzF8NEPH/<0;1>/*))#e5ttknaj";
-        const example = network.isMainnet() ? exampleMainnet : exampleTestnet;
-        descriptorTextarea.value = example
-        handleWatchOnlyClick()
+        if (descriptorTextarea.value == "") {
+            const exampleTestnet = "ct(slip77(ac53739ddde9fdf6bba3dbc51e989b09aa8c9cdce7b7d7eddd49cec86ddf71f7),elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))#u0y4axgs"
+            const exampleMainnet = "ct(elip151,elwpkh([a8874235/84h/1776h/0h]xpub6DLHCiTPg67KE9ksCjNVpVHTRDHzhCSmoBTKzp2K4FxLQwQvvdNzuqxhK2f9gFVCN6Dori7j2JMLeDoB4VqswG7Et9tjqauAvbDmzF8NEPH/<0;1>/*))#e5ttknaj"
+            const example = network.isMainnet() ? exampleMainnet : exampleTestnet
+            descriptorTextarea.value = example
+            handleWatchOnlyClick()
+        } else {
+            descriptorMessage.innerHTML = warning("Clear the descriptor text area to try an example descriptor")
+        }
     })
 
     let watchOnlyButton = document.getElementById("watch-only-button")
     watchOnlyButton.addEventListener("click", handleWatchOnlyClick)
-
 
     connectJade.disabled = false
     watchOnlyButton.disabled = false
@@ -54,10 +58,13 @@ async function init() {
 }
 
 async function handleWatchOnlyClick(_e) {
+    let descriptorMessage = document.getElementById("descriptor-message")
     try {
         let descriptorTextarea = document.getElementById("descriptor-textarea")
         const descriptorText = descriptorTextarea.value.trim()
-        console.log(descriptorText)
+        if (descriptorText == "") {
+            throw new Error("Empty confidential descriptor")
+        }
         const descriptor = new lwk.WolletDescriptor(descriptorText)
 
         STATE.wollet = new lwk.Wollet(network, descriptor)
@@ -68,10 +75,9 @@ async function handleWatchOnlyClick(_e) {
         document.dispatchEvent(new CustomEvent('wallet-selected'))
 
         await fullScanAndApply(STATE.wollet, STATE.scan)
-
     } catch (e) {
-        // TODO show UI
-        console.log(e)
+        descriptorMessage.innerHTML = warning(e)
+
     }
 }
 
@@ -295,7 +301,7 @@ class AskAddress extends HTMLElement {
             jadeAddress = await STATE.jade.getReceiveAddressSingle(variant, fullPath)
         } else {
             // 0 means external chain
-            jadeAddress = await STATE.jade.getReceiveAddressMulti(STATE.wolletSelected, [0, index]);
+            jadeAddress = await STATE.jade.getReceiveAddressMulti(STATE.wolletSelected, [0, index])
         }
 
 
@@ -403,7 +409,7 @@ class WalletTransactions extends HTMLElement {
                 `
             let heightCell = document.createElement("td")
 
-            var height = (typeof val.height() === 'undefined') ? "unconfirmed" : val.height();
+            var height = (typeof val.height() === 'undefined') ? "unconfirmed" : val.height()
             heightCell.innerHTML = `
                     <span>${height}</span>
                 `
@@ -412,7 +418,7 @@ class WalletTransactions extends HTMLElement {
             newRow.appendChild(txid)
             newRow.appendChild(txType)
             newRow.appendChild(heightCell)
-        });
+        })
 
         updatedAt(STATE.wollet, this.subtitle)
         cleanChilds(this.div)
@@ -463,17 +469,17 @@ class CreateTransaction extends HTMLElement {
     }
 
     handleCreate = (_e) => {
-        var inputsValid = "";
+        var inputsValid = ""
 
         this.addressInput.setAttribute("aria-invalid", false)
         var recipientAddress
         try {
             if (this.addressInput.value === "") {
-                throw new Error('Address cannot be empty');
+                throw new Error('Address cannot be empty')
             }
             recipientAddress = new lwk.Address(this.addressInput.value)
             if (!recipientAddress.isBlinded()) {
-                throw new Error('Address is not confidential');
+                throw new Error('Address is not confidential')
             }
             if (network.isMainnet() != recipientAddress.isMainnet()) {
                 throw new Error("Invalid address network")
@@ -506,7 +512,7 @@ class CreateTransaction extends HTMLElement {
         }
 
         try {
-            var builder = new lwk.TxBuilder(network);
+            var builder = new lwk.TxBuilder(network)
             builder = builder.addRecipient(recipientAddress, satoshis, recipientAsset)
             STATE.pset = builder.finish(STATE.wollet)
         } catch (e) {
@@ -518,7 +524,7 @@ class CreateTransaction extends HTMLElement {
             bubbles: true,
         }))
 
-    };
+    }
 }
 
 
@@ -596,20 +602,20 @@ class SignTransaction extends HTMLElement {
         let details = STATE.wollet.psetDetails(pset)
 
         cleanChilds(this.signDivAnalyze)
-        let hgroup = document.createElement("hgroup");
+        let hgroup = document.createElement("hgroup")
         hgroup.innerHTML = `
                 <h3>Net balance</h3><p>From the perspective of ${STATE.wolletSelected}</p>
             `
         this.signDivAnalyze.appendChild(hgroup)
 
-        var psetBalance = details.balance().balances();
-        psetBalance.set("fee", details.balance().fee());
+        var psetBalance = details.balance().balances()
+        psetBalance.set("fee", details.balance().fee())
         this.signDivAnalyze.appendChild(mapToTable(psetBalance))
 
-        let h3 = document.createElement("h3");
+        let h3 = document.createElement("h3")
         h3.innerText = "Signatures"
         this.signDivAnalyze.appendChild(h3)
-        const sigMap = new Map();
+        const sigMap = new Map()
 
         let has = details.fingerprintsHas()
         let missing = details.fingerprintsMissing()
@@ -913,6 +919,7 @@ function mapAssetHex(assetHex) {
     switch (assetHex) {
         case "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d": return "L-BTC"
         case "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49": return "tL-BTC"
+
         case "ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2": return "USDt"
         case "0e99c1a6da379d1f4151fb9df90449d40d0608f6cb33a5bcbfc8c265f42bab0a": return "LCAD"
         case "18729918ab4bca843656f08d4dd877bed6641fbd596a0a963abbf199cfeb3cec": return "EURx"
@@ -921,6 +928,8 @@ function mapAssetHex(assetHex) {
         case "52d77159096eed69c73862a30b0d4012b88cedf92d518f98bc5fc8d34b6c27c9": return "EXOeu"
         case "9c11715c79783d7ba09ecece1e82c652eccbb8d019aec50cf913f540310724a6": return "EXOus"
         case "38fca2d939696061a8f76d4e6b5eecd54e3b4221c846f24a6b279e79952850a5": return "TEST"
+
+        case "26ac924263ba547b706251635550a8649545ee5c074fe5db8d7140557baaf32e": return "MEX"
 
         default: return assetHex
     }
