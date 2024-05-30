@@ -3,7 +3,8 @@
 
 **NOTE: only a mock up for now**
 
-A [Liquid](https://liquid.net) web wallet that runs in the browser (works on chrome, chromium, edge).
+A [Liquid](https://liquid.net) web wallet that runs in the browser.
+Watch-only mode works in any modern browser, connection with [JADE](https://blockstream.com/jade/) works on chrome, chromium, edge.
 
 Based on [LWK wasm](https://github.com/Blockstream/lwk/tree/master/lwk_wasm)
 
