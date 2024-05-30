@@ -7,11 +7,11 @@
     "deploy-mainnet": "npm run mainnet && npm run build && npm run sync-mainnet",
     "deploy-testnet": "npm run testnet && npm run build && npm run sync-testnet",
     "deploy": "npm run deploy-mainnet && npm run deploy-testnet",
-    "sync-mainnet": "rsync -avh dist/ root@praga:/var/www/liquidwebwallet.org/ && rsync -avh dist/ root@gandi:/var/www/liquidwebwallet.org/",
-    "sync-testnet": "rsync -avh dist/ root@praga:/var/www/liquidwebwallet.org/testnet/ && rsync -avh dist/ root@gandi:/var/www/liquidwebwallet.org/testnet/"
+    "sync-mainnet": "rsync -avh dist/ root@praga:/var/www/liquidwebwallet.org/waterfall/ && rsync -avh dist/ root@gandi:/var/www/liquidwebwallet.org/waterfall/",
+    "sync-testnet": "rsync -avh dist/ root@praga:/var/www/liquidwebwallet.org/testnet/waterfall/ && rsync -avh dist/ root@gandi:/var/www/liquidwebwallet.org/testnet/waterfall/"
   },
   "dependencies": {
-    "lwk_wasm": "0.6.2"
+    "lwk_wasm": "file:../lwk/lwk_wasm/pkg"
   },
   "devDependencies": {
     "copy-webpack-plugin": "^11.0.0",
