@@ -10,7 +10,7 @@ STATE.xpub = String
 STATE.multiWallets = [String]
 */
 const STATE = {}
-const network = lwk.Network.testnet()
+const network = lwk.Network.mainnet()
 
 /// Re-enables initially disabled buttons, and add listener to buttons on the first page
 /// First page doesn't use components because we want to be loaded before the wasm is loaded, which takes time
@@ -370,7 +370,7 @@ class WalletBalance extends HTMLElement {
         updatedAt(STATE.wollet, this.subtitle)
 
         cleanChilds(this.div)
-        this.div.appendChild(mapToTable(balance))
+        this.div.appendChild(mapToTable(mapBalance(balance)))
     }
 }
 
@@ -458,7 +458,7 @@ class CreateTransaction extends HTMLElement {
         this.select.appendChild(option)
         balance.forEach((_val, key) => {
             let option = document.createElement("option")
-            option.innerText = mapAssetHex(key)
+            option.innerText = mapAssetTicker(key)
             option.setAttribute("value", key)
             this.select.appendChild(option)
         })
@@ -610,7 +610,7 @@ class SignTransaction extends HTMLElement {
 
         var psetBalance = details.balance().balances()
         psetBalance.set("fee", details.balance().fee())
-        this.signDivAnalyze.appendChild(mapToTable(psetBalance))
+        this.signDivAnalyze.appendChild(mapToTable(mapBalance(psetBalance)))
 
         let h3 = document.createElement("h3")
         h3.innerText = "Signatures"
@@ -781,6 +781,13 @@ customElements.define("sign-transaction", SignTransaction)
 customElements.define("register-wallet", RegisterWallet)
 
 
+function mapBalance(map) {
+    map.forEach((value, key) => {
+        map.set(key, mapAssetPrecision(key, value));
+    })
+    return map
+}
+
 function mapToTable(map, firstCode = true, secondCode = false) {
     let div = document.createElement("div")
     div.setAttribute("class", "overflow-auto")
@@ -794,7 +801,7 @@ function mapToTable(map, firstCode = true, secondCode = false) {
 
         let asset = document.createElement("td")
         if (firstCode) {
-            asset.innerHTML = `<code>${mapAssetHex(key)}</code>`
+            asset.innerHTML = `<code>${mapAssetTicker(key)}</code>`
         } else {
             asset.innerHTML = key
         }
@@ -915,22 +922,47 @@ function cleanChilds(comp) {
 }
 
 /// returns the Ticker if the asset id maps to featured ones
-function mapAssetHex(assetHex) {
+function mapAssetTicker(assetHex) {
+    return _mapAssetHex(assetHex)[0]
+}
+
+/// returns the asset value with the precision associated with the given asset hex if exist or 0 precision
+function mapAssetPrecision(assetHex, value) {
+    const precision = _mapAssetHex(assetHex)[1]
+    return formatPrecision(value, precision)
+}
+
+function formatPrecision(value, precision) {
+    const valueString = value.toString()
+
+    if (precision == 0) {
+        return valueString
+    }
+    if (valueString.length > precision) {
+        const over = valueString.length - precision
+        return valueString.substr(0, over) + "." + valueString.substr(over)
+    } else {
+        const missing = precision - valueString.length
+        return "0." + "0".repeat(missing) + valueString
+    }
+}
+
+function _mapAssetHex(assetHex) {
     switch (assetHex) {
-        case "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d": return "L-BTC"
-        case "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49": return "tL-BTC"
+        case "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d": return ["L-BTC", 8]
+        case "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49": return ["tL-BTC", 8]
 
-        case "ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2": return "USDt"
-        case "0e99c1a6da379d1f4151fb9df90449d40d0608f6cb33a5bcbfc8c265f42bab0a": return "LCAD"
-        case "18729918ab4bca843656f08d4dd877bed6641fbd596a0a963abbf199cfeb3cec": return "EURx"
-        case "78557eb89ea8439dc1a519f4eb0267c86b261068648a0f84a5c6b55ca39b66f1": return "B-JDE"
-        case "11f91cb5edd5d0822997ad81f068ed35002daec33986da173461a8427ac857e1": return "BMN1"
-        case "52d77159096eed69c73862a30b0d4012b88cedf92d518f98bc5fc8d34b6c27c9": return "EXOeu"
-        case "9c11715c79783d7ba09ecece1e82c652eccbb8d019aec50cf913f540310724a6": return "EXOus"
-        case "38fca2d939696061a8f76d4e6b5eecd54e3b4221c846f24a6b279e79952850a5": return "TEST"
+        case "ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2": return ["USDt", 8]
+        case "0e99c1a6da379d1f4151fb9df90449d40d0608f6cb33a5bcbfc8c265f42bab0a": return ["LCAD", 8]
+        case "18729918ab4bca843656f08d4dd877bed6641fbd596a0a963abbf199cfeb3cec": return ["EURx", 8]
+        case "78557eb89ea8439dc1a519f4eb0267c86b261068648a0f84a5c6b55ca39b66f1": return ["B-JDE", 0]
+        case "11f91cb5edd5d0822997ad81f068ed35002daec33986da173461a8427ac857e1": return ["BMN1", 2]
+        case "52d77159096eed69c73862a30b0d4012b88cedf92d518f98bc5fc8d34b6c27c9": return ["EXOeu", 0]
+        case "9c11715c79783d7ba09ecece1e82c652eccbb8d019aec50cf913f540310724a6": return ["EXOus", 0]
+        case "38fca2d939696061a8f76d4e6b5eecd54e3b4221c846f24a6b279e79952850a5": return ["TEST", 3] // testnet
 
-        case "26ac924263ba547b706251635550a8649545ee5c074fe5db8d7140557baaf32e": return "MEX"
+        case "26ac924263ba547b706251635550a8649545ee5c074fe5db8d7140557baaf32e": return ["MEX", 8]
 
-        default: return assetHex
+        default: return ["assetHex", 0]
     }
 }
