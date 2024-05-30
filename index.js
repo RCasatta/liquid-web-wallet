@@ -963,6 +963,6 @@ function _mapAssetHex(assetHex) {
 
         case "26ac924263ba547b706251635550a8649545ee5c074fe5db8d7140557baaf32e": return ["MEX", 8]
 
-        default: return ["assetHex", 0]
+        default: return [assetHex, 0]
     }
 }
