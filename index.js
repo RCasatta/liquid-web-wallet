@@ -371,7 +371,7 @@ class WalletBalance extends HTMLElement {
         updatedAt(STATE.wollet, this.subtitle)
 
         cleanChilds(this.div)
-        this.div.appendChild(mapToTable(mapBalance(balance), true, true))
+        this.div.appendChild(mapToTable(mapBalance(balance)))
     }
 }
 
@@ -628,7 +628,7 @@ class SignTransaction extends HTMLElement {
             sigMap.set("Missing", missing)
         }
 
-        this.signDivAnalyze.appendChild(mapToTable(sigMap, false, true))
+        this.signDivAnalyze.appendChild(mapToTable(sigMap))
         // TODO issuances
     }
 }
@@ -789,7 +789,21 @@ function mapBalance(map) {
     return map
 }
 
-function mapToTable(map, firstCode = true, secondCode = false) {
+// We want number or hexes to be monospace
+function useCodeIfNecessary(value) {
+    if (!isNaN(Number(value))) {
+        return `<code>${value}</code>`
+    } else {
+        try {
+            new lwk.AssetId(value)
+            return `<code>${value}</code>`
+        } catch (_) {
+            return value
+        }
+    }
+}
+
+function mapToTable(map) {
     let div = document.createElement("div")
     div.setAttribute("class", "overflow-auto")
     let table = document.createElement("table")
@@ -801,20 +815,16 @@ function mapToTable(map, firstCode = true, secondCode = false) {
         table.appendChild(newRow)
 
         let asset = document.createElement("td")
-        if (firstCode) {
-            asset.innerHTML = `<code>${mapAssetTicker(key)}</code>`
-        } else {
-            asset.innerHTML = key
-        }
+
+        asset.innerHTML = useCodeIfNecessary(mapAssetTicker(key))
+
         newRow.appendChild(asset)
 
         let secondCell = document.createElement("td")
         secondCell.setAttribute("style", "text-align:right")
-        if (secondCode) {
-            secondCell.innerHTML = `<code>${val}</code>`
-        } else {
-            secondCell.textContent = val
-        }
+
+        secondCell.innerHTML = useCodeIfNecessary(val)
+
         newRow.appendChild(secondCell)
     })
     return div
