@@ -10,7 +10,7 @@ STATE.xpub = String
 STATE.multiWallets = [String]
 */
 const STATE = {}
-const network = lwk.Network.mainnet()
+const network = lwk.Network.testnet()
 
 /// Re-enables initially disabled buttons, and add listener to buttons on the first page
 /// First page doesn't use components because we want to be loaded before the wasm is loaded, which takes time
@@ -40,6 +40,7 @@ async function init() {
         if (descriptorTextarea.value == "") {
             const exampleTestnet = "ct(slip77(ac53739ddde9fdf6bba3dbc51e989b09aa8c9cdce7b7d7eddd49cec86ddf71f7),elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))#u0y4axgs"
             const exampleMainnet = "ct(elip151,elwpkh([a8874235/84h/1776h/0h]xpub6DLHCiTPg67KE9ksCjNVpVHTRDHzhCSmoBTKzp2K4FxLQwQvvdNzuqxhK2f9gFVCN6Dori7j2JMLeDoB4VqswG7Et9tjqauAvbDmzF8NEPH/<0;1>/*))#e5ttknaj"
+            //const exampleMainnet = "ct(slip77(2411e278affa5c47010eab6d313c1ec66628ec0dd03b6fc98d1a05a0618719e6),elwpkh([a8874235/84h/1776h/0h]xpub6DLHCiTPg67KE9ksCjNVpVHTRDHzhCSmoBTKzp2K4FxLQwQvvdNzuqxhK2f9gFVCN6Dori7j2JMLeDoB4VqswG7Et9tjqauAvbDmzF8NEPH/<0;1>/*))#lc5n602e"
             const example = network.isMainnet() ? exampleMainnet : exampleTestnet
             descriptorTextarea.value = example
             handleWatchOnlyClick()
@@ -108,7 +109,7 @@ class MyFooter extends HTMLElement {
             footer += `<span> | </span><span><code>${jadeIdentifier}</code></span>`
         }
         if (STATE.wolletSelected != null) {
-            footer += `<span> | </span><a href="#" id="wallet">${STATE.wolletSelected}</a>`
+            footer += `<span> | </span><a href="#" id="wallet">Descriptor</a>`
         }
         if (network.isMainnet()) {
             footer += `<span> | </span><a href="/testnet">Switch to Testnet</a>`
@@ -370,7 +371,7 @@ class WalletBalance extends HTMLElement {
         updatedAt(STATE.wollet, this.subtitle)
 
         cleanChilds(this.div)
-        this.div.appendChild(mapToTable(mapBalance(balance)))
+        this.div.appendChild(mapToTable(mapBalance(balance), true, true))
     }
 }
 
@@ -489,13 +490,6 @@ class CreateTransaction extends HTMLElement {
             inputsValid += e.toString() + ". "
         }
 
-        this.satoshisInput.setAttribute("aria-invalid", false)
-        const satoshis = this.satoshisInput.value
-        if (!satoshis || satoshis <= 0) {
-            this.satoshisInput.setAttribute("aria-invalid", true)
-            inputsValid += "Invalid satoshis. "
-        }
-
         this.assetInput.setAttribute("aria-invalid", false)
         var recipientAsset
         try {
@@ -504,6 +498,13 @@ class CreateTransaction extends HTMLElement {
             this.assetInput.setAttribute("aria-invalid", true)
             inputsValid += "Invalid asset. "
 
+        }
+
+        this.satoshisInput.setAttribute("aria-invalid", false)
+        const satoshis = parsePrecision(recipientAsset.toString(), this.satoshisInput.value)
+        if (!satoshis || satoshis <= 0) {
+            this.satoshisInput.setAttribute("aria-invalid", true)
+            inputsValid += "Invalid satoshis. "
         }
 
         if (inputsValid != "") {
@@ -604,13 +605,13 @@ class SignTransaction extends HTMLElement {
         cleanChilds(this.signDivAnalyze)
         let hgroup = document.createElement("hgroup")
         hgroup.innerHTML = `
-                <h3>Net balance</h3><p>From the perspective of ${STATE.wolletSelected}</p>
+                <h3>Net balance</h3><p>From the perspective of the current wallet</p>
             `
         this.signDivAnalyze.appendChild(hgroup)
 
         var psetBalance = details.balance().balances()
         psetBalance.set("fee", details.balance().fee())
-        this.signDivAnalyze.appendChild(mapToTable(mapBalance(psetBalance)))
+        this.signDivAnalyze.appendChild(mapToTable(mapBalance(psetBalance), true, true))
 
         let h3 = document.createElement("h3")
         h3.innerText = "Signatures"
@@ -845,15 +846,6 @@ function success(message, helper = "") {
     return createMessage(message, false, helper)
 }
 
-// function attachDescription(node, message, invalid = true) {
-//     const id = Math.random().toString()
-//     const desc = `<small id="${id}">${message}</small>`
-//     const el = document.createElement("div")
-//     el.innerHTML = desc
-//     node.setAttribute("aria-invalid", invalid)
-//     node.setAttribute("aria-describedby", id)
-// }
-
 function createMessage(message, invalid, helper) {
     if (helper) {
         const id = Math.random().toString()
@@ -933,23 +925,21 @@ function mapAssetPrecision(assetHex, value) {
 }
 
 function formatPrecision(value, precision) {
-    const valueString = value.toString()
+    const prec = new lwk.Precision(precision);
+    return prec.satsToString(value)
+}
 
-    if (precision == 0) {
-        return valueString
-    }
-    if (valueString.length > precision) {
-        const over = valueString.length - precision
-        return valueString.substr(0, over) + "." + valueString.substr(over)
-    } else {
-        const missing = precision - valueString.length
-        return "0." + "0".repeat(missing) + valueString
-    }
+function parsePrecision(assetHex, value) {
+    const valueStr = value.toString()
+    const precision = _mapAssetHex(assetHex)[1]
+    const prec = new lwk.Precision(precision);
+    return prec.stringToSats(valueStr)
 }
 
 function _mapAssetHex(assetHex) {
     switch (assetHex) {
         case "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d": return ["L-BTC", 8]
+        case "fee": return ["fee", 8]
         case "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49": return ["tL-BTC", 8]
 
         case "ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2": return ["USDt", 8]
