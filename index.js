@@ -66,7 +66,7 @@ async function handleWatchOnlyClick(_e) {
         if (descriptorText == "") {
             throw new Error("Empty confidential descriptor")
         }
-        let descNetworkIsMainnet = descriptorText.includes("xpub");
+        let descNetworkIsMainnet = descriptorText.includes("xpub")
         if (descNetworkIsMainnet != network.isMainnet()) {
             throw new Error("The descriptor has wrong network")
         }
@@ -197,12 +197,11 @@ class MyNav extends HTMLElement {
                 `
             this.renderPage("wallets-page")
         } else if (STATE.scan) {
-            let signTitle = STATE.jade ? "Sign" : "Analyze"
             this.innerHTML = `
                     <a href="#" id="balance-page">Balance</a> |
                     <a href="#" id="transactions-page">Transactions</a> |
                     <a href="#" id="create-page">Create</a> |
-                    <a href="#" id="sign-page">${signTitle}</a> |
+                    <a href="#" id="sign-page">PSET</a> |
                     <a href="#" id="receive-page">Receive</a> |
                     <a href="#" id="scan" aria-busy="${STATE.scan.running}" >Scan</a> |
                     <a href="#" id="disconnect">Disconnect</a>
@@ -538,10 +537,14 @@ class SignTransaction extends HTMLElement {
     constructor() {
         super()
 
-        this.textarea = this.querySelector("textarea")
+        const textareas = this.querySelectorAll("textarea")
+        this.textarea = textareas[0]
+        this.combineTextarea = textareas[1]
         this.analyzeButton = this.querySelector("button.analyze")
         this.signButton = this.querySelector("button.sign")
         this.broadcastButton = this.querySelector("button.broadcast")
+        this.combineButton = this.querySelector("button.combine")
+
         this.messageDiv = this.querySelector("div.message")
         this.signDivAnalyze = this.querySelector("div.analyze")
 
@@ -552,8 +555,10 @@ class SignTransaction extends HTMLElement {
 
         this.broadcastButton.addEventListener("click", this.handleBroadcastClick)
 
+        this.combineButton.addEventListener("click", this.handleCombineClick)
+
         if (STATE.pset != null) {
-            this.textarea.textContent = STATE.pset.toString()
+            this.textarea.value = STATE.pset.toString()
             STATE.pset = null
         }
 
@@ -566,24 +571,21 @@ class SignTransaction extends HTMLElement {
 
     handleBroadcastClick = async (_e) => {
         try {
-            let psetString = this.textarea.textContent
+            let psetString = this.textarea.value
             let pset = new lwk.Pset(psetString)
             let psetFinalized = STATE.wollet.finalize(pset)
             setBusyDisabled(this.broadcastButton, true)
-
             let client = esploraClient()
-
             let txid = await client.broadcast(psetFinalized)
-            setBusyDisabled(this.broadcastButton, false)
-
             this.messageDiv.innerHTML = success(txid, "Tx broadcasted!")
         } catch (e) {
             this.messageDiv.innerHTML = warning("Cannot broadcast tx, is it signed?")
         }
+        setBusyDisabled(this.broadcastButton, false)
     }
 
     handleSignClick = async (_e) => {
-        let psetString = this.textarea.textContent
+        let psetString = this.textarea.value
         let pset = new lwk.Pset(psetString)
         setBusyDisabled(this.signButton, true)
 
@@ -594,12 +596,34 @@ class SignTransaction extends HTMLElement {
 
         this.messageDiv.innerHTML = success("Transaction signed!")
 
-        this.textarea.textContent = signedPset
+        this.textarea.value = signedPset
         this.renderAnalyze()
     }
 
+
+    handleCombineClick = async (_e) => {
+        const pset1Str = this.textarea.value
+        const pset2Str = this.combineTextarea.value
+        try {
+            if (pset1Str === "" || pset2Str === "") {
+                throw new Error("Both PSET must be non-empty")
+            }
+            const pset1 = new lwk.Pset(pset1Str)
+            const pset2 = new lwk.Pset(pset2Str)
+            pset1.combine(pset2)
+            this.textarea.value = pset1
+            this.combineTextarea.value = ""
+            this.renderAnalyze()
+
+            this.messageDiv.innerHTML = success("PSET combined!")
+        } catch (e) {
+            this.messageDiv.innerHTML = warning(e.toString())
+        }
+    }
+
     renderAnalyze() {
-        let psetString = this.textarea.textContent
+        this.messageDiv.innerHTML = ""
+        let psetString = this.textarea.value
         if (!psetString) {
             return
         }
@@ -788,7 +812,7 @@ customElements.define("register-wallet", RegisterWallet)
 
 function mapBalance(map) {
     map.forEach((value, key) => {
-        map.set(key, mapAssetPrecision(key, value));
+        map.set(key, mapAssetPrecision(key, value))
     })
     return map
 }
@@ -939,14 +963,14 @@ function mapAssetPrecision(assetHex, value) {
 }
 
 function formatPrecision(value, precision) {
-    const prec = new lwk.Precision(precision);
+    const prec = new lwk.Precision(precision)
     return prec.satsToString(value)
 }
 
 function parsePrecision(assetHex, value) {
     const valueStr = value.toString()
     const precision = _mapAssetHex(assetHex)[1]
-    const prec = new lwk.Precision(precision);
+    const prec = new lwk.Precision(precision)
     return prec.stringToSats(valueStr)
 }
 
