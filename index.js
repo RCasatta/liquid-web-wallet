@@ -862,14 +862,20 @@ function mapToTable(map) {
 function loadPersisted(wolletLocal) {
     const descriptor = wolletLocal.descriptor()
     var loaded = false
+    var precStatus
     while (true) {
         const walletStatus = wolletLocal.status()
         const retrievedUpdate = localStorage.getItem(walletStatus)
         if (retrievedUpdate) {
+            if (precStatus === walletStatus) {
+                // FIXME this prevents infinite loop in case the applied update doesn't change anything
+                return loaded
+            }
             console.log("Found persisted update, applying " + walletStatus)
             const update = lwk.Update.deserializeDecryptedBase64(retrievedUpdate, descriptor)
             wolletLocal.applyUpdate(update)
             loaded = true
+            precStatus = walletStatus
         } else {
             return loaded
         }
