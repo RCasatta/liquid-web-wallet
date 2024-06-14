@@ -116,9 +116,9 @@ class MyFooter extends HTMLElement {
             footer += `<span> | </span><a href="#" id="wallet">Descriptor</a>`
         }
         if (network.isMainnet()) {
-            footer += `<span> | </span><a href="/testnet/waterfall">Switch to Testnet</a>`
+            footer += `<span> | </span><a href="/testnet/waterfalls">Switch to Testnet</a>`
         } else {
-            footer += `<span> | </span><a href="/waterfall">Switch to Mainnet</a>`
+            footer += `<span> | </span><a href="/waterfalls">Switch to Mainnet</a>`
         }
         this.footer.innerHTML = footer
         let id = this.querySelector("#wallet")
@@ -908,8 +908,8 @@ function updatedAt(wolletLocal, node) {
 }
 
 function esploraClient() {
-    const mainnetUrl = "https://waterfall.liquidwebwallet.org/liquid/api"
-    const testnetUrl = "https://waterfall.liquidwebwallet.org/liquidtestnet/api"
+    const mainnetUrl = "https://waterfalls.liquidwebwallet.org/liquid/api"
+    const testnetUrl = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api"
     const url = network.isMainnet() ? mainnetUrl : testnetUrl
     const client = new lwk.EsploraClient(url, true)
     return client
