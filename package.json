@@ -7,8 +7,8 @@
     "deploy-mainnet": "npm run mainnet && npm run build && npm run sync-mainnet",
     "deploy-testnet": "npm run testnet && npm run build && npm run sync-testnet",
     "deploy": "npm run deploy-mainnet && npm run deploy-testnet",
-    "sync-mainnet": "rsync -avh dist/ root@praga:/var/www/liquidwebwallet.org/waterfalls/ && rsync -avh dist/ root@gandi:/var/www/liquidwebwallet.org/waterfalls/",
-    "sync-testnet": "rsync -avh dist/ root@praga:/var/www/liquidwebwallet.org/testnet/waterfalls/ && rsync -avh dist/ root@gandi:/var/www/liquidwebwallet.org/testnet/waterfalls/"
+    "sync-mainnet": "rsync -avh dist/ root@praga:/var/www/liquidwebwallet.org/ && rsync -avh dist/ root@gandi:/var/www/liquidwebwallet.org/",
+    "sync-testnet": "rsync -avh dist/ root@praga:/var/www/liquidwebwallet.org/testnet/ && rsync -avh dist/ root@gandi:/var/www/liquidwebwallet.org/testnet/"
   },
   "dependencies": {
     "lwk_wasm": "file:../lwk/lwk_wasm/pkg"

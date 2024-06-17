@@ -36,6 +36,12 @@ async function init() {
     let descriptorTextarea = document.getElementById("descriptor-textarea")
     let descriptorMessage = document.getElementById("descriptor-message")
     let exampleDescriptor = document.getElementById("example-descriptor-link")
+
+    // TODO: temporary while fixing waterfall endpoint
+    if (network.isMainnet()) {
+        exampleDescriptor.hidden = true
+    }
+
     exampleDescriptor.addEventListener("click", (_e) => {
         if (descriptorTextarea.value == "") {
             const exampleTestnet = "ct(slip77(ac53739ddde9fdf6bba3dbc51e989b09aa8c9cdce7b7d7eddd49cec86ddf71f7),elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))#u0y4axgs"
@@ -116,9 +122,9 @@ class MyFooter extends HTMLElement {
             footer += `<span> | </span><a href="#" id="wallet">Descriptor</a>`
         }
         if (network.isMainnet()) {
-            footer += `<span> | </span><a href="/testnet/waterfalls">Switch to Testnet</a>`
+            footer += `<span> | </span><a href="/testnet">Switch to Testnet</a>`
         } else {
-            footer += `<span> | </span><a href="/waterfalls">Switch to Mainnet</a>`
+            footer += `<span> | </span><a href="/">Switch to Mainnet</a>`
         }
         this.footer.innerHTML = footer
         let id = this.querySelector("#wallet")
