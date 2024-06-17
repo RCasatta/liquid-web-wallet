@@ -413,10 +413,10 @@ class WalletTransactions extends HTMLElement {
                 `
             let heightCell = document.createElement("td")
 
-            var height = (typeof val.height() === 'undefined') ? "unconfirmed" : val.height()
+            var timeAgo = (typeof val.timestamp() === 'undefined') ? "unconfirmed" : elapsedFrom(val.timestamp())
             heightCell.innerHTML = `
-                    <span>${height}</span>
-                `
+                <em data-placement="left" data-tooltip="Block ${val.height()}">${timeAgo}</em>
+            `
             heightCell.setAttribute("style", "text-align:right")
 
             newRow.appendChild(txid)
@@ -955,6 +955,29 @@ function cleanChilds(comp) {
             comp.firstChild.remove()
         }
     }
+}
+
+// convert a unix timestamp to human readable elapsed time, like "1 day ago"
+function elapsedFrom(unixTs) {
+    const currentUnixTs = new Date().getTime() / 1000.0
+    const delta = currentUnixTs - unixTs
+
+    const secondsPer = [31536000, 2592000, 604800, 86400, 3600, 60, 1];
+    const namesPer = ["year", "month", "week", "day", "hour", "minute", "second"];
+
+    function numberEnding(number) {
+        return (number > 1) ? 's' : ''
+    }
+
+    for (let i = 0; i < secondsPer.length; i++) {
+        let current = Math.floor(delta / secondsPer[i])
+        if (current) {
+            return current + ' ' + namesPer[i] + numberEnding(current) + ' ago'
+
+        }
+    }
+
+    return 'now';
 }
 
 /// returns the Ticker if the asset id maps to featured ones
