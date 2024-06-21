@@ -936,7 +936,12 @@ async function fullScanAndApply(wolletLocal, scanLocal) {
             } else {
                 console.log("Saving persisted update " + walletStatus)
                 const base64 = update.serializeEncryptedBase64(wolletLocal.descriptor())
-                localStorage.setItem(walletStatus, base64)
+                try {
+                    localStorage.setItem(walletStatus, base64)
+                } catch (e) {
+                    console.log("Saving persisted update " + walletStatus + " failed, too big")
+                    alert("Attempt to store too much data in the local storage, skipping")
+                }
             }
         }
         scanLocal.running = false
