@@ -40,6 +40,7 @@ async function init() {
     exampleDescriptor.addEventListener("click", (_e) => {
         if (descriptorTextarea.value == "") {
             const exampleTestnet = "ct(slip77(ac53739ddde9fdf6bba3dbc51e989b09aa8c9cdce7b7d7eddd49cec86ddf71f7),elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))#u0y4axgs"
+            // const exampleTestnet = "ct(elip151,elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))"
             const exampleMainnet = "ct(slip77(2411e278affa5c47010eab6d313c1ec66628ec0dd03b6fc98d1a05a0618719e6),elwpkh([a8874235/84'/1776'/0']xpub6DLHCiTPg67KE9ksCjNVpVHTRDHzhCSmoBTKzp2K4FxLQwQvvdNzuqxhK2f9gFVCN6Dori7j2JMLeDoB4VqswG7Et9tjqauAvbDmzF8NEPH/<0;1>/*))#upsg7h8m"
             // const exampleMainnet = "ct(elip151,elwpkh([a8874235/84h/1776h/0h]xpub6DLHCiTPg67KE9ksCjNVpVHTRDHzhCSmoBTKzp2K4FxLQwQvvdNzuqxhK2f9gFVCN6Dori7j2JMLeDoB4VqswG7Et9tjqauAvbDmzF8NEPH/<0;1>/*))#e5ttknaj"
             const example = network.isMainnet() ? exampleMainnet : exampleTestnet
@@ -55,6 +56,7 @@ async function init() {
 
     connectJade.disabled = false
     watchOnlyButton.disabled = false
+    exampleDescriptor.disabled = false
 
     document.getElementById("loading-wasm").setAttribute("style", "visibility: hidden;") // by using visibility we avoid layout shifts
 }
@@ -912,7 +914,7 @@ function esploraClient() {
     const mainnetUrl = "https://waterfalls.liquidwebwallet.org/liquid/api"
     const testnetUrl = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api"
     const url = network.isMainnet() ? mainnetUrl : testnetUrl
-    const client = new lwk.EsploraClient(url, true)
+    const client = new lwk.EsploraClient(network, url, true)
     return client
 }
 
