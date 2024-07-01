@@ -926,7 +926,7 @@ async function fullScanAndApply(wolletLocal, scanLocal) {
         document.dispatchEvent(new CustomEvent('wallet-sync-start'))
         let client = esploraClient()
 
-        const update = await client.fullScan(wolletLocal)
+        var update = await client.fullScan(wolletLocal)
         if (update instanceof lwk.Update) {
             const walletStatus = wolletLocal.status()
             wolletLocal.applyUpdate(update)
@@ -937,7 +937,9 @@ async function fullScanAndApply(wolletLocal, scanLocal) {
                 console.log("avoid persisting only tip update")
             } else {
                 console.log("Saving persisted update " + walletStatus)
+                update.prune(wolletLocal)
                 const base64 = update.serializeEncryptedBase64(wolletLocal.descriptor())
+
                 try {
                     localStorage.setItem(walletStatus, base64)
                 } catch (e) {
