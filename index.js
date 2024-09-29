@@ -385,6 +385,7 @@ class WalletBalance extends HTMLElement {
 class WalletTransactions extends HTMLElement {
     constructor() {
         super()
+        this.txsTitle = this.querySelector("h2")
         this.subtitle = this.querySelector("p")
         this.div = this.querySelector("div")
         document.addEventListener('wallet-sync-end', this.render)
@@ -396,6 +397,9 @@ class WalletTransactions extends HTMLElement {
             return
         }
         let transactions = STATE.wollet.transactions()
+        if (transactions.length > 1) {
+            this.txsTitle.innerText = transactions.length + " Transactions"
+        }
         let div = document.createElement("div")
         div.setAttribute("class", "overflow-auto")
         let table = document.createElement("table")
