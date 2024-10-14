@@ -69,11 +69,10 @@ async function handleWatchOnlyClick(_e) {
         if (descriptorText == "") {
             throw new Error("Empty confidential descriptor")
         }
-        let descNetworkIsMainnet = descriptorText.includes("xpub")
-        if (descNetworkIsMainnet != network.isMainnet()) {
+        const descriptor = new lwk.WolletDescriptor(descriptorText)
+        if (descriptor.isMainnet() != network.isMainnet()) {
             throw new Error("The descriptor has wrong network")
         }
-        const descriptor = new lwk.WolletDescriptor(descriptorText)
 
         STATE.wollet = new lwk.Wollet(network, descriptor)
         STATE.wolletSelected = "Descriptor"
