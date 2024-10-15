@@ -249,6 +249,29 @@
         </register-wallet>
     </template>
 
+    <template id="contact-page-template">
+        <form action="https://pay2.email/" method="post">
+
+            <label for="reply_to">From:</label>
+            <input type="email" id="reply_to" name="reply_to" placeholder="Email address (optional)"><br><br>
+
+            <label for="message">Message:</label>
+            <textarea id="message" name="message" placeholder="Message"></textarea><br><br>
+
+            <!-- The recipient is encrypted with the server key to prevent scraping, use below form to update it with your email -->
+            <!-- Multiple recipients are supported -->
+            <input type="hidden" name="to_enc"
+                value="e1v9nk2tt9de3hy7tsw35k7m3wdaexwtmkxy9z603qtqer2df38ysy546pdy44y3n4wexnzetsw998s6mht94k6etzw3g55etk0f3kj6rpvafxksfjw9f8s3p5pfc5j3pt2pj9yarst9hh5j69wfn4gnr3dyu5sm292ec4suj4wv4nv4rw2fyr26mdxemxzng295lzqj6zfpcj6emjv4shxefqfagnummwyp7n6jm8ype4ja3qxpds5vmswazhxnn8f5c5j6jpd3d8xj68tpt9qkzed9f4272vxej8zez42av4jmnrtge9jteexye5z3ehd3c57469w49xsnt6v4x4qun5d3fq5nz8f4zy2vtfxy4kucn9w5u5wmjsfen56a3e09vysjtzfenrxwtcwdnxwv2twu9z6tfdyp9yuj6nwvmhxjrrwa44zs3523e4genzx9axz4mhwd3nwu62v3kyumr9v955vufs8p89jmc28jzzc30cp2lx2ld6qe7gr0z596w9w78rj906z9vh4evmkursmsql3k6q9mtav2lh43vq7dgrzjwpjk7agds40suj2nu8xyjjcvz">
+
+            <!-- Also the subject is encrypted with the server key -->
+            <input type="hidden" name="subject_enc"
+                value="e1v9nk2tt9de3hy7tsw35k7m3wdaexwtmkxy9z603qtqer2df38ys9y3tj2ff52mj4dfhnj36h9dpnzwfsw3vhy4f409d8zepex985ynfegcenv6ptddehys63pfxngd2cdav4yezg2afryutwff495jrrvfr8j3f32pt9jened365we35wa9y53zd23x5ysg295lzqnte94nhyetpwdjjqfq2fse5ysnkw3thjdjrgyh4g4r3wdrryanxfa48genjt9zyzkn5w44kg6nktpdycvrkvf2h5une2arxxnm8pgkj6tfqvshnqnjvf329q5nhw984s6tvwdnrvct9xfg9yerv0y65xsmtx444g33jggcngu6pvdgkxzhcnd8x9jzxpdxr5lh5rgmw4l7r76mq7n7dvc23pju384pvs8n6z0y23yazf6g0w9nxlzahsr4jv6apm4wyyqcr2jv72zull8">
+
+            <button type="submit">Pay 20 satoshi ⚡ to send</button>
+
+        </form>
+    </template>
+
     <script type="module" src="./bootstrap.js"></script>
 </body>
 

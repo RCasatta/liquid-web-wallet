@@ -106,8 +106,15 @@ class MyFooter extends HTMLElement {
         }))
     }
 
+    handleContactClick = (_event) => {
+        this.dispatchEvent(new CustomEvent('contact-clicked', {
+            bubbles: true,
+        }))
+    }
+
     render = () => {
         var footer = '<a href="https://github.com/RCasatta/liquid-web-wallet">Source</a>'
+        footer += `<span> | </span><a href="#" id="contact">Contact</a>`
 
         footer += `<span> | </span><span>${network}</span>`
         if (STATE.jade != null) {
@@ -127,6 +134,11 @@ class MyFooter extends HTMLElement {
         if (id) {
             id.addEventListener("click", this.handleClick)
         }
+        let idContact = this.querySelector("#contact")
+        if (idContact) {
+            idContact.addEventListener("click", this.handleContactClick)
+        }
+
     }
 }
 
@@ -158,6 +170,10 @@ class MyNav extends HTMLElement {
 
         document.addEventListener('register-clicked', (event) => {
             this.renderPage("register-multisig-page")
+        })
+
+        document.addEventListener('contact-clicked', (event) => {
+            this.renderPage("contact-page")
         })
     }
 
