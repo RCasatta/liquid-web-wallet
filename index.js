@@ -113,7 +113,15 @@ class MyFooter extends HTMLElement {
     }
 
     render = () => {
-        var footer = '<a href="https://github.com/RCasatta/liquid-web-wallet">Source</a>'
+
+        var footer = ''
+        if (network.isMainnet()) {
+            footer += `<a href="/">Home</a>`
+        } else {
+            footer += `<a href="/testnet">Home</a>`
+        }
+
+        footer += `<span> | </span><a href="https://github.com/RCasatta/liquid-web-wallet">Source</a>`
         footer += `<span> | </span><a href="#" id="contact">Contact</a>`
 
         footer += `<span> | </span><span>${network}</span>`
