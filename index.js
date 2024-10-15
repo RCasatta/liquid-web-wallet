@@ -10,7 +10,7 @@ STATE.xpub = String
 STATE.multiWallets = [String]
 */
 const STATE = {}
-const network = lwk.Network.testnet()
+const network = lwk.Network.mainnet()
 
 /// Re-enables initially disabled buttons, and add listener to buttons on the first page
 /// First page doesn't use components because we want to be loaded before the wasm is loaded, which takes time
@@ -523,6 +523,10 @@ class CreateTransaction extends HTMLElement {
 
         try {
             var builder = new lwk.TxBuilder(network)
+            if (!network.isMainnet()) {
+                // CT discount only available on liquid testnet for now
+                builder = builder.enableCtDiscount()
+            }
             builder = builder.addRecipient(recipientAddress, satoshis, recipientAsset)
             STATE.pset = builder.finish(STATE.wollet)
         } catch (e) {
@@ -545,14 +549,20 @@ class SignTransaction extends HTMLElement {
 
         const textareas = this.querySelectorAll("textarea")
         this.textarea = textareas[0]
-        this.combineTextarea = textareas[1]
+        this.mnemonic = textareas[1]
+        this.combineTextarea = textareas[2]
         this.analyzeButton = this.querySelector("button.analyze")
         this.signButton = this.querySelector("button.sign")
+        this.softwareSignButton = this.querySelector("button.ss")
         this.broadcastButton = this.querySelector("button.broadcast")
         this.combineButton = this.querySelector("button.combine")
 
         this.messageDiv = this.querySelector("div.message")
         this.signDivAnalyze = this.querySelector("div.analyze")
+        const details = this.querySelectorAll("details")
+        this.signDetails = details[0]
+
+        this.signDetails.hidden = network.isMainnet()
 
         this.analyzeButton.addEventListener("click", (_e) => {
             this.renderAnalyze()
@@ -562,6 +572,8 @@ class SignTransaction extends HTMLElement {
         this.broadcastButton.addEventListener("click", this.handleBroadcastClick)
 
         this.combineButton.addEventListener("click", this.handleCombineClick)
+
+        this.softwareSignButton.addEventListener("click", this.handleSoftwareSignClick)
 
         if (STATE.pset != null) {
             this.textarea.value = STATE.pset.toString()
@@ -573,6 +585,29 @@ class SignTransaction extends HTMLElement {
         }
 
         this.renderAnalyze()
+    }
+
+    handleSoftwareSignClick = async (_e) => {
+        setBusyDisabled(this.softwareSignButton, true)
+        try {
+            let psetString = this.textarea.value
+            let pset = new lwk.Pset(psetString)
+
+            let mnemonicStr = this.mnemonic.value
+            let mnemonic = new lwk.Mnemonic(mnemonicStr)
+
+            let signer = new lwk.Signer(mnemonic, network)
+            let signedPset = signer.sign(pset)
+
+            this.textarea.value = signedPset
+            this.renderAnalyze()
+            this.messageDiv.innerHTML = success("Transaction signed!")
+
+        } catch (e) {
+            this.messageDiv.innerHTML = warning(e.toString())
+
+        }
+        setBusyDisabled(this.softwareSignButton, false)
     }
 
     handleBroadcastClick = async (_e) => {
