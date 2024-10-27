@@ -8,9 +8,10 @@ STATE.scan.running bool
 STATE.jade = lwk.Jade
 STATE.xpub = String
 STATE.multiWallets = [String]
+STATE.randomMnemonic = lwk.Mnemonic # only for testnet
 */
 const STATE = {}
-const network = lwk.Network.mainnet()
+const network = lwk.Network.testnet()
 
 /// Re-enables initially disabled buttons, and add listener to buttons on the first page
 /// First page doesn't use components because we want to be loaded before the wasm is loaded, which takes time
@@ -59,6 +60,21 @@ async function init() {
     exampleDescriptor.disabled = false
 
     document.getElementById("loading-wasm").setAttribute("style", "visibility: hidden;") // by using visibility we avoid layout shifts
+
+    let randomWalletButton = document.getElementById("random-wallet-button");
+    if (!network.isMainnet()) {
+        randomWalletButton.setAttribute("style", "visibility: visible;")
+        randomWalletButton.disabled = false
+        randomWalletButton.addEventListener("click", (_e) => {
+
+            STATE.randomMnemonic = lwk.Mnemonic.fromRandom(12)
+            let signer = new lwk.Signer(STATE.randomMnemonic, network)
+            let desc = signer.wpkhSlip77Descriptor()
+
+            descriptorTextarea.value = desc.toString()
+            handleWatchOnlyClick()
+        });
+    }
 }
 
 async function handleWatchOnlyClick(_e) {
@@ -606,6 +622,11 @@ class SignTransaction extends HTMLElement {
 
         if (STATE.jade == null) {
             this.signButton.hidden = true
+        }
+
+        if (STATE.randomMnemonic != null) {
+            this.mnemonic.value = STATE.randomMnemonic
+            this.mnemonic.disabled = true
         }
 
         this.renderAnalyze()

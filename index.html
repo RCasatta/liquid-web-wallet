@@ -32,6 +32,8 @@
         <div id="connect-jade-message"></div>
 
         <br><br>
+
+
         <details>
             <summary role="button" class="secondary">Watch-only</summary>
             <textarea placeholder="CT Descriptor" id="descriptor-textarea"></textarea>
@@ -44,6 +46,11 @@
         </details>
 
         <br><br>
+
+        <div style="visibility: hidden;">
+            <p><input type="button" id="random-wallet-button" disabled value="Random wallet"></p>
+            <br><br>
+        </div>
     </main>
 
     <br><br>
@@ -250,6 +257,8 @@
     </template>
 
     <template id="contact-page-template">
+        <h2>Contact</h2>
+
         <form action="https://pay2.email/" method="post">
 
             <label for="reply_to">From:</label>
