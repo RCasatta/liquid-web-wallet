@@ -9,6 +9,8 @@ STATE.jade = lwk.Jade
 STATE.xpub = String
 STATE.multiWallets = [String]
 STATE.randomMnemonic = lwk.Mnemonic # only for testnet
+STATE.scanLoop = interval
+STATE.page = String # id of the last rendered page
 */
 const STATE = {}
 const network = lwk.Network.testnet()
@@ -67,7 +69,18 @@ async function init() {
         randomWalletButton.disabled = false
         randomWalletButton.addEventListener("click", (_e) => {
 
-            STATE.randomMnemonic = lwk.Mnemonic.fromRandom(12)
+            let mnemonicFromCookie = getCookie("random_mnemonic")
+            if (mnemonicFromCookie == null) {
+                STATE.randomMnemonic = lwk.Mnemonic.fromRandom(12)
+                setCookie("random_mnemonic", STATE.randomMnemonic.toString(), 365)
+            } else {
+                try {
+                    STATE.randomMnemonic = new lwk.Mnemonic(mnemonicFromCookie)
+                } catch {
+                    STATE.randomMnemonic = lwk.Mnemonic.fromRandom(12)
+                    setCookie("random_mnemonic", STATE.randomMnemonic.toString(), 365)
+                }
+            }
             let signer = new lwk.Signer(STATE.randomMnemonic, network)
             let desc = signer.wpkhSlip77Descriptor()
 
@@ -180,6 +193,7 @@ class MyNav extends HTMLElement {
         document.addEventListener('wallet-sync-start', this.render)
 
         document.addEventListener('wallet-selected', (event) => {
+            scanLoop()
             this.render()
             this.renderPage("balance-page")
         })
@@ -199,6 +213,12 @@ class MyNav extends HTMLElement {
         document.addEventListener('contact-clicked', (event) => {
             this.renderPage("contact-page")
         })
+
+        document.addEventListener('reload-page', (event) => {
+            if (STATE.page != null) {
+                this.renderPage(STATE.page)
+            }
+        })
     }
 
     handleClick = async (event) => {
@@ -207,6 +227,7 @@ class MyNav extends HTMLElement {
             return
         }
         if (id == "disconnect") {
+            stopScanLoop()
             location.reload()
             return
         }
@@ -224,6 +245,7 @@ class MyNav extends HTMLElement {
     }
 
     renderPage(id) {
+        STATE.page = id
         const template = document.getElementById(id + "-template").content.cloneNode(true)
 
         cleanChilds(app)
@@ -398,8 +420,6 @@ class WalletBalance extends HTMLElement {
         this.messageDiv.innerHTML = success("Sending request to the faucet...")
         await fetch(url, { mode: "no-cors" })
         this.messageDiv.innerHTML = success("Request sent to the faucet, click scan to update")
-
-
     }
 
     render = () => {
@@ -747,6 +767,22 @@ class SignTransaction extends HTMLElement {
     }
 }
 
+function scanLoop() {
+    if (STATE.scanLoop == null) {
+        STATE.scanLoop = setInterval(
+            async function () {
+                await fullScanAndApply(STATE.wollet, STATE.scan)
+                window.dispatchEvent(new CustomEvent("reload-page"))
+            },
+            7000
+        )
+    }
+}
+function stopScanLoop() {
+    if (STATE.scanLoop != null) {
+        clearInterval(STATE.scanLoop)
+    }
+}
 
 class WalletDescriptor extends HTMLElement {
     constructor() {
@@ -1094,6 +1130,28 @@ function parsePrecision(assetHex, value) {
     const precision = _mapAssetHex(assetHex)[1]
     const prec = new lwk.Precision(precision)
     return prec.stringToSats(valueStr)
+}
+
+function setCookie(cname, cvalue, exdays) {
+    const d = new Date();
+    d.setTime(d.getTime() + (exdays * 24 * 60 * 60 * 1000));
+    let expires = "expires=" + d.toUTCString();
+    document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+}
+
+function getCookie(cname) {
+    let name = cname + "=";
+    let ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) == ' ') {
+            c = c.substring(1);
+        }
+        if (c.indexOf(name) == 0) {
+            return c.substring(name.length, c.length);
+        }
+    }
+    return "";
 }
 
 function _mapAssetHex(assetHex) {
