@@ -511,8 +511,15 @@ class CreateTransaction extends HTMLElement {
         const inputs = this.querySelectorAll("input")
         this.addressInput = inputs[0]
         this.satoshisInput = inputs[1]
+        this.addRecipient = inputs[2]
+        this.addRecipient.addEventListener("click", this.handleAdd)
+
         this.assetInput = this.querySelector("select")
         this.message = this.querySelector("div.message")
+        this.messageCreate = this.querySelector("div.messageCreate")
+
+        this.template = this.querySelector("template")
+        this.listRecipients = this.querySelector("div.recipients")
 
         this.render()
     }
@@ -540,6 +547,50 @@ class CreateTransaction extends HTMLElement {
     }
 
     handleCreate = (_e) => {
+
+        this.messageCreate.innerHTML = ""
+        // verify at least 1 row
+
+        const recipients = Array.from(this.querySelectorAll("fieldset.recipients"))
+        if (recipients.length == 0) {
+            this.messageCreate.innerHTML = warning("Cannot create a transaction with no recipients")
+            return
+        }
+
+
+
+        try {
+            var builder = new lwk.TxBuilder(network)
+            if (!network.isMainnet()) {
+                // CT discount only available on liquid testnet for now
+                builder = builder.enableCtDiscount()
+            }
+            for (const recipient of recipients) {
+                // inputs already validated during add phase
+                const recipientAddress = new lwk.Address(recipient.querySelector("input.address").value)
+                const recipientAsset = new lwk.AssetId(recipient.querySelector("input.asset").value)
+                const satoshis = parsePrecision(recipientAsset.toString(), recipient.querySelector("input.amount").value)
+
+                builder = builder.addRecipient(recipientAddress, satoshis, recipientAsset)
+            }
+            STATE.pset = builder.finish(STATE.wollet)
+        } catch (e) {
+            this.messageCreate.innerHTML = warning(e)
+            return
+        }
+
+        this.dispatchEvent(new CustomEvent('pset-ready', {
+            bubbles: true,
+        }))
+
+
+
+    }
+
+    handleAdd = (_e) => {
+        this.message.innerHTML = ""
+        this.messageCreate.innerHTML = ""
+
         var inputsValid = ""
 
         /// first validate for emptyness
@@ -556,6 +607,7 @@ class CreateTransaction extends HTMLElement {
         }
         /// end emptyness validation
 
+        /// Other validations such as valid address
         this.addressInput.setAttribute("aria-invalid", false)
         var recipientAddress
         try {
@@ -591,24 +643,30 @@ class CreateTransaction extends HTMLElement {
             this.message.innerHTML = warning(inputsValid)
             return
         }
+        // end other validations
 
-        try {
-            var builder = new lwk.TxBuilder(network)
-            if (!network.isMainnet()) {
-                // CT discount only available on liquid testnet for now
-                builder = builder.enableCtDiscount()
-            }
-            builder = builder.addRecipient(recipientAddress, satoshis, recipientAsset)
-            STATE.pset = builder.finish(STATE.wollet)
-        } catch (e) {
-            this.message.innerHTML = warning(e)
-            return
-        }
+        // Add recipient row
+        const content = this.template.content.cloneNode(true)
 
-        this.dispatchEvent(new CustomEvent('pset-ready', {
-            bubbles: true,
-        }))
+        const el = content.querySelector("fieldset")
+        const inputs = content.querySelectorAll("input")
+        inputs[0].value = this.addressInput.value
+        inputs[1].value = this.satoshisInput.value
+        inputs[2].value = this.assetInput.value
+        inputs[3].addEventListener("click", (_e) => {
+            this.listRecipients.removeChild(el)
+        })
+        this.listRecipients.appendChild(content)
+        // end add recipient row
 
+        // Reset fields
+        this.addressInput.value = ""
+        this.satoshisInput.value = ""
+        this.assetInput.value = "Select Asset"
+        this.addressInput.removeAttribute("aria-invalid")
+        this.satoshisInput.removeAttribute("aria-invalid")
+        this.assetInput.removeAttribute("aria-invalid")
+        // end reset fields
     }
 }
 
@@ -786,7 +844,7 @@ function scanLoop() {
                 // TODO dispatch only on effective change
                 window.dispatchEvent(new CustomEvent("reload-page"))
             },
-            7000
+            10000
         )
     }
 }
@@ -918,7 +976,6 @@ class RegisterWallet extends HTMLElement {
     addValidParticipant = (keyoriginXpub) => {
         const content = this.templatePart.content.cloneNode(true)
         const el = content.querySelector("fieldset")
-        console.log(content)
         const inputs = content.querySelectorAll("input")
         inputs[0].value = keyoriginXpub
         inputs[1].addEventListener("click", (_e) => {

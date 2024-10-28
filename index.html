@@ -122,11 +122,30 @@
                         <select name="asset"></select>
                         <!-- <input type="submit" value="+" id="create-transaction-button-add"
                             onclick="alert('multiple recipients not yet implemented')"> -->
+                        <input type="submit" value="+">
+
                     </fieldset>
 
                     <div class="message"></div>
 
+                    <div class="recipients">
+                        <template>
+                            <fieldset role="group" class="recipients">
+                                <input readonly class="address">
+                                <input readonly class="amount">
+                                <input readonly class="asset">
+
+                                <input type="submit" value="Remove">
+                            </fieldset>
+                        </template>
+                    </div>
+
+
                     <button class="create">Create</button>
+
+                    <br><br>
+                    <div class="messageCreate"></div>
+
                 </div>
             </create-transaction>
         </section>
