@@ -216,7 +216,9 @@ class MyNav extends HTMLElement {
 
         document.addEventListener('reload-page', (event) => {
             if (STATE.page != null) {
-                this.renderPage(STATE.page)
+                if (STATE.page == "balance-page" || STATE.page == "transactions-page") {
+                    this.renderPage(STATE.page)
+                }
             }
         })
     }
@@ -512,7 +514,6 @@ class CreateTransaction extends HTMLElement {
         this.assetInput = this.querySelector("select")
         this.message = this.querySelector("div.message")
 
-        document.addEventListener('wallet-sync-end', this.render)
         this.render()
     }
 
@@ -772,6 +773,7 @@ function scanLoop() {
         STATE.scanLoop = setInterval(
             async function () {
                 await fullScanAndApply(STATE.wollet, STATE.scan)
+                // TODO dispatch only on effective change
                 window.dispatchEvent(new CustomEvent("reload-page"))
             },
             7000
