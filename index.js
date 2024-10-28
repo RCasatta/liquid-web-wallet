@@ -542,12 +542,23 @@ class CreateTransaction extends HTMLElement {
     handleCreate = (_e) => {
         var inputsValid = ""
 
+        /// first validate for emptyness
+        var inputsEmpty = []
+        for (const element of [this.addressInput, this.satoshisInput, this.assetInput]) {
+            if (element.value === "" || (element.name == "asset" && element.value === "Select Asset")) {
+                element.setAttribute("aria-invalid", true)
+                inputsEmpty.push(element.name)
+            }
+        }
+        if (inputsEmpty.length > 0) {
+            this.message.innerHTML = warning(inputsEmpty.join(", ") + " cannot be empty")
+            return
+        }
+        /// end emptyness validation
+
         this.addressInput.setAttribute("aria-invalid", false)
         var recipientAddress
         try {
-            if (this.addressInput.value === "") {
-                throw new Error('Address cannot be empty')
-            }
             recipientAddress = new lwk.Address(this.addressInput.value)
             if (!recipientAddress.isBlinded()) {
                 throw new Error('Address is not confidential')
@@ -567,14 +578,13 @@ class CreateTransaction extends HTMLElement {
         } catch (_e) {
             this.assetInput.setAttribute("aria-invalid", true)
             inputsValid += "Invalid asset. "
-
         }
 
         this.satoshisInput.setAttribute("aria-invalid", false)
         const satoshis = parsePrecision(recipientAsset.toString(), this.satoshisInput.value)
         if (!satoshis || satoshis <= 0) {
             this.satoshisInput.setAttribute("aria-invalid", true)
-            inputsValid += "Invalid satoshis. "
+            inputsValid += "Invalid value. "
         }
 
         if (inputsValid != "") {
