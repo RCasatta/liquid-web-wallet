@@ -69,7 +69,7 @@ async function init() {
 
     let randomWalletButton = document.getElementById("random-wallet-button");
     if (!network.isMainnet()) {
-        randomWalletButton.setAttribute("style", "visibility: visible;")
+        document.getElementById("random-wallet-div").hidden = false
         randomWalletButton.disabled = false
         randomWalletButton.addEventListener("click", (_e) => {
 
