@@ -555,6 +555,12 @@ class CreateTransaction extends HTMLElement {
         this.messageCreate.innerHTML = ""
         // verify at least 1 row
 
+        const inputsEmpty = this.checkEmptyness()
+        if (inputsEmpty.length == 0) {
+            this.messageCreate.innerHTML = warning("Click '+' to add the output")
+            return
+        }
+
         const recipients = Array.from(this.querySelectorAll("fieldset.recipients"))
         if (recipients.length == 0) {
             this.messageCreate.innerHTML = warning("Cannot create a transaction with no recipients")
@@ -591,13 +597,7 @@ class CreateTransaction extends HTMLElement {
 
     }
 
-    handleAdd = (_e) => {
-        this.message.innerHTML = ""
-        this.messageCreate.innerHTML = ""
-
-        var inputsValid = ""
-
-        /// first validate for emptyness
+    checkEmptyness = () => {
         var inputsEmpty = []
         for (const element of [this.addressInput, this.satoshisInput, this.assetInput]) {
             if (element.value === "" || (element.name == "asset" && element.value === "Select Asset")) {
@@ -605,11 +605,22 @@ class CreateTransaction extends HTMLElement {
                 inputsEmpty.push(element.name)
             }
         }
+        return inputsEmpty
+
+    }
+
+    handleAdd = (_e) => {
+        this.listRecipients.hidden = false
+        this.message.innerHTML = ""
+        this.messageCreate.innerHTML = ""
+
+        var inputsValid = ""
+
+        const inputsEmpty = this.checkEmptyness()
         if (inputsEmpty.length > 0) {
             this.message.innerHTML = warning(inputsEmpty.join(", ") + " cannot be empty")
             return
         }
-        /// end emptyness validation
 
         /// Other validations such as valid address
         this.addressInput.setAttribute("aria-invalid", false)

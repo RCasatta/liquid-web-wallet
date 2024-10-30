@@ -124,6 +124,7 @@
                 <article aria-busy="true"></article>
 
                 <div hidden>
+                    <h3>Add recipient</h3>
                     <fieldset role="group">
                         <input type="text" placeholder="Address" name="address">
                         <input type="number" placeholder="Value" name="value">
@@ -136,7 +137,9 @@
 
                     <div class="message"></div>
 
-                    <div class="recipients">
+                    <div class="recipients" hidden>
+                        <h3>Recipients</h3>
+
                         <template>
                             <fieldset role="group" class="recipients">
                                 <input readonly class="address">
