@@ -31,11 +31,12 @@
         <p><input type="button" id="connect-jade-button" disabled value="Connect to Jade"></p>
         <div id="connect-jade-message"></div>
 
+
         <br><br>
 
-
         <details>
-            <summary role="button" class="secondary">Watch-only</summary>
+            <summary role="button" class="secondary">Options</summary>
+            <h3>Watch-only</h3>
             <textarea placeholder="CT Descriptor" id="descriptor-textarea"></textarea>
             <p>
                 <button id="watch-only-button" disabled>Use watch-only descriptor</button>
@@ -43,14 +44,22 @@
             </p>
 
             <div id="descriptor-message"></div>
+
+            <h3>Do it yourself</h3>
+
+            <label>
+                <input type="checkbox" id="diy-jade" />
+                Show
+            </label>
         </details>
 
         <br><br>
 
         <div style="visibility: hidden;">
-            <p><input type="button" id="random-wallet-button" disabled value="Random wallet"></p>
+            <p><input type="button" id="random-wallet-button" disabled value="Random wallet" class="secondary"></p>
             <br><br>
         </div>
+
     </main>
 
     <br><br>

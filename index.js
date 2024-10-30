@@ -23,7 +23,11 @@ async function init() {
         let connectJadeMessage = document.getElementById("connect-jade-message")
         try {
             setBusyDisabled(connectJade, true)
-            STATE.jade = await new lwk.Jade(network, true) // pass false if you don't see your DYI Jade
+
+            let filter = !document.getElementById("diy-jade").checked
+            console.log("filter out do it yourself " + filter)
+
+            STATE.jade = await new lwk.Jade(network, filter)
             connectJadeMessage.innerHTML = warning("Insert the PIN on the Jade")
             STATE.xpub = await STATE.jade.getMasterXpub() // asking something that requires unlock
             STATE.multiWallets = await STATE.jade.getRegisteredMultisigs()
