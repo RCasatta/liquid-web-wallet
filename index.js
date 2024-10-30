@@ -555,7 +555,7 @@ class CreateTransaction extends HTMLElement {
         this.messageCreate.innerHTML = ""
         // verify at least 1 row
 
-        const inputsEmpty = this.checkEmptyness()
+        const inputsEmpty = this.checkEmptyness(false)
         if (inputsEmpty.length == 0) {
             this.messageCreate.innerHTML = warning("Click '+' to add the output")
             return
@@ -578,7 +578,7 @@ class CreateTransaction extends HTMLElement {
             for (const recipient of recipients) {
                 // inputs already validated during add phase
                 const recipientAddress = new lwk.Address(recipient.querySelector("input.address").value)
-                const recipientAsset = new lwk.AssetId(recipient.querySelector("input.asset").value)
+                const recipientAsset = new lwk.AssetId(recipient.querySelector("input.assetid").value)
                 const satoshis = parsePrecision(recipientAsset.toString(), recipient.querySelector("input.amount").value)
 
                 builder = builder.addRecipient(recipientAddress, satoshis, recipientAsset)
@@ -597,11 +597,13 @@ class CreateTransaction extends HTMLElement {
 
     }
 
-    checkEmptyness = () => {
+    checkEmptyness = (setAria) => {
         var inputsEmpty = []
         for (const element of [this.addressInput, this.satoshisInput, this.assetInput]) {
             if (element.value === "" || (element.name == "asset" && element.value === "Select Asset")) {
-                element.setAttribute("aria-invalid", true)
+                if (setAria) {
+                    element.setAttribute("aria-invalid", true)
+                }
                 inputsEmpty.push(element.name)
             }
         }
@@ -616,7 +618,7 @@ class CreateTransaction extends HTMLElement {
 
         var inputsValid = ""
 
-        const inputsEmpty = this.checkEmptyness()
+        const inputsEmpty = this.checkEmptyness(true)
         if (inputsEmpty.length > 0) {
             this.message.innerHTML = warning(inputsEmpty.join(", ") + " cannot be empty")
             return
@@ -667,8 +669,9 @@ class CreateTransaction extends HTMLElement {
         const inputs = content.querySelectorAll("input")
         inputs[0].value = this.addressInput.value
         inputs[1].value = this.satoshisInput.value
-        inputs[2].value = this.assetInput.value
-        inputs[3].addEventListener("click", (_e) => {
+        inputs[2].value = mapAssetTicker(this.assetInput.value) // value seen
+        inputs[3].value = this.assetInput.value                 // value used
+        inputs[4].addEventListener("click", (_e) => {
             this.listRecipients.removeChild(el)
         })
         this.listRecipients.appendChild(content)
