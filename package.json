@@ -11,7 +11,7 @@
     "sync-testnet": "rsync -avh dist/ root@praga:/var/www/liquidwebwallet.org/testnet/ && rsync -avh dist/ root@gandi:/var/www/liquidwebwallet.org/testnet/"
   },
   "dependencies": {
-    "lwk_wasm": "0.8.3"
+    "lwk_wasm": "0.8.4"
   },
   "devDependencies": {
     "copy-webpack-plugin": "^11.0.0",
