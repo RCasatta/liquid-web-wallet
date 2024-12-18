@@ -237,15 +237,6 @@ class MyNav extends HTMLElement {
             location.reload()
             return
         }
-        if (id == "scan") {
-            if (STATE.scan.running) {
-                // unreachable since scan link is disable
-                throw new Error("Scan is running")
-            } else {
-                await fullScanAndApply(STATE.wollet, STATE.scan)
-            }
-            return
-        }
 
         this.renderPage(id)
     }
@@ -273,7 +264,6 @@ class MyNav extends HTMLElement {
                     <a href="#" id="create-page">Create</a> |
                     <a href="#" id="sign-page">PSET</a> |
                     <a href="#" id="receive-page">Receive</a> |
-                    <a href="#" id="scan" aria-busy="${STATE.scan.running}" >Scan</a> |
                     <a href="#" id="disconnect">Disconnect</a>
 
                     <br><br>
@@ -425,7 +415,7 @@ class WalletBalance extends HTMLElement {
         console.log(url)
         this.messageDiv.innerHTML = success("Sending request to the faucet...")
         await fetch(url, { mode: "no-cors" })
-        this.messageDiv.innerHTML = success("Request sent to the faucet, click scan to update")
+        this.messageDiv.innerHTML = success("Request sent to the faucet, wait a bit to see funds")
     }
 
     render = () => {
