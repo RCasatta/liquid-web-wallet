@@ -170,7 +170,9 @@ class MyFooter extends HTMLElement {
         }
         if (STATE.wolletSelected != null) {
             footer += `<span> | </span><a href="#" id="wallet">Descriptor</a>`
-            footer += `<span> | </span><a href="#" id="xpubs">Xpubs</a>`
+            if (jadeOrSwSigner() != null) {
+                footer += `<span> | </span><a href="#" id="xpubs">Xpubs</a>`
+            }
         }
         if (network.isMainnet()) {
             footer += `<span> | </span><a href="/testnet">Switch to Testnet</a>`
@@ -891,18 +893,32 @@ class WalletXpubs extends HTMLElement {
     constructor() {
         super()
 
-        // TODO handle jade
-
-        const textareas = this.querySelectorAll("textarea")
-        const paragraphs = this.querySelectorAll("p")
-        const bips = [lwk.Bip.bip49(), lwk.Bip.bip84(), lwk.Bip.bip87()];
+        this.textareas = this.querySelectorAll("textarea")
+        this.paragraphs = this.querySelectorAll("p")
+        this.bips = [lwk.Bip.bip49(), lwk.Bip.bip84(), lwk.Bip.bip87()];
 
         for (let i = 0; i < 3; i++) {
-            paragraphs[i].innerText = bips[i].toString()
-            textareas[i].value = STATE.swSigner.keyoriginXpub(bips[i]);
+            this.paragraphs[i].innerText = this.bips[i].toString()
         }
 
+        this.render()
     }
+
+    render = async (_) => {
+        let signer = jadeOrSwSigner()
+
+        for (let i = 0; i < 3; i++) {
+            if (STATE.jade == null) {
+                this.textareas[i].value =
+                    signer.keyoriginXpub(this.bips[i]);
+            } else {
+                this.textareas[i].value = await
+                    signer.keyoriginXpub(this.bips[i]);
+            }
+
+        }
+    }
+
 }
 
 
@@ -1232,6 +1248,16 @@ function mapAssetTicker(assetHex) {
 function mapAssetPrecision(assetHex, value) {
     const precision = _mapAssetHex(assetHex)[1]
     return formatPrecision(value, precision)
+}
+
+/// returns the jade if exists, or the softare signer, or null for watch-only
+function jadeOrSwSigner() {
+    if (STATE.jade != null)
+        return STATE.jade
+    else if (STATE.swSigner != null)
+        return STATE.swSigner
+    else
+        return null
 }
 
 function formatPrecision(value, precision) {
