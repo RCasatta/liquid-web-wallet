@@ -8,7 +8,7 @@ STATE.scan.running bool
 STATE.jade = lwk.Jade
 STATE.xpub = String
 STATE.multiWallets = [String]
-STATE.randomMnemonic = lwk.Mnemonic # only for testnet
+STATE.swSigner = lwk.Signer # only for testnet
 STATE.scanLoop = interval
 STATE.page = String # id of the last rendered page
 */
@@ -74,19 +74,20 @@ async function init() {
         randomWalletButton.addEventListener("click", (_e) => {
 
             let mnemonicFromCookie = getCookie("random_mnemonic")
+            var randomMnemonic
             if (mnemonicFromCookie == null) {
-                STATE.randomMnemonic = lwk.Mnemonic.fromRandom(12)
-                setCookie("random_mnemonic", STATE.randomMnemonic.toString(), 365)
+                randomMnemonic = lwk.Mnemonic.fromRandom(12)
+                setCookie("random_mnemonic", randomMnemonic.toString(), 365)
             } else {
                 try {
-                    STATE.randomMnemonic = new lwk.Mnemonic(mnemonicFromCookie)
+                    randomMnemonic = new lwk.Mnemonic(mnemonicFromCookie)
                 } catch {
-                    STATE.randomMnemonic = lwk.Mnemonic.fromRandom(12)
-                    setCookie("random_mnemonic", STATE.randomMnemonic.toString(), 365)
+                    randomMnemonic = lwk.Mnemonic.fromRandom(12)
+                    setCookie("random_mnemonic", randomMnemonic.toString(), 365)
                 }
             }
-            let signer = new lwk.Signer(STATE.randomMnemonic, network)
-            let desc = signer.wpkhSlip77Descriptor()
+            STATE.swSigner = new lwk.Signer(randomMnemonic, network)
+            let desc = STATE.swSigner.wpkhSlip77Descriptor()
 
             descriptorTextarea.value = desc.toString()
             handleWatchOnlyClick()
@@ -736,8 +737,8 @@ class SignTransaction extends HTMLElement {
             this.signButton.hidden = true
         }
 
-        if (STATE.randomMnemonic != null) {
-            this.mnemonic.value = STATE.randomMnemonic
+        if (STATE.swSigner != null) {
+            this.mnemonic.value = STATE.swSigner.mnemonic()
             this.mnemonic.disabled = true
         }
 
@@ -889,7 +890,8 @@ class WalletDescriptor extends HTMLElement {
 class WalletXpubs extends HTMLElement {
     constructor() {
         super()
-        let signer = new lwk.Signer(STATE.randomMnemonic, network)  // TODO move in STATE
+
+        // TODO handle jade
 
         const textareas = this.querySelectorAll("textarea")
         const paragraphs = this.querySelectorAll("p")
@@ -897,7 +899,7 @@ class WalletXpubs extends HTMLElement {
 
         for (let i = 0; i < 3; i++) {
             paragraphs[i].innerText = bips[i].toString()
-            textareas[i].value = signer.keyoriginXpub(bips[i]);
+            textareas[i].value = STATE.swSigner.keyoriginXpub(bips[i]);
         }
 
     }
