@@ -129,7 +129,6 @@ class MyFooter extends HTMLElement {
         this.footer = this.querySelector('footer')
         document.addEventListener('jade-initialized', this.render)
         document.addEventListener('wallet-selected', this.render)
-
         this.render()
     }
 
@@ -141,6 +140,12 @@ class MyFooter extends HTMLElement {
 
     handleContactClick = (_event) => {
         this.dispatchEvent(new CustomEvent('contact-clicked', {
+            bubbles: true,
+        }))
+    }
+
+    handleXpubClick = (_event) => {
+        this.dispatchEvent(new CustomEvent('xpubs-clicked', {
             bubbles: true,
         }))
     }
@@ -164,6 +169,7 @@ class MyFooter extends HTMLElement {
         }
         if (STATE.wolletSelected != null) {
             footer += `<span> | </span><a href="#" id="wallet">Descriptor</a>`
+            footer += `<span> | </span><a href="#" id="xpubs">Xpubs</a>`
         }
         if (network.isMainnet()) {
             footer += `<span> | </span><a href="/testnet">Switch to Testnet</a>`
@@ -178,6 +184,11 @@ class MyFooter extends HTMLElement {
         let idContact = this.querySelector("#contact")
         if (idContact) {
             idContact.addEventListener("click", this.handleContactClick)
+        }
+
+        let idXpubs = this.querySelector("#xpubs")
+        if (idXpubs) {
+            idXpubs.addEventListener("click", this.handleXpubClick)
         }
 
     }
@@ -216,6 +227,10 @@ class MyNav extends HTMLElement {
 
         document.addEventListener('contact-clicked', (event) => {
             this.renderPage("contact-page")
+        })
+
+        document.addEventListener('xpubs-clicked', (event) => {
+            this.renderPage("xpubs-page")
         })
 
         document.addEventListener('reload-page', (event) => {
@@ -871,6 +886,24 @@ class WalletDescriptor extends HTMLElement {
 }
 
 
+class WalletXpubs extends HTMLElement {
+    constructor() {
+        super()
+        let signer = new lwk.Signer(STATE.randomMnemonic, network)  // TODO move in STATE
+
+        const textareas = this.querySelectorAll("textarea")
+        const paragraphs = this.querySelectorAll("p")
+        const bips = [lwk.Bip.bip49(), lwk.Bip.bip84(), lwk.Bip.bip87()];
+
+        for (let i = 0; i < 3; i++) {
+            paragraphs[i].innerText = bips[i].toString()
+            textareas[i].value = signer.keyoriginXpub(bips[i]);
+        }
+
+    }
+}
+
+
 class RegisterWallet extends HTMLElement {
     constructor() {
         super()
@@ -1002,6 +1035,7 @@ customElements.define("wallet-selector", WalletSelector)
 customElements.define("receive-address", ReceiveAddress)
 customElements.define("ask-address", AskAddress)
 customElements.define("wallet-descriptor", WalletDescriptor)
+customElements.define("wallet-xpubs", WalletXpubs)
 customElements.define("wallet-balance", WalletBalance)
 customElements.define("wallet-transactions", WalletTransactions)
 customElements.define("create-transaction", CreateTransaction)
