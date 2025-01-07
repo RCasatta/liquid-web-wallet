@@ -879,11 +879,14 @@ class WalletXpubs extends HTMLElement {
         this.labels = this.querySelectorAll("label")
         this.bips = [lwk.Bip.bip49(), lwk.Bip.bip84(), lwk.Bip.bip87()];
 
-        for (let i = 0; i < 3; i++) {
-            this.labels[i].childNodes[0].nodeValue = this.bips[i].toString()
-        }
+        if (jadeOrSwSigner() != null) {
+            // TODO should remove also the "Xpubs" subtitle
+            for (let i = 0; i < 3; i++) {
+                this.labels[i].childNodes[0].nodeValue = this.bips[i].toString()
+            }
 
-        this.render()
+            this.render()
+        }
     }
 
     render = async (_) => {
