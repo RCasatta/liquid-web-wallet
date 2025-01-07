@@ -145,12 +145,6 @@ class MyFooter extends HTMLElement {
         }))
     }
 
-    handleXpubClick = (_event) => {
-        this.dispatchEvent(new CustomEvent('xpubs-clicked', {
-            bubbles: true,
-        }))
-    }
-
     render = () => {
 
         var footer = ''
@@ -169,10 +163,7 @@ class MyFooter extends HTMLElement {
             footer += `<span> | </span><span><code>${jadeIdentifier}</code></span>`
         }
         if (STATE.wolletSelected != null) {
-            footer += `<span> | </span><a href="#" id="wallet">Descriptor</a>`
-            if (jadeOrSwSigner() != null) {
-                footer += `<span> | </span><a href="#" id="xpubs">Xpubs</a>`
-            }
+            footer += `<span> | </span><a href="#" id="wallet">Wallet</a>`
         }
         if (network.isMainnet()) {
             footer += `<span> | </span><a href="/testnet">Switch to Testnet</a>`
@@ -187,16 +178,11 @@ class MyFooter extends HTMLElement {
         let idContact = this.querySelector("#contact")
         if (idContact) {
             idContact.addEventListener("click", this.handleContactClick)
-        }
 
-        let idXpubs = this.querySelector("#xpubs")
-        if (idXpubs) {
-            idXpubs.addEventListener("click", this.handleXpubClick)
-        }
 
+        }
     }
 }
-
 
 class MyNav extends HTMLElement {
     constructor() {
@@ -230,10 +216,6 @@ class MyNav extends HTMLElement {
 
         document.addEventListener('contact-clicked', (event) => {
             this.renderPage("contact-page")
-        })
-
-        document.addEventListener('xpubs-clicked', (event) => {
-            this.renderPage("xpubs-page")
         })
 
         document.addEventListener('reload-page', (event) => {
@@ -894,11 +876,11 @@ class WalletXpubs extends HTMLElement {
         super()
 
         this.textareas = this.querySelectorAll("textarea")
-        this.paragraphs = this.querySelectorAll("p")
+        this.labels = this.querySelectorAll("label")
         this.bips = [lwk.Bip.bip49(), lwk.Bip.bip84(), lwk.Bip.bip87()];
 
         for (let i = 0; i < 3; i++) {
-            this.paragraphs[i].innerText = this.bips[i].toString()
+            this.labels[i].childNodes[0].nodeValue = this.bips[i].toString()
         }
 
         this.render()
