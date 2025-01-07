@@ -871,6 +871,27 @@ class WalletDescriptor extends HTMLElement {
 }
 
 
+class WalletAmp2 extends HTMLElement {
+    constructor() {
+        super()
+        this.textarea = this.querySelector("textarea")
+        this.button = this.querySelector("button")
+        this.button.addEventListener("click", this.handleRegister)
+    }
+
+    handleRegister = async (_) => {
+        // TODO disappear for mainnet
+        let amp2 = lwk.Amp2.new_testnet()
+        let keyoriginXpub = await keyoriginXpubUnified(lwk.Bip.bip87());
+        let amp2_desc = amp2.descriptor_from_str(keyoriginXpub)
+        let result = amp2.register(amp2_desc);
+        console.log(result)
+    }
+}
+
+
+
+
 class WalletXpubs extends HTMLElement {
     constructor() {
         super()
@@ -890,17 +911,8 @@ class WalletXpubs extends HTMLElement {
     }
 
     render = async (_) => {
-        let signer = jadeOrSwSigner()
-
         for (let i = 0; i < 3; i++) {
-            if (STATE.jade == null) {
-                this.textareas[i].value =
-                    signer.keyoriginXpub(this.bips[i]);
-            } else {
-                this.textareas[i].value = await
-                    signer.keyoriginXpub(this.bips[i]);
-            }
-
+            this.textareas[i].value = await keyoriginXpubUnified(this.bips[i]);
         }
     }
 
@@ -1039,6 +1051,8 @@ customElements.define("receive-address", ReceiveAddress)
 customElements.define("ask-address", AskAddress)
 customElements.define("wallet-descriptor", WalletDescriptor)
 customElements.define("wallet-xpubs", WalletXpubs)
+customElements.define("wallet-amp2", WalletAmp2)
+
 customElements.define("wallet-balance", WalletBalance)
 customElements.define("wallet-transactions", WalletTransactions)
 customElements.define("create-transaction", CreateTransaction)
@@ -1150,6 +1164,17 @@ function esploraClient() {
     const client = new lwk.EsploraClient(network, url, true)
     client.set_waterfalls_server_recipient("age1xxzrgrfjm3yrwh3u6a7exgrldked0pdauvr3mx870wl6xzrwm5ps8s2h0p");
     return client
+}
+
+async function keyoriginXpubUnified(bip) {
+    if (STATE.jade != null) {
+        return await
+            STATE.jade.keyoriginXpub(bip)
+    } else if (STATE.swSigner != null) {
+        return STATE.swSigner.keyoriginXpub(bip)
+    } else {
+        return null
+    }
 }
 
 async function fullScanAndApply(wolletLocal, scanLocal) {
