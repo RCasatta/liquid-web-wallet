@@ -690,6 +690,8 @@ class SignTransaction extends HTMLElement {
         this.combineTextarea = textareas[2]
         this.analyzeButton = this.querySelector("button.analyze")
         this.signButton = this.querySelector("button.sign")
+        this.cosignButton = this.querySelector("button.cosign")
+
         this.softwareSignButton = this.querySelector("button.ss")
         this.broadcastButton = this.querySelector("button.broadcast")
         this.combineButton = this.querySelector("button.combine")
@@ -705,6 +707,7 @@ class SignTransaction extends HTMLElement {
             this.renderAnalyze()
         })
         this.signButton.addEventListener("click", this.handleSignClick)
+        this.cosignButton.addEventListener("click", this.handleCosignClick)
 
         this.broadcastButton.addEventListener("click", this.handleBroadcastClick)
 
@@ -784,6 +787,27 @@ class SignTransaction extends HTMLElement {
     }
 
 
+    handleCosignClick = async (_e) => {
+        let psetString = this.textarea.value
+        let pset = new lwk.Pset(psetString)
+        setBusyDisabled(this.cosignButton, true)
+
+        let amp2 = lwk.Amp2.new_testnet()
+
+        try {
+            let signedPset = await amp2.cosign(pset)
+            this.messageDiv.innerHTML = success("Transaction cosigned!")
+            this.textarea.value = signedPset
+            this.renderAnalyze()
+        } catch (e) {
+            this.messageDiv.innerHTML = warning(e.toString())
+        } finally {
+            setBusyDisabled(this.cosignButton, false)
+        }
+
+    }
+
+
     handleCombineClick = async (_e) => {
         const pset1Str = this.textarea.value
         const pset2Str = this.combineTextarea.value
@@ -837,6 +861,9 @@ class SignTransaction extends HTMLElement {
         }
         if (missing.length > 0) {
             sigMap.set("Missing", missing)
+            if (missing.includes("3d970d04") && !network.isMainnet()) {
+                this.cosignButton.hidden = false
+            }
         }
 
         this.signDivAnalyze.appendChild(mapToTable(sigMap))
