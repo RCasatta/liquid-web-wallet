@@ -561,10 +561,9 @@ class CreateTransaction extends HTMLElement {
 
         try {
             var builder = new lwk.TxBuilder(network)
-            if (!network.isMainnet()) {
-                // CT discount only available on liquid testnet for now
-                builder = builder.enableCtDiscount()
-            }
+
+            builder = builder.enableCtDiscount()
+
             for (const recipient of recipients) {
                 // inputs already validated during add phase
                 const recipientAddress = new lwk.Address(recipient.querySelector("input.address").value)
