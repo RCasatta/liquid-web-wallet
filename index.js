@@ -881,6 +881,21 @@ class WalletAmp2 extends HTMLElement {
             this.textarea = this.querySelector("textarea")
             this.button = this.querySelector("button")
             this.button.addEventListener("click", this.handleRegister)
+            this.render()
+        }
+    }
+
+    render = async (_) => {
+        let keyoriginXpub = await keyoriginXpubUnified(lwk.Bip.bip87());
+        let uuid = getCookie("amp2_uuid_" + keyoriginXpub)
+        console.log(uuid)
+        if (uuid === "") {
+            this.textarea.hidden = true
+            this.button.hidden = false
+        } else {
+            this.textarea.hidden = false
+            this.textarea.value = uuid
+            this.button.hidden = true
         }
     }
 
@@ -890,6 +905,8 @@ class WalletAmp2 extends HTMLElement {
         let amp2_desc = amp2.descriptor_from_str(keyoriginXpub)
         let result = await amp2.register(amp2_desc);
         console.log(result)
+        setCookie("amp2_uuid_" + keyoriginXpub, result, 365)
+        this.render()
     }
 }
 
