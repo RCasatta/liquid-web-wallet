@@ -874,22 +874,24 @@ class WalletDescriptor extends HTMLElement {
 class WalletAmp2 extends HTMLElement {
     constructor() {
         super()
-        this.textarea = this.querySelector("textarea")
-        this.button = this.querySelector("button")
-        this.button.addEventListener("click", this.handleRegister)
+
+        if (network.isMainnet()) {
+            this.remove()
+        } else {
+            this.textarea = this.querySelector("textarea")
+            this.button = this.querySelector("button")
+            this.button.addEventListener("click", this.handleRegister)
+        }
     }
 
     handleRegister = async (_) => {
-        // TODO disappear for mainnet
         let amp2 = lwk.Amp2.new_testnet()
         let keyoriginXpub = await keyoriginXpubUnified(lwk.Bip.bip87());
         let amp2_desc = amp2.descriptor_from_str(keyoriginXpub)
-        let result = amp2.register(amp2_desc);
+        let result = await amp2.register(amp2_desc);
         console.log(result)
     }
 }
-
-
 
 
 class WalletXpubs extends HTMLElement {
