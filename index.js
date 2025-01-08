@@ -73,17 +73,17 @@ async function init() {
         randomWalletButton.disabled = false
         randomWalletButton.addEventListener("click", (_e) => {
 
-            let mnemonicFromCookie = getCookie("random_mnemonic")
+            let mnemonicFromCookie = localStorage.getItem("random_mnemonic")
             var randomMnemonic
             if (mnemonicFromCookie == null) {
                 randomMnemonic = lwk.Mnemonic.fromRandom(12)
-                setCookie("random_mnemonic", randomMnemonic.toString(), 365)
+                localStorage.setItem("random_mnemonic", randomMnemonic.toString())
             } else {
                 try {
                     randomMnemonic = new lwk.Mnemonic(mnemonicFromCookie)
                 } catch {
                     randomMnemonic = lwk.Mnemonic.fromRandom(12)
-                    setCookie("random_mnemonic", randomMnemonic.toString(), 365)
+                    localStorage.setItem("random_mnemonic", randomMnemonic.toString())
                 }
             }
             STATE.swSigner = new lwk.Signer(randomMnemonic, network)
@@ -1306,28 +1306,6 @@ function parsePrecision(assetHex, value) {
     const precision = _mapAssetHex(assetHex)[1]
     const prec = new lwk.Precision(precision)
     return prec.stringToSats(valueStr)
-}
-
-function setCookie(cname, cvalue, exdays) {
-    const d = new Date();
-    d.setTime(d.getTime() + (exdays * 24 * 60 * 60 * 1000));
-    let expires = "expires=" + d.toUTCString();
-    document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
-}
-
-function getCookie(cname) {
-    let name = cname + "=";
-    let ca = document.cookie.split(';');
-    for (let i = 0; i < ca.length; i++) {
-        let c = ca[i];
-        while (c.charAt(0) == ' ') {
-            c = c.substring(1);
-        }
-        if (c.indexOf(name) == 0) {
-            return c.substring(name.length, c.length);
-        }
-    }
-    return "";
 }
 
 function _mapAssetHex(assetHex) {
