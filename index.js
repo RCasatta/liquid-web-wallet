@@ -875,10 +875,12 @@ class WalletAmp2 extends HTMLElement {
     constructor() {
         super()
 
-        if (network.isMainnet()) {
+        if (network.isMainnet() || jadeOrSwSigner() == null) {
             this.remove()
         } else {
-            this.textarea = this.querySelector("textarea")
+            let textareas = this.querySelectorAll("textarea")
+            this.uuid = textareas[0]
+            this.descriptor = textareas[1]
             this.button = this.querySelector("button")
             this.button.addEventListener("click", this.handleRegister)
             this.render()
@@ -887,14 +889,17 @@ class WalletAmp2 extends HTMLElement {
 
     render = async (_) => {
         let keyoriginXpub = await keyoriginXpubUnified(lwk.Bip.bip87());
-        let uuid = getCookie("amp2_uuid_" + keyoriginXpub)
-        console.log(uuid)
-        if (uuid === "") {
-            this.textarea.hidden = true
+        let uuid_descriptor = localStorage.getItem("amp2_data_" + keyoriginXpub)
+        if (uuid_descriptor == null) {
+            this.uuid.parentElement.hidden = true
+            this.descriptor.parentElement.hidden = true
             this.button.hidden = false
         } else {
-            this.textarea.hidden = false
-            this.textarea.value = uuid
+            let [uuid, descriptor] = uuid_descriptor.split("|")
+            this.uuid.parentElement.hidden = false
+            this.descriptor.parentElement.hidden = false
+            this.uuid.value = uuid
+            this.descriptor.value = descriptor
             this.button.hidden = true
         }
     }
@@ -903,9 +908,9 @@ class WalletAmp2 extends HTMLElement {
         let amp2 = lwk.Amp2.new_testnet()
         let keyoriginXpub = await keyoriginXpubUnified(lwk.Bip.bip87());
         let amp2_desc = amp2.descriptor_from_str(keyoriginXpub)
-        let result = await amp2.register(amp2_desc);
-        console.log(result)
-        setCookie("amp2_uuid_" + keyoriginXpub, result, 365)
+        let uuid = await amp2.register(amp2_desc);
+        let uuid_descriptor = uuid + "|" + amp2_desc.descriptor(); // TODO: remove `descriptor()` once Amp2Descriptor support toString()
+        localStorage.setItem("amp2_data_" + keyoriginXpub, uuid_descriptor)
         this.render()
     }
 }
@@ -919,7 +924,9 @@ class WalletXpubs extends HTMLElement {
         this.labels = this.querySelectorAll("label")
         this.bips = [lwk.Bip.bip49(), lwk.Bip.bip84(), lwk.Bip.bip87()];
 
-        if (jadeOrSwSigner() != null) {
+        if (jadeOrSwSigner() == null) {
+            this.remove()
+        } else {
             // TODO should remove also the "Xpubs" subtitle
             for (let i = 0; i < 3; i++) {
                 this.labels[i].childNodes[0].nodeValue = this.bips[i].toString()
