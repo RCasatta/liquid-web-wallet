@@ -910,7 +910,11 @@ class WalletDescriptor extends HTMLElement {
     constructor() {
         super()
         this.textarea = this.querySelector("textarea")
-        this.textarea.innerText = STATE.wollet.descriptor().toString()
+        this.quickLink = this.querySelector("a")
+
+        let descriptor = STATE.wollet.descriptor().toString()
+        this.textarea.innerText = descriptor
+        this.quickLink.href = "#" + encodeRFC3986URIComponent(descriptor)
     }
 }
 
@@ -923,8 +927,11 @@ class WalletAmp2 extends HTMLElement {
             this.remove()
         } else {
             let textareas = this.querySelectorAll("textarea")
+
             this.uuid = textareas[0]
             this.descriptor = textareas[1]
+            this.quickLink = this.querySelector("a")
+
             this.button = this.querySelector("button")
             this.button.addEventListener("click", this.handleRegister)
             this.render()
@@ -944,6 +951,7 @@ class WalletAmp2 extends HTMLElement {
             this.descriptor.parentElement.hidden = false
             this.uuid.value = uuid
             this.descriptor.value = descriptor
+            this.quickLink.href = "#" + encodeRFC3986URIComponent(descriptor)
             this.button.hidden = true
         }
     }
@@ -1371,4 +1379,11 @@ function _mapAssetHex(assetHex) {
 
         default: return [assetHex, 0]
     }
+}
+
+function encodeRFC3986URIComponent(str) {
+    return encodeURIComponent(str).replace(
+        /[!'()*]/g,
+        (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
+    );
 }
