@@ -19,6 +19,10 @@ const network = lwk.Network.testnet()
 /// First page doesn't use components because we want to be loaded before the wasm is loaded, which takes time
 async function init() {
     let connectJade = document.getElementById("connect-jade-button")
+    let descriptorTextarea = document.getElementById("descriptor-textarea")
+    let descriptorMessage = document.getElementById("descriptor-message")
+    let exampleDescriptor = document.getElementById("example-descriptor-link")
+
     connectJade.addEventListener("click", async (_e) => {
         let connectJadeMessage = document.getElementById("connect-jade-message")
         try {
@@ -39,10 +43,6 @@ async function init() {
             setBusyDisabled(connectJade, false)
         }
     })
-
-    let descriptorTextarea = document.getElementById("descriptor-textarea")
-    let descriptorMessage = document.getElementById("descriptor-message")
-    let exampleDescriptor = document.getElementById("example-descriptor-link")
 
     exampleDescriptor.addEventListener("click", (_e) => {
         if (descriptorTextarea.value == "") {
@@ -93,6 +93,20 @@ async function init() {
             handleWatchOnlyClick()
         });
     }
+
+    const hashDescriptor = decodeURIComponent(window.location.hash.slice(1))
+    if (hashDescriptor) {
+        descriptorTextarea.value = hashDescriptor
+        document.querySelector("details").open = true
+        window.location.hash = ''
+
+        // Using setTimeout to ensure this runs after component initialization.
+        // This allows the custom elements to be registered and ready before
+        // we try to navigate to the wallet view.
+        setTimeout(async () => {
+            await handleWatchOnlyClick()
+        }, 0)
+    }
 }
 
 async function handleWatchOnlyClick(_e) {
@@ -118,7 +132,6 @@ async function handleWatchOnlyClick(_e) {
         await fullScanAndApply(STATE.wollet, STATE.scan)
     } catch (e) {
         descriptorMessage.innerHTML = warning(e)
-
     }
 }
 
