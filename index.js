@@ -464,10 +464,12 @@ class WalletTransactions extends HTMLElement {
 
             let newRow = document.createElement("tr")
             table.appendChild(newRow)
+            let txid_string = val.txid().toString()
+            let txid_truncated = txid_string.slice(0, 8) + "..." + txid_string.slice(-8)
 
             let txid = document.createElement("td")
             txid.innerHTML = `
-                    <code><a href="${val.unblindedUrl(network.defaultExplorerUrl())}" target="_blank">${val.txid()}</a></code>
+                    <code><a href="${val.unblindedUrl(network.defaultExplorerUrl())}" target="_blank">${txid_truncated}</a></code>
                 `
             let txType = document.createElement("td")
             txType.innerHTML = `
