@@ -761,6 +761,9 @@ class SignTransaction extends HTMLElement {
             let psetString = this.textarea.value
             let pset = new lwk.Pset(psetString)
             let psetFinalized = STATE.wollet.finalize(pset)
+            let tx = psetFinalized.extractTx().toString()
+            console.log("broadcasting:")
+            console.log(tx)
             setBusyDisabled(this.broadcastButton, true)
             let client = esploraClient()
             let txid = await client.broadcast(psetFinalized)
