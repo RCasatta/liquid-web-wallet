@@ -945,6 +945,7 @@ class WalletAmp2 extends HTMLElement {
             this.uuid.parentElement.hidden = true
             this.descriptor.parentElement.hidden = true
             this.button.hidden = false
+            this.quickLink.hidden = true
         } else {
             let [uuid, descriptor] = uuid_descriptor.split("|")
             this.uuid.parentElement.hidden = false
@@ -957,13 +958,19 @@ class WalletAmp2 extends HTMLElement {
     }
 
     handleRegister = async (_) => {
-        let amp2 = lwk.Amp2.new_testnet()
-        let keyoriginXpub = await keyoriginXpubUnified(lwk.Bip.bip87());
-        let amp2_desc = amp2.descriptor_from_str(keyoriginXpub)
-        let uuid = await amp2.register(amp2_desc);
-        let uuid_descriptor = uuid + "|" + amp2_desc.descriptor(); // TODO: remove `descriptor()` once Amp2Descriptor support toString()
-        localStorage.setItem("amp2_data_" + keyoriginXpub, uuid_descriptor)
-        this.render()
+        try {
+            setBusyDisabled(this.button, true)
+            let amp2 = lwk.Amp2.new_testnet()
+            let keyoriginXpub = await keyoriginXpubUnified(lwk.Bip.bip87());
+            let amp2_desc = amp2.descriptor_from_str(keyoriginXpub)
+            let uuid = await amp2.register(amp2_desc);
+            let uuid_descriptor = uuid + "|" + amp2_desc.descriptor(); // TODO: remove `descriptor()` once Amp2Descriptor support toString()
+            localStorage.setItem("amp2_data_" + keyoriginXpub, uuid_descriptor)
+            this.render()
+        } catch (e) {
+            setBusyDisabled(this.button, false)
+
+        }
     }
 }
 
