@@ -530,7 +530,70 @@ class CreateTransaction extends HTMLElement {
         this.template = this.querySelector("template")
         this.listRecipients = this.querySelector("div.recipients")
 
+        let issuanceSection = this.querySelector("details")
+        this.issueButton = issuanceSection.querySelector("button")
+        this.issueButton.addEventListener("click", this.handleIssue)
+        const issuanceInputs = issuanceSection.querySelectorAll("input")
+        this.assetAmount = issuanceInputs[0]
+        this.assetAddress = issuanceInputs[1]
+        this.tokenAmount = issuanceInputs[2]
+        this.tokenAddress = issuanceInputs[3]
+        this.domain = issuanceInputs[4]
+        this.name = issuanceInputs[5]
+        this.ticker = issuanceInputs[6]
+        this.precision = issuanceInputs[7]
+        this.pubkey = issuanceInputs[8]
+        this.messageIssuance = issuanceSection.querySelector("div.messageIssuance")
+
         this.render()
+    }
+
+    handleIssue = (e) => {
+        e.preventDefault()
+        // Get form and validate using built-in HTML5 validation
+        const form = e.target.form
+
+        // initIssuanceForm() // TODO: mockup data, remove this
+
+        if (!form.checkValidity()) {
+            form.reportValidity()
+            return
+        }
+
+        try {
+            var builder = new lwk.TxBuilder(network)
+
+            builder = builder.enableCtDiscount()
+
+            const assetAddr = new lwk.Address(this.assetAddress.value)
+            const tokenAddr = new lwk.Address(this.tokenAddress.value)
+            const contract = new lwk.Contract(
+                this.domain.value,
+                this.pubkey.value,
+                this.name.value,
+                parseInt(this.precision.value),
+                this.ticker.value,
+                0,
+            )
+
+            builder = builder.issueAsset(
+                this.assetAmount.value,
+                assetAddr,
+                this.tokenAmount.value,
+                tokenAddr,
+                contract
+            )
+            STATE.pset = builder.finish(STATE.wollet)
+
+            this.dispatchEvent(new CustomEvent('pset-ready', {
+                bubbles: true,
+            }))
+
+        } catch (e) {
+            this.messageIssuance.innerHTML = warning(e)
+            return
+        }
+
     }
 
     render = () => {
@@ -1393,4 +1456,32 @@ function encodeRFC3986URIComponent(str) {
         /[!'()*]/g,
         (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
     );
+}
+
+
+// TODO: remove me
+function initIssuanceForm() {
+    const form = document.querySelector('create-transaction details form');
+    if (!form) return;
+
+    // Sample data that meets validation requirements
+    const mockData = {
+        asset_amount: 1000,
+        asset_address: "tlq1qqw4c6fpq7luwl7ka9rdrgtgef3nycm5dw85h0tz4sezvd9svh28p055pq2sj6g6ka5veatxnyhgcx2rlzhx0sns7dec5wz6ug",
+        token_amount: 1,
+        token_address: "tlq1qqw4c6fpq7luwl7ka9rdrgtgef3nycm5dw85h0tz4sezvd9svh28p055pq2sj6g6ka5veatxnyhgcx2rlzhx0sns7dec5wz6ug",
+        domain: "example.com",
+        name: "Example Asset Token",  // min 5 chars, max 255
+        ticker: "EAT",               // min 3 chars, max 5
+        precision: 8,                // min 0, max 8
+        pubkey: "02c095d069538f96bf14c5f90f6c0851bdf354a0ec86039a24bf38a73f705adc2c" // sample public key
+    };
+
+    // Set values for each form input
+    Object.entries(mockData).forEach(([key, value]) => {
+        const input = form.querySelector(`[name="${key}"]`);
+        if (input) {
+            input.value = value;
+        }
+    });
 }
