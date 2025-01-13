@@ -164,18 +164,18 @@
 
                         <form>
                             <label for="asset_amount">Asset amount</label>
-                            <input type="number" step="1" min="0" max="2100000000000000" lang="en" name="asset_amount"
-                                required="required" placeholder="1">
+                            <input type="number" step="1" min="0" max="18446744073709551615" lang="en"
+                                name="asset_amount" required="required" placeholder="1">
 
                             <label for="asset_address">Asset address</label>
                             <input type="text" lang="en" name="asset_address" required="required" placeholder="">
 
-                            <label for="token_amount">Reissunace token amount</label>
-                            <input type="number" step="1" min="0" max="2100000000000000" lang="en" name="token_amount"
-                                required="required" placeholder="1">
+                            <label for="token_amount">Reissuance token amount</label>
+                            <input type="number" step="1" min="0" lang="en" name="token_amount" required="required"
+                                placeholder="1">
 
                             <label for="token_address">Token address</label>
-                            <input type="text" lang="en" name="token_address" required="required" placeholder="">
+                            <input type="text" lang="en" name="token_address" placeholder="">
 
                             <label for="domain">Domain</label>
                             <input type="text" name="domain" required="required" placeholder="xyzcoin.com">
@@ -191,8 +191,10 @@
                             <label for="precision">Precision</label>
                             <input type="number" min="0" max="8" name="precision" required="required" placeholder="0">
 
-                            <label for="pubkey">PubKey</label>
-                            <input type="text" name="pubkey" required="required" placeholder="">
+                            <label for="pubkey">PubKey. You need to change this value if you need to update asset
+                                metadata in the future.</label>
+                            <input type="text" name="pubkey" required="required"
+                                value="020202020202020202020202020202020202020202020202020202020202020202">
 
                             <button type="submit" name="action" value="create">Issue assets</button>
                         </form>

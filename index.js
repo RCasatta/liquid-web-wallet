@@ -570,7 +570,7 @@ class CreateTransaction extends HTMLElement {
             builder = builder.enableCtDiscount()
 
             const assetAddr = new lwk.Address(this.assetAddress.value)
-            const tokenAddr = new lwk.Address(this.tokenAddress.value)
+            const tokenAddr = this.tokenAmount.value > 0 ? new lwk.Address(this.tokenAddress.value) : null
             const contract = new lwk.Contract(
                 this.domain.value,
                 this.pubkey.value,
