@@ -772,6 +772,7 @@ class SignTransaction extends HTMLElement {
         this.analyzeButton = this.querySelector("button.analyze")
         this.signButton = this.querySelector("button.sign")
         this.cosignButton = this.querySelector("button.cosign")
+        this.signWithJadeButton = this.querySelector("button.sign-with-jade")
 
         this.softwareSignButton = this.querySelector("button.ss")
         this.broadcastButton = this.querySelector("button.broadcast")
@@ -796,6 +797,8 @@ class SignTransaction extends HTMLElement {
 
         this.softwareSignButton.addEventListener("click", this.handleSoftwareSignClick)
 
+        this.signWithJadeButton.addEventListener("click", this.handleSignWithJadeClick)
+
         if (STATE.pset != null) {
             this.textarea.value = STATE.pset.toString()
             STATE.pset = null
@@ -810,7 +813,28 @@ class SignTransaction extends HTMLElement {
             this.mnemonic.disabled = true
         }
 
+        if (STATE.jade == null && STATE.swSigner == null) {
+            this.signWithJadeButton.hidden = false
+        }
+
         this.renderAnalyze()
+    }
+
+    handleSignWithJadeClick = async (_e) => {
+        setBusyDisabled(this.signWithJadeButton, true)
+        try {
+            let psetString = this.textarea.value
+            let pset = new lwk.Pset(psetString)
+            let jade = await new lwk.Jade(network, true)
+            let signedPset = await jade.sign(pset)
+            this.textarea.value = signedPset
+            this.renderAnalyze()
+            this.messageDiv.innerHTML = success("Transaction signed!")
+        } catch (e) {
+            this.messageDiv.innerHTML = warning(e.toString())
+        } finally {
+            setBusyDisabled(this.signWithJadeButton, false)
+        }
     }
 
     handleSoftwareSignClick = async (_e) => {
