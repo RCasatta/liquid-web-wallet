@@ -531,19 +531,23 @@ class CreateTransaction extends HTMLElement {
         this.listRecipients = this.querySelector("div.recipients")
 
         let issuanceSection = this.querySelector("details")
-        this.issueButton = issuanceSection.querySelector("button")
-        this.issueButton.addEventListener("click", this.handleIssue)
-        const issuanceInputs = issuanceSection.querySelectorAll("input")
-        this.assetAmount = issuanceInputs[0]
-        this.assetAddress = issuanceInputs[1]
-        this.tokenAmount = issuanceInputs[2]
-        this.tokenAddress = issuanceInputs[3]
-        this.domain = issuanceInputs[4]
-        this.name = issuanceInputs[5]
-        this.ticker = issuanceInputs[6]
-        this.precision = issuanceInputs[7]
-        this.pubkey = issuanceInputs[8]
-        this.messageIssuance = issuanceSection.querySelector("div.messageIssuance")
+        if (network.isMainnet()) {
+            issuanceSection.hidden = true
+        } else {
+            this.issueButton = issuanceSection.querySelector("button")
+            this.issueButton.addEventListener("click", this.handleIssue)
+            const issuanceInputs = issuanceSection.querySelectorAll("input")
+            this.assetAmount = issuanceInputs[0]
+            this.assetAddress = issuanceInputs[1]
+            this.tokenAmount = issuanceInputs[2]
+            this.tokenAddress = issuanceInputs[3]
+            this.domain = issuanceInputs[4]
+            this.name = issuanceInputs[5]
+            this.ticker = issuanceInputs[6]
+            this.precision = issuanceInputs[7]
+            this.pubkey = issuanceInputs[8]
+            this.messageIssuance = issuanceSection.querySelector("div.messageIssuance")
+        }
 
         this.render()
     }
