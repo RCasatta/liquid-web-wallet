@@ -275,7 +275,7 @@ class MyNav extends HTMLElement {
                     <a href="#" id="balance-page">Balance</a> |
                     <a href="#" id="transactions-page">Transactions</a> |
                     <a href="#" id="create-page">Create</a> |
-                    <a href="#" id="sign-page">PSET</a> |
+                    <a href="#" id="sign-page">Sign</a> |
                     <a href="#" id="receive-page">Receive</a> |
                     <a href="#" id="disconnect">Disconnect</a>
 
