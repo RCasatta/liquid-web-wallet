@@ -163,32 +163,34 @@
                         <summary role="button" class="secondary">Issuance</summary>
 
                         <form>
-                            <label for="asset_amount">Asset amount</label>
+                            <label for="asset_amount">Asset amount. The number of assets to issue without decimanls (eg
+                                Bitcoin is 21M)</label>
                             <input type="number" step="1" min="0" max="18446744073709551615" lang="en"
                                 name="asset_amount" required="required" placeholder="1">
 
-                            <label for="asset_address">Asset address</label>
+                            <label for="asset_address">Asset address. The address receiving the issued assets.</label>
                             <input type="text" lang="en" name="asset_address" required="required" placeholder="">
 
-                            <label for="token_amount">Reissuance token amount</label>
+                            <label for="token_amount">Reissuance token amount. The number of reissuance tokens.</label>
                             <input type="number" step="1" min="0" lang="en" name="token_amount" required="required"
                                 placeholder="1">
 
-                            <label for="token_address">Token address</label>
+                            <label for="token_address">Token address. The address receiving the reissuance
+                                tokens.</label>
                             <input type="text" lang="en" name="token_address" placeholder="">
 
-                            <label for="domain">Domain</label>
+                            <label for="domain">Domain. The domain for the proof of ownership.</label>
                             <input type="text" name="domain" required="required" placeholder="xyzcoin.com">
 
-                            <label for="name">Name</label>
+                            <label for="name">Name. The name of the asset.</label>
                             <input type="text" minlength="5" maxlength="255" name="name" required="required"
                                 placeholder="XYZ Instable Coin">
 
-                            <label for="ticker">Ticker</label>
+                            <label for="ticker">Ticker. The ticker of the asset.</label>
                             <input type="text" minlength="3" maxlength="5" name="ticker" required="required"
                                 placeholder="XYZ">
 
-                            <label for="precision">Precision</label>
+                            <label for="precision">Precision. The number of decimals to use for the asset.</label>
                             <input type="number" min="0" max="8" name="precision" required="required" placeholder="0">
 
                             <label for="pubkey">PubKey. You need to change this value if you need to update asset
