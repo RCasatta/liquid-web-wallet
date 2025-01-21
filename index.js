@@ -780,6 +780,8 @@ class SignTransaction extends HTMLElement {
 
         this.messageDiv = this.querySelector("div.message")
         this.signDivAnalyze = this.querySelector("div.analyze")
+        this.recipientsDiv = this.querySelector("div.recipients")
+
         const details = this.querySelectorAll("details")
         this.signDetails = details[0]
 
@@ -975,6 +977,18 @@ class SignTransaction extends HTMLElement {
         }
 
         this.signDivAnalyze.appendChild(mapToTable(sigMap))
+
+
+        // Recipients
+        const psetRecipients = details.balance().recipients()
+        const recipientsMap = new Map()
+        for (const recipient of psetRecipients) {
+            recipientsMap.set(recipient.address().toString() + " " + mapAssetTicker(recipient.asset().toString()), recipient.value().toString())
+        }
+        this.recipientsDiv.innerHTML = "<h3>Recipients</h3>"
+        this.recipientsDiv.appendChild(mapToTable(recipientsMap))
+
+
         // TODO issuances
     }
 }
