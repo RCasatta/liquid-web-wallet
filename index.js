@@ -15,6 +15,9 @@ STATE.page = String # id of the last rendered page
 const STATE = {}
 const network = lwk.Network.testnet()
 
+const RANDOM_MNEMONIC_KEY = "random_mnemonic"
+const AMP2_DATA_KEY_PREFIX = "amp2_data_v2_"
+
 /// Re-enables initially disabled buttons, and add listener to buttons on the first page
 /// First page doesn't use components because we want to be loaded before the wasm is loaded, which takes time
 async function init() {
@@ -73,17 +76,17 @@ async function init() {
         randomWalletButton.disabled = false
         randomWalletButton.addEventListener("click", (_e) => {
 
-            let mnemonicFromCookie = localStorage.getItem("random_mnemonic")
+            let mnemonicFromCookie = localStorage.getItem(RANDOM_MNEMONIC_KEY)
             var randomMnemonic
             if (mnemonicFromCookie == null) {
                 randomMnemonic = lwk.Mnemonic.fromRandom(12)
-                localStorage.setItem("random_mnemonic", randomMnemonic.toString())
+                localStorage.setItem(RANDOM_MNEMONIC_KEY, randomMnemonic.toString())
             } else {
                 try {
                     randomMnemonic = new lwk.Mnemonic(mnemonicFromCookie)
                 } catch {
                     randomMnemonic = lwk.Mnemonic.fromRandom(12)
-                    localStorage.setItem("random_mnemonic", randomMnemonic.toString())
+                    localStorage.setItem(RANDOM_MNEMONIC_KEY, randomMnemonic.toString())
                 }
             }
             STATE.swSigner = new lwk.Signer(randomMnemonic, network)
@@ -1045,7 +1048,7 @@ class WalletAmp2 extends HTMLElement {
 
     render = async (_) => {
         let keyoriginXpub = await keyoriginXpubUnified(lwk.Bip.bip87());
-        let uuid_descriptor = localStorage.getItem("amp2_data_" + keyoriginXpub)
+        let uuid_descriptor = localStorage.getItem(AMP2_DATA_KEY_PREFIX + keyoriginXpub)
         if (uuid_descriptor == null) {
             this.uuid.parentElement.hidden = true
             this.descriptor.parentElement.hidden = true
@@ -1070,7 +1073,7 @@ class WalletAmp2 extends HTMLElement {
             let amp2_desc = amp2.descriptor_from_str(keyoriginXpub)
             let uuid = await amp2.register(amp2_desc);
             let uuid_descriptor = uuid + "|" + amp2_desc.descriptor(); // TODO: remove `descriptor()` once Amp2Descriptor support toString()
-            localStorage.setItem("amp2_data_" + keyoriginXpub, uuid_descriptor)
+            localStorage.setItem(AMP2_DATA_KEY_PREFIX + keyoriginXpub, uuid_descriptor)
             this.render()
         } catch (e) {
             setBusyDisabled(this.button, false)
