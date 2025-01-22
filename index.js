@@ -1060,6 +1060,7 @@ class WalletAmp2 extends HTMLElement {
             this.descriptor.parentElement.hidden = false
             this.uuid.value = uuid
             this.descriptor.value = descriptor
+            this.quickLink.hidden = false
             this.quickLink.href = "#" + encodeRFC3986URIComponent(descriptor)
             this.button.hidden = true
         }
