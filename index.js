@@ -1499,31 +1499,3 @@ function encodeRFC3986URIComponent(str) {
         (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
     );
 }
-
-
-// TODO: remove me
-function initIssuanceForm() {
-    const form = document.querySelector('create-transaction details form');
-    if (!form) return;
-
-    // Sample data that meets validation requirements
-    const mockData = {
-        asset_amount: 1000,
-        asset_address: "tlq1qqw4c6fpq7luwl7ka9rdrgtgef3nycm5dw85h0tz4sezvd9svh28p055pq2sj6g6ka5veatxnyhgcx2rlzhx0sns7dec5wz6ug",
-        token_amount: 1,
-        token_address: "tlq1qqw4c6fpq7luwl7ka9rdrgtgef3nycm5dw85h0tz4sezvd9svh28p055pq2sj6g6ka5veatxnyhgcx2rlzhx0sns7dec5wz6ug",
-        domain: "example.com",
-        name: "Example Asset Token",  // min 5 chars, max 255
-        ticker: "EAT",               // min 3 chars, max 5
-        precision: 8,                // min 0, max 8
-        pubkey: "02c095d069538f96bf14c5f90f6c0851bdf354a0ec86039a24bf38a73f705adc2c" // sample public key
-    };
-
-    // Set values for each form input
-    Object.entries(mockData).forEach(([key, value]) => {
-        const input = form.querySelector(`[name="${key}"]`);
-        if (input) {
-            input.value = value;
-        }
-    });
-}
