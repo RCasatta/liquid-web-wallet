@@ -570,8 +570,6 @@ class CreateTransaction extends HTMLElement {
         try {
             var builder = new lwk.TxBuilder(network)
 
-            builder = builder.enableCtDiscount()
-
             const assetAddr = new lwk.Address(this.assetAddress.value)
             const tokenAddr = this.tokenAmount.value > 0 ? new lwk.Address(this.tokenAddress.value) : null
             const contract = new lwk.Contract(
@@ -646,8 +644,6 @@ class CreateTransaction extends HTMLElement {
 
         try {
             var builder = new lwk.TxBuilder(network)
-
-            builder = builder.enableCtDiscount()
 
             for (const recipient of recipients) {
                 // inputs already validated during add phase
