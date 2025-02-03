@@ -18,6 +18,14 @@ const network = lwk.Network.testnet()
 const RANDOM_MNEMONIC_KEY = "random_mnemonic"
 const AMP2_DATA_KEY_PREFIX = "amp2_data_v2_"
 
+let requestButton = document.getElementById("request-hid-device");
+requestButton.addEventListener("click", async () => {
+    let device = await lwk.search_ledger_device();
+    let ledger = new lwk.LedgerWeb(device)
+    let version = await ledger.get_version()
+    console.log(version)
+});
+
 /// Re-enables initially disabled buttons, and add listener to buttons on the first page
 /// First page doesn't use components because we want to be loaded before the wasm is loaded, which takes time
 async function init() {
