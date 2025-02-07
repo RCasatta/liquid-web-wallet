@@ -11,6 +11,7 @@ STATE.multiWallets = [String]
 STATE.swSigner = lwk.Signer # only for testnet
 STATE.scanLoop = interval
 STATE.page = String # id of the last rendered page
+STATE.contract = lwk.Contract # last issued contract
 */
 const STATE = {}
 const network = lwk.Network.testnet()
@@ -555,7 +556,7 @@ class CreateTransaction extends HTMLElement {
         this.render()
     }
 
-    handleIssue = (e) => {
+    handleIssue = async (e) => {
         e.preventDefault()
         // Get form and validate using built-in HTML5 validation
         const form = e.target.form
@@ -580,6 +581,10 @@ class CreateTransaction extends HTMLElement {
                 this.ticker.value,
                 0,
             )
+
+            if (contract.domain() === "liquidtestnet.com") {
+                STATE.contract = contract.clone()
+            }
 
             builder = builder.issueAsset(
                 this.assetAmount.value,
@@ -778,6 +783,7 @@ class SignTransaction extends HTMLElement {
         this.combineButton = this.querySelector("button.combine")
 
         this.messageDiv = this.querySelector("div.message")
+        this.contractDiv = this.querySelector("div.contract")
         this.signDivAnalyze = this.querySelector("div.analyze")
         this.recipientsDiv = this.querySelector("div.recipients")
 
@@ -873,10 +879,41 @@ class SignTransaction extends HTMLElement {
             let client = esploraClient()
             let txid = await client.broadcast(psetFinalized)
             this.messageDiv.innerHTML = success(txid, "Tx broadcasted!")
+
+            this.broadcastContractIfAny()
+
         } catch (e) {
             this.messageDiv.innerHTML = warning("Cannot broadcast tx, is it signed?")
         }
         setBusyDisabled(this.broadcastButton, false)
+    }
+
+    broadcastContractIfAny = async (_e) => {
+        if (STATE.contract != null) {
+            if (STATE.contract.domain() === "liquidtestnet.com") {
+                try {
+                    const response = await fetch('https://assets-testnet.blockstream.info/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: STATE.contract.toString()
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    console.log('Asset registered successfully');
+                    this.this.contractDiv.innerHTML = success("Asset contract registered successfully!");
+                } catch (error) {
+                    console.error('Error registering asset:', error);
+                } finally {
+                    STATE.contract = null
+                }
+            }
+        }
     }
 
     handleSignClick = async (_e) => {
