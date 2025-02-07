@@ -1405,6 +1405,7 @@ async function keyoriginXpubUnified(bip) {
 }
 
 async function fullScanAndApply(wolletLocal, scanLocal) {
+    var updated = false
 
     if (!scanLocal.running) {
         scanLocal.running = true
@@ -1412,32 +1413,40 @@ async function fullScanAndApply(wolletLocal, scanLocal) {
         document.dispatchEvent(new CustomEvent('wallet-sync-start'))
         let client = esploraClient()
 
-        var update = await client.fullScan(wolletLocal)
-        if (update instanceof lwk.Update) {
-            const walletStatus = wolletLocal.status()
-            wolletLocal.applyUpdate(update)
-            if (update.onlyTip()) {
-                // this is a shortcut, the restored from persisted state UI won't see "updated at <most recent scan>" but "updated at <most recent scan with tx>".
-                // The latter is possible by deleting the previous update if both this and the previous are `onlyTip()` but the 
-                // more complex logic is avoided for now
-                console.log("avoid persisting only tip update")
-            } else {
-                console.log("Saving persisted update " + walletStatus)
-                update.prune(wolletLocal)
-                const base64 = update.serializeEncryptedBase64(wolletLocal.descriptor())
+        try {
+            var update = await client.fullScan(wolletLocal)
 
-                try {
-                    localStorage.setItem(walletStatus, base64)
-                } catch (e) {
-                    console.log("Saving persisted update " + walletStatus + " failed, too big")
-                    alert("Attempt to store too much data in the local storage, skipping")
+            if (update instanceof lwk.Update) {
+                updated = true
+                const walletStatus = wolletLocal.status()
+                wolletLocal.applyUpdate(update)
+                if (update.onlyTip()) {
+                    // this is a shortcut, the restored from persisted state UI won't see "updated at <most recent scan>" but "updated at <most recent scan with tx>".
+                    // The latter is possible by deleting the previous update if both this and the previous are `onlyTip()` but the
+                    // more complex logic is avoided for now
+                    console.log("avoid persisting only tip update")
+                } else {
+                    console.log("Saving persisted update " + walletStatus)
+                    update.prune(wolletLocal)
+                    const base64 = update.serializeEncryptedBase64(wolletLocal.descriptor())
+
+                    try {
+                        localStorage.setItem(walletStatus, base64)
+                    } catch (e) {
+                        console.log("Saving persisted update " + walletStatus + " failed, too big")
+                        alert("Attempt to store too much data in the local storage, skipping")
+                    }
                 }
             }
+            document.dispatchEvent(new CustomEvent('wallet-sync-end'))
+        } catch (e) {
+            console.log("Error in fullScanAndApply: " + e)
+        } finally {
+            scanLocal.running = false
         }
-        scanLocal.running = false
-        document.dispatchEvent(new CustomEvent('wallet-sync-end'))
 
     }
+    return updated
 }
 
 function setBusyDisabled(node, b) {
