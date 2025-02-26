@@ -26,6 +26,30 @@ requestButton.addEventListener("click", async () => {
     console.log(version)
 });
 
+let requestButtonXpub = document.getElementById("request-xpub");
+requestButtonXpub.addEventListener("click", async () => {
+    let device = await lwk.search_ledger_device();
+    let ledger = new lwk.LedgerWeb(device)
+    let xpub = await ledger.derive_xpub()
+    console.log(xpub)
+});
+
+let requestButtonMaster = document.getElementById("request-master");
+requestButtonMaster.addEventListener("click", async () => {
+    let device = await lwk.search_ledger_device();
+    let ledger = new lwk.LedgerWeb(device)
+    let master = await ledger.slip77_master_blinding_key()
+    console.log(master)
+});
+
+let requestButtonFingerprint = document.getElementById("request-fingerprint");
+requestButtonFingerprint.addEventListener("click", async () => {
+    let device = await lwk.search_ledger_device();
+    let ledger = new lwk.LedgerWeb(device)
+    let fingerprint = await ledger.fingerprint()
+    console.log(fingerprint)
+});
+
 /// Re-enables initially disabled buttons, and add listener to buttons on the first page
 /// First page doesn't use components because we want to be loaded before the wasm is loaded, which takes time
 async function init() {
