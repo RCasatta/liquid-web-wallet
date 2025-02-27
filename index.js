@@ -20,31 +20,31 @@ const AMP2_DATA_KEY_PREFIX = "amp2_data_v2_"
 
 let requestButton = document.getElementById("request-hid-device");
 requestButton.addEventListener("click", async () => {
-    let device = await lwk.search_ledger_device();
+    let device = await lwk.searchLedgerDevice();
     let ledger = new lwk.LedgerWeb(device)
-    let version = await ledger.get_version()
+    let version = await ledger.getVersion()
     console.log(version)
 });
 
 let requestButtonXpub = document.getElementById("request-xpub");
 requestButtonXpub.addEventListener("click", async () => {
-    let device = await lwk.search_ledger_device();
+    let device = await lwk.searchLedgerDevice();
     let ledger = new lwk.LedgerWeb(device)
-    let xpub = await ledger.derive_xpub("m/44'/1'/0'/")
+    let xpub = await ledger.deriveXpub("m/44'/1'/0'")
     console.log(xpub)
 });
 
 let requestButtonMaster = document.getElementById("request-master");
 requestButtonMaster.addEventListener("click", async () => {
-    let device = await lwk.search_ledger_device();
+    let device = await lwk.searchLedgerDevice();
     let ledger = new lwk.LedgerWeb(device)
-    let master = await ledger.slip77_master_blinding_key()
+    let master = await ledger.slip77MasterBlindingKey()
     console.log(master)
 });
 
 let requestButtonFingerprint = document.getElementById("request-fingerprint");
 requestButtonFingerprint.addEventListener("click", async () => {
-    let device = await lwk.search_ledger_device();
+    let device = await lwk.searchLedgerDevice();
     let ledger = new lwk.LedgerWeb(device)
     let fingerprint = await ledger.fingerprint()
     console.log(fingerprint)
