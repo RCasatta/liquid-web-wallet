@@ -30,7 +30,7 @@ let requestButtonXpub = document.getElementById("request-xpub");
 requestButtonXpub.addEventListener("click", async () => {
     let device = await lwk.search_ledger_device();
     let ledger = new lwk.LedgerWeb(device)
-    let xpub = await ledger.derive_xpub()
+    let xpub = await ledger.derive_xpub("m/44'/1'/0'/")
     console.log(xpub)
 });
 
