@@ -586,7 +586,78 @@ class CreateTransaction extends HTMLElement {
             this.messageIssuance = issuanceSection.querySelector("div.messageIssuance")
         }
 
+        // Add reissuance section components
+        let reissuanceSection = this.querySelectorAll("details")[1]
+        if (network.isMainnet()) {
+            reissuanceSection.hidden = true
+        } else {
+            this.reissueButton = reissuanceSection.querySelector("button")
+            this.reissueButton.addEventListener("click", this.handleReissue)
+            const reissuanceInputs = reissuanceSection.querySelectorAll("input")
+            this.reissuanceAssetId = reissuanceInputs[0]
+            this.reissuanceSatoshi = reissuanceInputs[1]
+            this.reissuanceAddress = reissuanceInputs[2]
+            this.messageReissuance = reissuanceSection.querySelector("div.messageReissuance")
+        }
+
         this.render()
+    }
+
+    handleReissue = async (e) => {
+        e.preventDefault()
+        // Get form and validate using built-in HTML5 validation
+        const form = e.target.form
+
+        if (!form.checkValidity()) {
+            form.reportValidity()
+            return
+        }
+
+        try {
+            const esplora = esploraClient()
+            const assetId = new lwk.AssetId(this.reissuanceAssetId.value)
+            const registry = lwk.Registry.defaultForNetwork(network);
+            const assetInfo = await registry.fetchWithTx(assetId, esplora)
+            console.log(assetInfo.contract())
+            console.log(assetInfo.tx().txid().toString())
+
+            // var builder = new lwk.TxBuilder(network)
+
+            // // Get the asset ID from the input
+            // const assetId = new lwk.AssetId(this.reissuanceAssetId.value)
+
+            // // Get the amount to reissue
+            // const satoshis = parseInt(this.reissuanceSatoshi.value)
+            // if (isNaN(satoshis) || satoshis <= 0) {
+            //     throw new Error("Invalid reissuance amount")
+            // }
+
+            // // Get the address or use the wallet's address if empty
+            // let address
+            // if (this.reissuanceAddress.value.trim() === "") {
+            //     address = STATE.wollet.address(null).address()
+            // } else {
+            //     address = new lwk.Address(this.reissuanceAddress.value)
+            //     if (!address.isBlinded()) {
+            //         throw new Error('Address is not confidential')
+            //     }
+            //     if (network.isMainnet() != address.isMainnet()) {
+            //         throw new Error("Invalid address network")
+            //     }
+            // }
+
+            // // Build the reissuance transaction
+            // builder = builder.reissueAsset(assetId, satoshis, address)
+            // STATE.pset = builder.finish(STATE.wollet)
+
+            // this.dispatchEvent(new CustomEvent('pset-ready', {
+            //     bubbles: true,
+            // }))
+
+        } catch (e) {
+            this.messageReissuance.innerHTML = warning(e)
+            return
+        }
     }
 
     handleIssue = async (e) => {
@@ -602,6 +673,7 @@ class CreateTransaction extends HTMLElement {
         }
 
         try {
+            console.log("handleIssue")
             var builder = new lwk.TxBuilder(network)
 
             const assetAddr = new lwk.Address(this.assetAddress.value)
@@ -619,6 +691,8 @@ class CreateTransaction extends HTMLElement {
                 STATE.contract = contract.clone()
             }
 
+            // this.assetAmount.value and this.tokenAmount.value are strings, and it's right in release mode will be converted to bigint
+            // in debug mode it's an error
             builder = builder.issueAsset(
                 this.assetAmount.value,
                 assetAddr,
@@ -913,7 +987,7 @@ class SignTransaction extends HTMLElement {
             let txid = await client.broadcast(psetFinalized)
             this.messageDiv.innerHTML = success(txid, "Tx broadcasted!")
 
-            this.broadcastContractIfAny()
+            this.broadcastContractIfAny(psetFinalized)
 
         } catch (e) {
             this.messageDiv.innerHTML = warning("Cannot broadcast tx, is it signed?")
@@ -921,31 +995,29 @@ class SignTransaction extends HTMLElement {
         setBusyDisabled(this.broadcastButton, false)
     }
 
-    broadcastContractIfAny = async (_e) => {
-        if (STATE.contract != null) {
-            if (STATE.contract.domain() === "liquidtestnet.com") {
-                try {
-                    const response = await fetch('https://assets-testnet.blockstream.info/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: STATE.contract.toString()
-                    });
+    broadcastContractIfAny = async (pset) => {
+        if (STATE.contract != null && STATE.contract.domain() === "liquidtestnet.com") {
+            try {
+                const registry = lwk.Registry.defaultForNetwork(network);
+                const assetId = pset.inputs()[0].issuanceAsset()
+                console.log(assetId)
+                const result = await registry.post(STATE.contract, assetId);
+                console.log(result)
 
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
+                console.log('Asset registered successfully');
+                this.this.contractDiv.innerHTML = success("Asset contract registered successfully!");
+            } catch (error) {
+                console.error('Error registering asset:', error);
+                console.log('Post the following to https://assets-testnet.blockstream.info/')
+                const assetId = pset.inputs()[0].issuanceAsset()
+                let contractJson = JSON.parse(STATE.contract.toString())
+                let post = { contract: contractJson, asset_id: assetId.toString() }
+                console.log(JSON.stringify(post))
 
-                    const result = await response.json();
-                    console.log('Asset registered successfully');
-                    this.this.contractDiv.innerHTML = success("Asset contract registered successfully!");
-                } catch (error) {
-                    console.error('Error registering asset:', error);
-                } finally {
-                    STATE.contract = null
-                }
+            } finally {
+                STATE.contract = null
             }
+
         }
     }
 
