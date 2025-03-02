@@ -694,7 +694,7 @@ class CreateTransaction extends HTMLElement {
                 assetAddr,
                 this.tokenAmount.value,
                 tokenAddr,
-                contract
+                contract.clone()
             )
             STATE.pset = builder.finish(STATE.wollet)
 
@@ -1002,13 +1002,26 @@ class SignTransaction extends HTMLElement {
 
     broadcastContractIfAny = async () => {
         if (STATE.contract != null) {
-            // Wait for 2 minutes before broadcasting the contract so that the tx is confirmed
-            console.log("Broadcasting contract in 2 minutes...")
+            console.log("Will start broadcasting contract in 30 seconds...")
+
+            // Initial delay before first attempt
             setTimeout(() => {
-                // TODO maybe wait less and retry some times if it fails
-                console.log("Broadcasting contract...")
-                broadcastContract(STATE.contract)
-            }, 2 * 60 * 1000)
+                const attemptBroadcast = async () => {
+                    console.log("Attempting to broadcast contract...")
+                    const success = await broadcastContract(STATE.contract)
+
+                    if (success) {
+                        console.log("Contract broadcast succeeded!")
+                    } else {
+                        console.log("Contract broadcast failed, retrying in 30 seconds...")
+                        // Schedule another attempt in 30 seconds
+                        setTimeout(attemptBroadcast, 30 * 1000)
+                    }
+                }
+
+                // Start the first attempt
+                attemptBroadcast()
+            }, 30 * 1000)
         }
     }
 
@@ -1648,7 +1661,9 @@ async function broadcastContract(contract) {
         const result = await registry.post(contract);
         console.log(result)
         console.log('Asset registered successfully');
+        return true; // Success
     } catch (error) {
         console.error('Error registering asset:', error);
+        return false; // Failed
     }
 }
