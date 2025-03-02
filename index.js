@@ -1424,24 +1424,31 @@ function mapToTable(map) {
     let table = document.createElement("table")
     table.setAttribute("class", "striped")
     div.appendChild(table)
-    // for (let key in balance) {
-    map.forEach((val, key) => {
+    if (map.size === 0) {
         let newRow = document.createElement("tr")
         table.appendChild(newRow)
-
         let asset = document.createElement("td")
-
-        asset.innerHTML = useCodeIfNecessary(mapAssetTicker(key))
-
+        asset.innerHTML = "Empty"
         newRow.appendChild(asset)
+    } else {
+        map.forEach((val, key) => {
+            let newRow = document.createElement("tr")
+            table.appendChild(newRow)
 
-        let secondCell = document.createElement("td")
-        secondCell.setAttribute("style", "text-align:right")
+            let asset = document.createElement("td")
 
-        secondCell.innerHTML = useCodeIfNecessary(val)
+            asset.innerHTML = useCodeIfNecessary(mapAssetTicker(key))
 
-        newRow.appendChild(secondCell)
-    })
+            newRow.appendChild(asset)
+
+            let secondCell = document.createElement("td")
+            secondCell.setAttribute("style", "text-align:right")
+
+            secondCell.innerHTML = useCodeIfNecessary(val)
+
+            newRow.appendChild(secondCell)
+        })
+    }
     return div
 }
 
