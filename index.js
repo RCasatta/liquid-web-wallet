@@ -621,38 +621,38 @@ class CreateTransaction extends HTMLElement {
             console.log(assetInfo.contract())
             console.log(assetInfo.tx().txid().toString())
 
-            // var builder = new lwk.TxBuilder(network)
+            var builder = new lwk.TxBuilder(network)
 
-            // // Get the asset ID from the input
-            // const assetId = new lwk.AssetId(this.reissuanceAssetId.value)
 
-            // // Get the amount to reissue
-            // const satoshis = parseInt(this.reissuanceSatoshi.value)
-            // if (isNaN(satoshis) || satoshis <= 0) {
-            //     throw new Error("Invalid reissuance amount")
-            // }
+            // Get the amount to reissue
+            const satoshis = parseInt(this.reissuanceSatoshi.value)
+            if (isNaN(satoshis) || satoshis <= 0) {
+                throw new Error("Invalid reissuance amount")
+            }
 
-            // // Get the address or use the wallet's address if empty
-            // let address
-            // if (this.reissuanceAddress.value.trim() === "") {
-            //     address = STATE.wollet.address(null).address()
-            // } else {
-            //     address = new lwk.Address(this.reissuanceAddress.value)
-            //     if (!address.isBlinded()) {
-            //         throw new Error('Address is not confidential')
-            //     }
-            //     if (network.isMainnet() != address.isMainnet()) {
-            //         throw new Error("Invalid address network")
-            //     }
-            // }
+            // Get the address or use the wallet's address if empty
+            let address
+            if (this.reissuanceAddress.value.trim() === "") {
+                address = STATE.wollet.address(null).address()
+            } else {
+                address = new lwk.Address(this.reissuanceAddress.value)
+                if (!address.isBlinded()) {
+                    throw new Error('Address is not confidential')
+                }
+                if (network.isMainnet() != address.isMainnet()) {
+                    throw new Error("Invalid address network")
+                }
+            }
 
-            // // Build the reissuance transaction
-            // builder = builder.reissueAsset(assetId, satoshis, address)
-            // STATE.pset = builder.finish(STATE.wollet)
+            // Build the reissuance transaction
+            builder = builder.reissueAsset(assetId,
+                this.reissuanceSatoshi.value, // use string because bigint
+                address)
+            STATE.pset = builder.finish(STATE.wollet)
 
-            // this.dispatchEvent(new CustomEvent('pset-ready', {
-            //     bubbles: true,
-            // }))
+            this.dispatchEvent(new CustomEvent('pset-ready', {
+                bubbles: true,
+            }))
 
         } catch (e) {
             this.messageReissuance.innerHTML = warning(e)
