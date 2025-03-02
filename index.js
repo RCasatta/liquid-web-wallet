@@ -11,7 +11,7 @@ STATE.multiWallets = [String]
 STATE.swSigner = lwk.Signer # only for testnet
 STATE.scanLoop = interval
 STATE.page = String # id of the last rendered page
-STATE.contract = lwk.Contract # last issued contract
+STATE.contract = lwk.RegistryPost (contract, asset_id) # last issued contract
 */
 const STATE = {}
 const network = lwk.Network.testnet()
@@ -687,10 +687,6 @@ class CreateTransaction extends HTMLElement {
                 0,
             )
 
-            if (contract.domain() === "liquidtestnet.com") {
-                STATE.contract = contract.clone()
-            }
-
             // this.assetAmount.value and this.tokenAmount.value are strings, and it's right in release mode will be converted to bigint
             // in debug mode it's an error
             builder = builder.issueAsset(
@@ -701,6 +697,9 @@ class CreateTransaction extends HTMLElement {
                 contract
             )
             STATE.pset = builder.finish(STATE.wollet)
+
+            const assetId = STATE.pset.inputs()[0].issuanceAsset()
+            STATE.contract = new lwk.RegistryPost(contract, assetId)
 
             this.dispatchEvent(new CustomEvent('pset-ready', {
                 bubbles: true,
@@ -877,9 +876,10 @@ class SignTransaction extends HTMLElement {
         super()
 
         const textareas = this.querySelectorAll("textarea")
-        this.textarea = textareas[0]
-        this.mnemonic = textareas[1]
-        this.combineTextarea = textareas[2]
+        this.pset = textareas[0]
+        this.contract = textareas[1]
+        this.mnemonic = textareas[2]
+        this.combineTextarea = textareas[3]
         this.analyzeButton = this.querySelector("button.analyze")
         this.signButton = this.querySelector("button.sign")
         this.cosignButton = this.querySelector("button.cosign")
@@ -914,8 +914,13 @@ class SignTransaction extends HTMLElement {
         this.signWithJadeButton.addEventListener("click", this.handleSignWithJadeClick)
 
         if (STATE.pset != null) {
-            this.textarea.value = STATE.pset.toString()
+            this.pset.value = STATE.pset.toString()
             STATE.pset = null
+        }
+
+        if (STATE.contract != null) {
+            this.contract.value = STATE.contract.toString()
+            this.contract.hidden = false
         }
 
         if (STATE.jade == null) {
@@ -937,11 +942,11 @@ class SignTransaction extends HTMLElement {
     handleSignWithJadeClick = async (_e) => {
         setBusyDisabled(this.signWithJadeButton, true)
         try {
-            let psetString = this.textarea.value
+            let psetString = this.pset.value
             let pset = new lwk.Pset(psetString)
             let jade = await new lwk.Jade(network, true)
             let signedPset = await jade.sign(pset)
-            this.textarea.value = signedPset
+            this.pset.value = signedPset
             this.renderAnalyze()
             this.messageDiv.innerHTML = success("Transaction signed!")
         } catch (e) {
@@ -954,7 +959,7 @@ class SignTransaction extends HTMLElement {
     handleSoftwareSignClick = async (_e) => {
         setBusyDisabled(this.softwareSignButton, true)
         try {
-            let psetString = this.textarea.value
+            let psetString = this.pset.value
             let pset = new lwk.Pset(psetString)
 
             let mnemonicStr = this.mnemonic.value
@@ -963,7 +968,7 @@ class SignTransaction extends HTMLElement {
             let signer = new lwk.Signer(mnemonic, network)
             let signedPset = signer.sign(pset)
 
-            this.textarea.value = signedPset
+            this.pset.value = signedPset
             this.renderAnalyze()
             this.messageDiv.innerHTML = success("Transaction signed!")
 
@@ -976,7 +981,7 @@ class SignTransaction extends HTMLElement {
 
     handleBroadcastClick = async (_e) => {
         try {
-            let psetString = this.textarea.value
+            let psetString = this.pset.value
             let pset = new lwk.Pset(psetString)
             let psetFinalized = STATE.wollet.finalize(pset)
             let tx = psetFinalized.extractTx().toString()
@@ -987,7 +992,7 @@ class SignTransaction extends HTMLElement {
             let txid = await client.broadcast(psetFinalized)
             this.messageDiv.innerHTML = success(txid, "Tx broadcasted!")
 
-            this.broadcastContractIfAny(psetFinalized)
+            this.broadcastContractIfAny()
 
         } catch (e) {
             this.messageDiv.innerHTML = warning("Cannot broadcast tx, is it signed?")
@@ -995,34 +1000,20 @@ class SignTransaction extends HTMLElement {
         setBusyDisabled(this.broadcastButton, false)
     }
 
-    broadcastContractIfAny = async (pset) => {
-        if (STATE.contract != null && STATE.contract.domain() === "liquidtestnet.com") {
-            try {
-                const registry = lwk.Registry.defaultForNetwork(network);
-                const assetId = pset.inputs()[0].issuanceAsset()
-                console.log(assetId)
-                const result = await registry.post(STATE.contract, assetId);
-                console.log(result)
-
-                console.log('Asset registered successfully');
-                this.this.contractDiv.innerHTML = success("Asset contract registered successfully!");
-            } catch (error) {
-                console.error('Error registering asset:', error);
-                console.log('Post the following to https://assets-testnet.blockstream.info/')
-                const assetId = pset.inputs()[0].issuanceAsset()
-                let contractJson = JSON.parse(STATE.contract.toString())
-                let post = { contract: contractJson, asset_id: assetId.toString() }
-                console.log(JSON.stringify(post))
-
-            } finally {
-                STATE.contract = null
-            }
-
+    broadcastContractIfAny = async () => {
+        if (STATE.contract != null) {
+            // Wait for 2 minutes before broadcasting the contract so that the tx is confirmed
+            console.log("Broadcasting contract in 2 minutes...")
+            setTimeout(() => {
+                // TODO maybe wait less and retry some times if it fails
+                console.log("Broadcasting contract...")
+                broadcastContract(STATE.contract)
+            }, 2 * 60 * 1000)
         }
     }
 
     handleSignClick = async (_e) => {
-        let psetString = this.textarea.value
+        let psetString = this.pset.value
         let pset = new lwk.Pset(psetString)
         setBusyDisabled(this.signButton, true)
 
@@ -1033,13 +1024,13 @@ class SignTransaction extends HTMLElement {
 
         this.messageDiv.innerHTML = success("Transaction signed!")
 
-        this.textarea.value = signedPset
+        this.pset.value = signedPset
         this.renderAnalyze()
     }
 
 
     handleCosignClick = async (_e) => {
-        let psetString = this.textarea.value
+        let psetString = this.pset.value
         let pset = new lwk.Pset(psetString)
         setBusyDisabled(this.cosignButton, true)
 
@@ -1048,7 +1039,7 @@ class SignTransaction extends HTMLElement {
         try {
             let signedPset = await amp2.cosign(pset)
             this.messageDiv.innerHTML = success("Transaction cosigned!")
-            this.textarea.value = signedPset
+            this.pset.value = signedPset
             this.renderAnalyze()
         } catch (e) {
             this.messageDiv.innerHTML = warning(e.toString())
@@ -1060,7 +1051,7 @@ class SignTransaction extends HTMLElement {
 
 
     handleCombineClick = async (_e) => {
-        const pset1Str = this.textarea.value
+        const pset1Str = this.pset.value
         const pset2Str = this.combineTextarea.value
         try {
             if (pset1Str === "" || pset2Str === "") {
@@ -1069,7 +1060,7 @@ class SignTransaction extends HTMLElement {
             const pset1 = new lwk.Pset(pset1Str)
             const pset2 = new lwk.Pset(pset2Str)
             pset1.combine(pset2)
-            this.textarea.value = pset1
+            this.pset.value = pset1
             this.combineTextarea.value = ""
             this.renderAnalyze()
 
@@ -1081,7 +1072,7 @@ class SignTransaction extends HTMLElement {
 
     renderAnalyze() {
         this.messageDiv.innerHTML = ""
-        let psetString = this.textarea.value
+        let psetString = this.pset.value
         if (!psetString) {
             return
         }
@@ -1649,4 +1640,15 @@ function encodeRFC3986URIComponent(str) {
         /[!'()*]/g,
         (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`,
     );
+}
+
+async function broadcastContract(contract) {
+    try {
+        const registry = lwk.Registry.defaultForNetwork(network);
+        const result = await registry.post(contract);
+        console.log(result)
+        console.log('Asset registered successfully');
+    } catch (error) {
+        console.error('Error registering asset:', error);
+    }
 }
