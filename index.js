@@ -880,6 +880,7 @@ class SignTransaction extends HTMLElement {
         this.contract = textareas[1]
         this.mnemonic = textareas[2]
         this.combineTextarea = textareas[3]
+        this.contractLabel = this.querySelectorAll("label")
         this.analyzeButton = this.querySelector("button.analyze")
         this.signButton = this.querySelector("button.sign")
         this.cosignButton = this.querySelector("button.cosign")
@@ -920,7 +921,7 @@ class SignTransaction extends HTMLElement {
 
         if (STATE.contract != null) {
             this.contract.value = STATE.contract.toString()
-            this.contract.hidden = false
+            this.contractLabel.hidden = false
         }
 
         if (STATE.jade == null) {

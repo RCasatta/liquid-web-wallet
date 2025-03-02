@@ -229,9 +229,7 @@
                             <input type="text" minlength="64" maxlength="64" pattern="[0-9a-fA-F]{64}"
                                 name="reissuance_asset_id" required="required"
                                 placeholder="0000000000000000000000000000000000000000000000000000000000000000"
-                                value="8363084c77fbaebce672092d301fc103495546457468b88a0830ce4797562c03" <!-- TODO:
-                                remove -->
-                            >
+                                value="1f30c287ff01f4c71b1987ac4ac1abc04ce9be8d3171fd33ecf72a9255896982">
 
                             <label for="reissuance_satoshi">Satoshi. The amount to reissue in satoshi.</label>
                             <input type="number" step="1" min="0" max="18446744073709551615" lang="en"
@@ -258,7 +256,12 @@
         <section>
             <h2>Sign</h2>
             <sign-transaction>
-                <textarea placeholder="PSET"></textarea>
+                <label>PSET
+                    <textarea></textarea>
+                </label>
+                <label hidden>Contract
+                    <textarea></textarea>
+                </label>
                 <button class="analyze">Analyze</button>
                 <button class="sign">Sign</button>
                 <button class="broadcast">Broadcast</button>
@@ -289,7 +292,6 @@
                     <summary role="button" class="secondary">Combine with another PSET</summary>
 
                     <textarea placeholder="PSET"></textarea>
-                    <textarea placeholder="Contract" hidden></textarea>
 
                     <p>
                         <button class="combine">Combine</button>
