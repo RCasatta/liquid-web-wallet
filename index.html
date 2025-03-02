@@ -180,15 +180,16 @@
                             <input type="number" step="1" min="0" max="18446744073709551615" lang="en"
                                 name="asset_amount" required="required" placeholder="1">
 
-                            <label for="asset_address">Asset address. The address receiving the issued assets.</label>
-                            <input type="text" lang="en" name="asset_address" required="required" placeholder="">
+                            <label for="asset_address">Asset address. The address receiving the issued assets. If left
+                                empty, an address of current wallet is used.</label>
+                            <input type="text" lang="en" name="asset_address" placeholder="">
 
                             <label for="token_amount">Reissuance token amount. The number of reissuance tokens.</label>
                             <input type="number" step="1" min="0" lang="en" name="token_amount" required="required"
                                 placeholder="1">
 
                             <label for="token_address">Token address. The address receiving the reissuance
-                                tokens.</label>
+                                tokens. If left empty, an address of current wallet is used.</label>
                             <input type="text" lang="en" name="token_address" placeholder="">
 
                             <label for="domain">Domain. The domain for the proof of ownership. Use "liquidtestnet.com"
@@ -259,9 +260,11 @@
                 <label>PSET
                     <textarea></textarea>
                 </label>
-                <label hidden>Contract
-                    <textarea></textarea>
-                </label>
+                <div class="contract" hidden>
+                    <label>Contract
+                        <textarea></textarea>
+                    </label>
+                </div>
                 <button class="analyze">Analyze</button>
                 <button class="sign">Sign</button>
                 <button class="broadcast">Broadcast</button>

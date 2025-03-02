@@ -676,8 +676,8 @@ class CreateTransaction extends HTMLElement {
             console.log("handleIssue")
             var builder = new lwk.TxBuilder(network)
 
-            const assetAddr = new lwk.Address(this.assetAddress.value)
-            const tokenAddr = this.tokenAmount.value > 0 ? new lwk.Address(this.tokenAddress.value) : null
+            const assetAddr = this.assetAddress.value != '' ? new lwk.Address(this.assetAddress.value) : null
+            const tokenAddr = this.tokenAmount.value > 0 && this.tokenAddress.value != '' ? new lwk.Address(this.tokenAddress.value) : null
             const contract = new lwk.Contract(
                 this.domain.value,
                 this.pubkey.value,
@@ -880,7 +880,7 @@ class SignTransaction extends HTMLElement {
         this.contract = textareas[1]
         this.mnemonic = textareas[2]
         this.combineTextarea = textareas[3]
-        this.contractLabel = this.querySelectorAll("label")
+        this.contractDiv = this.querySelector("div.contract")
         this.analyzeButton = this.querySelector("button.analyze")
         this.signButton = this.querySelector("button.sign")
         this.cosignButton = this.querySelector("button.cosign")
@@ -921,7 +921,7 @@ class SignTransaction extends HTMLElement {
 
         if (STATE.contract != null) {
             this.contract.value = STATE.contract.toString()
-            this.contractLabel.hidden = false
+            this.contractDiv.hidden = false
         }
 
         if (STATE.jade == null) {
