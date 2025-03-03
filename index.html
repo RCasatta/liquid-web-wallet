@@ -139,7 +139,7 @@
                     <h3>Add recipient</h3>
                     <fieldset role="group">
                         <input type="text" placeholder="Address" name="address">
-                        <input type="number" placeholder="Value" name="value">
+                        <input type="number" placeholder="Amount" name="amount">
                         <select name="asset"></select>
                         <!-- <input type="submit" value="+" id="create-transaction-button-add"
                             onclick="alert('multiple recipients not yet implemented')"> -->
@@ -219,7 +219,7 @@
                         <div class="messageIssuance"></div>
                     </details>
 
-                    <br><br>
+                    <br>
 
                     <details>
                         <summary role="button" class="secondary">Reissuance</summary>
@@ -247,6 +247,18 @@
                         <div class="messageReissuance"></div>
                     </details>
 
+                    <br>
+
+                    <details>
+                        <summary role="button" class="secondary">Burn assets</summary>
+                        <fieldset role="group">
+                            <input type="number" placeholder="Amount" name="amount">
+                            <select name="asset"></select>
+                            <input type="submit" value="+">
+                        </fieldset>
+                        <div class="messageBurn"></div>
+
+                    </details>
 
                 </div>
             </create-transaction>

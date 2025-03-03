@@ -424,7 +424,7 @@ class WalletBalance extends HTMLElement {
 
         this.assetRegistry = this.querySelector("details")
         this.assetList = this.assetRegistry.querySelector("div.list")
-        this.assetInput = this.assetRegistry.querySelector("input")
+        this.selectAssetInRecipient = this.assetRegistry.querySelector("input")
         this.assetButton = this.assetRegistry.querySelector("button")
         this.assetMessage = this.assetRegistry.querySelector("div.message")
         this.assetButton.addEventListener("click", this.handleAssetButton)
@@ -445,7 +445,7 @@ class WalletBalance extends HTMLElement {
     handleAssetButton = async () => {
         this.assetMessage.innerHTML = "Fetching asset metadata..."
         try {
-            const assetId = new lwk.AssetId(this.assetInput.value)
+            const assetId = new lwk.AssetId(this.selectAssetInRecipient.value)
 
             // TODO mainet
             // TODO use assets.blockstream.info when CORS it's ready https://gl.blockstream.io/infrastructure/devops/tasks/-/issues/2302
@@ -552,7 +552,8 @@ class CreateTransaction extends HTMLElement {
         this.createButton = this.querySelector("button.create")
         this.createButton.addEventListener("click", this.handleCreate)
         this.busy = this.querySelector("article")
-        this.select = this.querySelector("select")
+        const selects = this.querySelectorAll("select")
+        this.selectAssetInRecipient = selects[0]
         this.div = this.querySelector("div")
         const inputs = this.querySelectorAll("input")
         this.addressInput = inputs[0]
@@ -560,14 +561,14 @@ class CreateTransaction extends HTMLElement {
         this.addRecipient = inputs[2]
         this.addRecipient.addEventListener("click", this.handleAdd)
 
-        this.assetInput = this.querySelector("select")
         this.message = this.querySelector("div.message")
         this.messageCreate = this.querySelector("div.messageCreate")
 
         this.template = this.querySelector("template")
         this.listRecipients = this.querySelector("div.recipients")
 
-        let issuanceSection = this.querySelector("details")
+        const details = this.querySelectorAll("details")
+        let issuanceSection = details[0]
         if (network.isMainnet()) {
             issuanceSection.hidden = true
         } else {
@@ -587,7 +588,7 @@ class CreateTransaction extends HTMLElement {
         }
 
         // Add reissuance section components
-        let reissuanceSection = this.querySelectorAll("details")[1]
+        let reissuanceSection = details[1]
         if (network.isMainnet()) {
             reissuanceSection.hidden = true
         } else {
@@ -598,6 +599,18 @@ class CreateTransaction extends HTMLElement {
             this.reissuanceSatoshi = reissuanceInputs[1]
             this.reissuanceAddress = reissuanceInputs[2]
             this.messageReissuance = reissuanceSection.querySelector("div.messageReissuance")
+        }
+
+        let burnSection = details[2]
+        if (network.isMainnet()) {
+            burnSection.hidden = true
+        } else {
+            this.selectAssetInBurn = burnSection.querySelector("select")
+            const inputs = burnSection.querySelectorAll("input")
+            this.amountBurn = inputs[0]
+            this.addBurn = inputs[1]
+            this.addBurn.addEventListener("click", this.handleBurn)
+            this.messageBurn = burnSection.querySelector("div.messageBurn")
         }
 
         this.render()
@@ -721,16 +734,33 @@ class CreateTransaction extends HTMLElement {
         }
         let balance = STATE.wollet.balance()
 
-        cleanChilds(this.select)
+        cleanChilds(this.selectAssetInRecipient)
         let option = document.createElement("option")
         option.innerText = "Select Asset"
-        this.select.appendChild(option)
+        this.selectAssetInRecipient.appendChild(option)
+
+        cleanChilds(this.selectAssetInBurn)
+        let optionBurn = document.createElement("option")
+        optionBurn.innerText = "Select Asset"
+        this.selectAssetInBurn.appendChild(optionBurn)
+
         balance.forEach((_val, key) => {
+
             let option = document.createElement("option")
             option.innerText = mapAssetTicker(key)
             option.setAttribute("value", key)
-            this.select.appendChild(option)
+            this.selectAssetInRecipient.appendChild(option)
+
+            if (key != network.policyAsset().toString()) {
+                // only show non-L-BTC assets in the burn section
+
+                let optionBurn = document.createElement("option")
+                optionBurn.innerText = mapAssetTicker(key)
+                optionBurn.setAttribute("value", key)
+                this.selectAssetInBurn.appendChild(optionBurn)
+            }
         })
+
 
         this.busy.hidden = true
         this.div.hidden = false
@@ -742,7 +772,7 @@ class CreateTransaction extends HTMLElement {
         this.messageCreate.innerHTML = ""
         // verify at least 1 row
 
-        const inputsEmpty = this.checkEmptyness(false)
+        const inputsEmpty = this.checkEmptynessRecipient(false)
         if (inputsEmpty.length == 0) {
             this.messageCreate.innerHTML = warning("Click '+' to add the output")
             return
@@ -754,18 +784,20 @@ class CreateTransaction extends HTMLElement {
             return
         }
 
-
-
         try {
             var builder = new lwk.TxBuilder(network)
 
             for (const recipient of recipients) {
-                // inputs already validated during add phase
-                const recipientAddress = new lwk.Address(recipient.querySelector("input.address").value)
                 const recipientAsset = new lwk.AssetId(recipient.querySelector("input.assetid").value)
                 const satoshis = parsePrecision(recipientAsset.toString(), recipient.querySelector("input.amount").value)
 
-                builder = builder.addRecipient(recipientAddress, satoshis, recipientAsset)
+                if (recipient.querySelector("input.address").value == "BURN") {
+                    builder = builder.addBurn(satoshis, recipientAsset)
+                } else {
+                    // address already validated during add phase
+                    const recipientAddress = new lwk.Address(recipient.querySelector("input.address").value)
+                    builder = builder.addRecipient(recipientAddress, satoshis, recipientAsset)
+                }
             }
             STATE.pset = builder.finish(STATE.wollet)
         } catch (e) {
@@ -776,14 +808,18 @@ class CreateTransaction extends HTMLElement {
         this.dispatchEvent(new CustomEvent('pset-ready', {
             bubbles: true,
         }))
-
-
-
     }
 
-    checkEmptyness = (setAria) => {
+    checkEmptynessRecipient = (setAria) => {
+        return this.checkEmptyness(setAria, [this.addressInput, this.satoshisInput, this.selectAssetInRecipient])
+    }
+    checkEmptynessBurn = (setAria) => {
+        return this.checkEmptyness(setAria, [this.amountBurn, this.selectAssetInBurn])
+    }
+    checkEmptyness = (setAria, elements) => {
         var inputsEmpty = []
-        for (const element of [this.addressInput, this.satoshisInput, this.assetInput]) {
+        for (const element of elements) {
+            console.log(`element ${element.name} ${element.value}`)
             if (element.value === "" || (element.name == "asset" && element.value === "Select Asset")) {
                 if (setAria) {
                     element.setAttribute("aria-invalid", true)
@@ -792,7 +828,63 @@ class CreateTransaction extends HTMLElement {
             }
         }
         return inputsEmpty
+    }
 
+    handleBurn = (_e) => {
+        this.messageBurn.innerHTML = ""
+
+        var inputsValid = ""
+
+        const inputsEmpty = this.checkEmptynessBurn(true)
+        if (inputsEmpty.length > 0) {
+            this.messageBurn.innerHTML = warning(inputsEmpty.join(", ") + " cannot be empty")
+            return
+        }
+
+        this.selectAssetInBurn.setAttribute("aria-invalid", false)
+        var assetInBurn
+        try {
+            assetInBurn = new lwk.AssetId(this.selectAssetInBurn.value)
+        } catch (e) {
+            this.selectAssetInBurn.setAttribute("aria-invalid", true)
+            inputsValid += "Invalid asset. " + e.toString()
+        }
+
+        this.amountBurn.setAttribute("aria-invalid", false)
+        const satoshis = parsePrecision(assetInBurn.toString(), this.amountBurn.value)
+        if (!satoshis || satoshis <= 0) {
+            this.amountBurn.setAttribute("aria-invalid", true)
+            inputsValid += "Invalid value. "
+        }
+
+        if (inputsValid != "") {
+            this.messageBurn.innerHTML = warning(inputsValid)
+            return
+        }
+
+        this.listRecipients.hidden = false
+
+        // Add recipient row
+        const content = this.template.content.cloneNode(true)
+
+        const el = content.querySelector("fieldset")
+        const inputs = content.querySelectorAll("input")
+        inputs[0].value = "BURN"
+        inputs[1].value = this.amountBurn.value
+        inputs[2].value = mapAssetTicker(this.selectAssetInBurn.value) // value seen
+        inputs[3].value = this.selectAssetInBurn.value                 // value used
+        inputs[4].addEventListener("click", (_e) => {
+            this.listRecipients.removeChild(el)
+        })
+        this.listRecipients.appendChild(content)
+        // end add recipient row
+
+        // Reset fields
+        this.amountBurn.value = ""
+        this.selectAssetInBurn.value = "Select Asset"
+        this.amountBurn.removeAttribute("aria-invalid")
+        this.selectAssetInBurn.removeAttribute("aria-invalid")
+        // end reset fields
     }
 
     handleAdd = (_e) => {
@@ -802,7 +894,7 @@ class CreateTransaction extends HTMLElement {
 
         var inputsValid = ""
 
-        const inputsEmpty = this.checkEmptyness(true)
+        const inputsEmpty = this.checkEmptynessRecipient(true)
         if (inputsEmpty.length > 0) {
             this.message.innerHTML = warning(inputsEmpty.join(", ") + " cannot be empty")
             return
@@ -824,12 +916,12 @@ class CreateTransaction extends HTMLElement {
             inputsValid += e.toString() + ". "
         }
 
-        this.assetInput.setAttribute("aria-invalid", false)
+        this.selectAssetInRecipient.setAttribute("aria-invalid", false)
         var recipientAsset
         try {
-            recipientAsset = new lwk.AssetId(this.assetInput.value)
+            recipientAsset = new lwk.AssetId(this.selectAssetInRecipient.value)
         } catch (_e) {
-            this.assetInput.setAttribute("aria-invalid", true)
+            this.selectAssetInRecipient.setAttribute("aria-invalid", true)
             inputsValid += "Invalid asset. "
         }
 
@@ -853,8 +945,8 @@ class CreateTransaction extends HTMLElement {
         const inputs = content.querySelectorAll("input")
         inputs[0].value = this.addressInput.value
         inputs[1].value = this.satoshisInput.value
-        inputs[2].value = mapAssetTicker(this.assetInput.value) // value seen
-        inputs[3].value = this.assetInput.value                 // value used
+        inputs[2].value = mapAssetTicker(this.selectAssetInRecipient.value) // value seen
+        inputs[3].value = this.selectAssetInRecipient.value                 // value used
         inputs[4].addEventListener("click", (_e) => {
             this.listRecipients.removeChild(el)
         })
@@ -864,10 +956,10 @@ class CreateTransaction extends HTMLElement {
         // Reset fields
         this.addressInput.value = ""
         this.satoshisInput.value = ""
-        this.assetInput.value = "Select Asset"
+        this.selectAssetInRecipient.value = "Select Asset"
         this.addressInput.removeAttribute("aria-invalid")
         this.satoshisInput.removeAttribute("aria-invalid")
-        this.assetInput.removeAttribute("aria-invalid")
+        this.selectAssetInRecipient.removeAttribute("aria-invalid")
         // end reset fields
     }
 }
@@ -1133,7 +1225,8 @@ class SignTransaction extends HTMLElement {
         const psetRecipients = details.balance().recipients()
         const recipientsMap = new Map()
         for (const recipient of psetRecipients) {
-            recipientsMap.set(recipient.address().toString() + " " + mapAssetTicker(recipient.asset().toString()), recipient.value().toString())
+            let address = recipient.address() != null ? recipient.address().toString() : "BURN"
+            recipientsMap.set(address + " " + mapAssetTicker(recipient.asset().toString()), recipient.value().toString())
         }
         this.recipientsDiv.innerHTML = "<h3>Recipients</h3>"
         this.recipientsDiv.appendChild(mapToTable(recipientsMap))
