@@ -193,7 +193,7 @@
                             <input type="text" lang="en" name="token_address" placeholder="">
 
                             <label for="domain">Domain. The domain for the proof of ownership. Use "liquidtestnet.com"
-                                for automatic contract publishing.</label>
+                                for automatic domain proof publishing.</label>
                             <input type="text" name="domain" required="required" placeholder="xyzcoin.com">
 
                             <label for="name">Name. The name of the asset.</label>
@@ -260,10 +260,15 @@
                 <label>PSET
                     <textarea></textarea>
                 </label>
-                <div class="contract" hidden>
+                <div class="contract-section" hidden>
                     <label>Contract
                         <textarea></textarea>
                     </label>
+                    <p>After broadcasting the issuance transaction, keep this page open to enable automatic contract
+                        publishing.
+                        The system will attempt to publish every 30 seconds until successful.
+                        Note: Publishing will fail if the domain proof has not been set up.
+                        (<a href="https://docs.liquid.net/docs/blockstream-liquid-asset-registry">docs</a>)</p>
                 </div>
                 <button class="analyze">Analyze</button>
                 <button class="sign">Sign</button>
@@ -274,9 +279,10 @@
                 <br><br>
 
                 <div class="message"></div>
+                <div class="contract"></div>
+
                 <div class="analyze"></div>
                 <div class="recipients"></div>
-                <div class="contract"></div>
 
                 <br><br>
 

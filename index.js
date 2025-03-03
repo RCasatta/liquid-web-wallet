@@ -618,8 +618,9 @@ class CreateTransaction extends HTMLElement {
             const assetId = new lwk.AssetId(this.reissuanceAssetId.value)
             const registry = lwk.Registry.defaultForNetwork(network);
             const assetInfo = await registry.fetchWithTx(assetId, esplora)
-            console.log(assetInfo.contract())
-            console.log(assetInfo.tx().txid().toString())
+            console.log(`assetId: ${assetId.toString()}`)
+            console.log(`contract: ${assetInfo.contract().toString()}`)
+            console.log(`issuance tx: ${assetInfo.tx().txid().toString()}`)
 
             var builder = new lwk.TxBuilder(network)
 
@@ -647,7 +648,9 @@ class CreateTransaction extends HTMLElement {
             // Build the reissuance transaction
             builder = builder.reissueAsset(assetId,
                 this.reissuanceSatoshi.value, // use string because bigint
-                address)
+                address,
+                assetInfo.tx()
+            )
             STATE.pset = builder.finish(STATE.wollet)
 
             this.dispatchEvent(new CustomEvent('pset-ready', {
@@ -880,7 +883,7 @@ class SignTransaction extends HTMLElement {
         this.contract = textareas[1]
         this.mnemonic = textareas[2]
         this.combineTextarea = textareas[3]
-        this.contractDiv = this.querySelector("div.contract")
+        this.contractSection = this.querySelector("div.contract-section")
         this.analyzeButton = this.querySelector("button.analyze")
         this.signButton = this.querySelector("button.sign")
         this.cosignButton = this.querySelector("button.cosign")
@@ -921,7 +924,7 @@ class SignTransaction extends HTMLElement {
 
         if (STATE.contract != null) {
             this.contract.value = STATE.contract.toString()
-            this.contractDiv.hidden = false
+            this.contractSection.hidden = false
         }
 
         if (STATE.jade == null) {
@@ -1009,10 +1012,11 @@ class SignTransaction extends HTMLElement {
             setTimeout(() => {
                 const attemptBroadcast = async () => {
                     console.log("Attempting to broadcast contract...")
-                    const success = await broadcastContract(STATE.contract)
+                    const successBroadcast = await broadcastContract(STATE.contract)
 
-                    if (success) {
+                    if (successBroadcast) {
                         console.log("Contract broadcast succeeded!")
+                        this.contractDiv.innerHTML = success("Asset registered in the asset registry")
                     } else {
                         console.log("Contract broadcast failed, retrying in 30 seconds...")
                         // Schedule another attempt in 30 seconds
