@@ -1108,6 +1108,7 @@ class SignTransaction extends HTMLElement {
 
                     if (successBroadcast) {
                         console.log("Contract broadcast succeeded!")
+                        STATE.contract = null
                         this.contractDiv.innerHTML = success("Asset registered in the asset registry")
                     } else {
                         console.log("Contract broadcast failed, retrying in 30 seconds...")
