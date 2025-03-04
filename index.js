@@ -14,7 +14,7 @@ STATE.page = String # id of the last rendered page
 STATE.contract = lwk.RegistryPost (contract, asset_id) # last issued contract
 */
 const STATE = {}
-const network = lwk.Network.testnet()
+const network = lwk.Network.mainnet()
 
 const RANDOM_MNEMONIC_KEY = "random_mnemonic"
 const AMP2_DATA_KEY_PREFIX = "amp2_data_v2_"
@@ -569,49 +569,41 @@ class CreateTransaction extends HTMLElement {
 
         const details = this.querySelectorAll("details")
         let issuanceSection = details[0]
-        if (network.isMainnet()) {
-            issuanceSection.hidden = true
-        } else {
-            this.issueButton = issuanceSection.querySelector("button")
-            this.issueButton.addEventListener("click", this.handleIssue)
-            const issuanceInputs = issuanceSection.querySelectorAll("input")
-            this.assetAmount = issuanceInputs[0]
-            this.assetAddress = issuanceInputs[1]
-            this.tokenAmount = issuanceInputs[2]
-            this.tokenAddress = issuanceInputs[3]
-            this.domain = issuanceInputs[4]
-            this.name = issuanceInputs[5]
-            this.ticker = issuanceInputs[6]
-            this.precision = issuanceInputs[7]
-            this.pubkey = issuanceInputs[8]
-            this.messageIssuance = issuanceSection.querySelector("div.messageIssuance")
-        }
+
+        this.issueButton = issuanceSection.querySelector("button")
+        this.issueButton.addEventListener("click", this.handleIssue)
+        const issuanceInputs = issuanceSection.querySelectorAll("input")
+        this.assetAmount = issuanceInputs[0]
+        this.assetAddress = issuanceInputs[1]
+        this.tokenAmount = issuanceInputs[2]
+        this.tokenAddress = issuanceInputs[3]
+        this.domain = issuanceInputs[4]
+        this.name = issuanceInputs[5]
+        this.ticker = issuanceInputs[6]
+        this.precision = issuanceInputs[7]
+        this.pubkey = issuanceInputs[8]
+        this.messageIssuance = issuanceSection.querySelector("div.messageIssuance")
+
 
         // Add reissuance section components
         let reissuanceSection = details[1]
-        if (network.isMainnet()) {
-            reissuanceSection.hidden = true
-        } else {
-            this.reissueButton = reissuanceSection.querySelector("button")
-            this.reissueButton.addEventListener("click", this.handleReissue)
-            const reissuanceInputs = reissuanceSection.querySelectorAll("input")
-            this.reissuanceAssetId = reissuanceInputs[0]
-            this.reissuanceSatoshi = reissuanceInputs[1]
-            this.reissuanceAddress = reissuanceInputs[2]
-            this.messageReissuance = reissuanceSection.querySelector("div.messageReissuance")
-        }
+
+        this.reissueButton = reissuanceSection.querySelector("button")
+        this.reissueButton.addEventListener("click", this.handleReissue)
+        const reissuanceInputs = reissuanceSection.querySelectorAll("input")
+        this.reissuanceAssetId = reissuanceInputs[0]
+        this.reissuanceSatoshi = reissuanceInputs[1]
+        this.reissuanceAddress = reissuanceInputs[2]
+        this.messageReissuance = reissuanceSection.querySelector("div.messageReissuance")
 
         let burnSection = details[2]
-        if (network.isMainnet()) {
-            burnSection.hidden = true
-        } else {
-            this.selectAssetInBurn = burnSection.querySelector("select")
-            const inputs = burnSection.querySelectorAll("input")
-            this.amountBurn = inputs[0]
-            this.addBurn = inputs[1]
-            this.addBurn.addEventListener("click", this.handleBurn)
-            this.messageBurn = burnSection.querySelector("div.messageBurn")
-        }
+
+        this.selectAssetInBurn = burnSection.querySelector("select")
+        const inputsBurn = burnSection.querySelectorAll("input")
+        this.amountBurn = inputsBurn[0]
+        this.addBurn = inputsBurn[1]
+        this.addBurn.addEventListener("click", this.handleBurn)
+        this.messageBurn = burnSection.querySelector("div.messageBurn")
 
         this.render()
     }
