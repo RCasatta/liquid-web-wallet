@@ -14,7 +14,7 @@ STATE.page = String # id of the last rendered page
 STATE.contract = lwk.RegistryPost (contract, asset_id) # last issued contract
 */
 const STATE = {}
-const network = lwk.Network.mainnet()
+const network = lwk.Network.testnet()
 
 const RANDOM_MNEMONIC_KEY = "random_mnemonic"
 const AMP2_DATA_KEY_PREFIX = "amp2_data_v2_"
