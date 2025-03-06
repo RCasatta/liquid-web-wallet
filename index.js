@@ -682,6 +682,14 @@ class CreateTransaction extends HTMLElement {
 
         try {
             console.log("handleIssue")
+
+            // Check if ticker is already in use
+            const tickerValue = this.ticker.value
+            const isTickerAvailable = await checkTickerAvailability(tickerValue);
+            if (!isTickerAvailable) {
+                throw new Error(`Ticker '${tickerValue}' is already in use. Please choose a different ticker.`);
+            }
+
             var builder = new lwk.TxBuilder(network)
 
             const assetAddr = this.assetAddress.value != '' ? new lwk.Address(this.assetAddress.value) : null
@@ -691,7 +699,7 @@ class CreateTransaction extends HTMLElement {
                 this.pubkey.value,
                 this.name.value,
                 parseInt(this.precision.value),
-                this.ticker.value,
+                tickerValue,
                 0,
             )
 
@@ -1763,5 +1771,55 @@ async function broadcastContract(contract) {
     } catch (error) {
         console.error('Error registering asset:', error);
         return false; // Failed
+    }
+}
+
+// Cache for ticker lists
+const TICKER_CACHE = {};
+
+// Check if a ticker is already in use in the current network
+async function checkTickerAvailability(ticker) {
+    console.log("check ticker");
+    try {
+        // Determine current network
+        const networkKey = network.toString();
+
+        // Check if we need to fetch the data or can use the cache
+        if (!TICKER_CACHE[networkKey]) {
+            // Cache is empty, fetch new data
+            const networkType = network.isMainnet() ? 'mainnet' : 'testnet';
+            const tickersUrl = `https://waterfalls.liquidwebwallet.org/tickers/assets-${networkType}-tickers.json`;
+
+            console.log(`Fetching ${networkType} ticker list...`);
+            const response = await fetch(tickersUrl);
+
+            if (!response.ok) {
+                console.error(`Failed to fetch ${networkType} ticker list`);
+                // If we can't check, we'll allow the ticker (better UX than blocking all issuances)
+                return true;
+            }
+
+            // Update cache
+            TICKER_CACHE[networkKey] = await response.json();
+            console.log(`${networkType} ticker list cached`);
+        } else {
+            console.log(`Using cached ticker list for ${network.toString()}`);
+        }
+
+        // Check if ticker exists in the list - case sensitive comparison
+        const isInUse = TICKER_CACHE[networkKey].some(item => {
+            if (typeof item === 'string') {
+                return item === ticker;
+            } else if (item.ticker) {
+                return item.ticker === ticker;
+            }
+            return false;
+        });
+
+        return !isInUse;
+    } catch (error) {
+        console.error("Error checking ticker availability:", error);
+        // If there's an error in the check, we'll allow the ticker
+        return true;
     }
 }
