@@ -1005,7 +1005,11 @@ class SignTransaction extends HTMLElement {
 
         if (STATE.jade == null && STATE.swSigner == null) {
             this.signWithJadeButton.hidden = false
+            if (!network.isMainnet()) {
+                this.signWithLedgerButton.hidden = false
+            }
         }
+
 
         this.renderAnalyze()
     }
@@ -1035,14 +1039,14 @@ class SignTransaction extends HTMLElement {
             let pset = new lwk.Pset(psetString)
             let device = await lwk.searchLedgerDevice()
             let ledger = new lwk.LedgerWeb(device)
-            let signedPset = await ledger.sign(pset)
+            let signedPset = await ledger.sign(pset.toString())
             this.pset.value = signedPset
             this.renderAnalyze()
             this.messageDiv.innerHTML = success("Transaction signed!")
         } catch (e) {
             this.messageDiv.innerHTML = warning(e.toString())
         } finally {
-            setBusyDisabled(this.signWithJadeButton, false)
+            setBusyDisabled(this.signWithLedgerButton, false)
         }
     }
 
