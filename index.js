@@ -427,12 +427,6 @@ class WalletBalance extends HTMLElement {
         this.faucetRequest.addEventListener('click', this.handleFaucetRequest)
         this.messageDiv = this.querySelector("div.message")
 
-        this.assetRegistry = this.querySelector("details")
-        this.assetList = this.assetRegistry.querySelector("div.list")
-        this.selectAssetInRecipient = this.assetRegistry.querySelector("input")
-        this.assetButton = this.assetRegistry.querySelector("button")
-        this.assetMessage = this.assetRegistry.querySelector("div.message")
-        this.assetButton.addEventListener("click", this.handleAssetButton)
 
         this.render()
     }
@@ -445,32 +439,6 @@ class WalletBalance extends HTMLElement {
         this.messageDiv.innerHTML = success("Sending request to the faucet...")
         await fetch(url, { mode: "no-cors" })
         this.messageDiv.innerHTML = success("Request sent to the faucet, wait a bit to see funds")
-    }
-
-    handleAssetButton = async () => {
-        this.assetMessage.innerHTML = "Fetching asset metadata..."
-        try {
-            const assetId = new lwk.AssetId(this.selectAssetInRecipient.value)
-
-            // TODO mainet
-            // TODO use assets.blockstream.info when CORS it's ready https://gl.blockstream.io/infrastructure/devops/tasks/-/issues/2302
-            // const url = `https://waterfalls.liquidwebwallet.org/liquidtestnet/asset-id/${assetId}`
-            const url = `https://assets-testnet.blockstream.info/${assetId}`
-            console.log(url)
-            const response = await fetch(url);
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const result = await response.json();
-            localStorage.setItem(`asset-${assetId}`, JSON.stringify(result));
-            console.log(result)
-        } catch (e) {
-            this.assetMessage.innerHTML = warning(e)
-            return
-        }
-
     }
 
     render = () => {
