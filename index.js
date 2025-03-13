@@ -980,7 +980,7 @@ class SignTransaction extends HTMLElement {
         this.signButton = this.querySelector("button.sign")
         this.cosignButton = this.querySelector("button.cosign")
         this.signWithJadeButton = this.querySelector("button.sign-with-jade")
-
+        this.signWithLedgerButton = this.querySelector("button.sign-with-ledger")
         this.softwareSignButton = this.querySelector("button.ss")
         this.broadcastButton = this.querySelector("button.broadcast")
         this.combineButton = this.querySelector("button.combine")
@@ -1008,6 +1008,8 @@ class SignTransaction extends HTMLElement {
         this.softwareSignButton.addEventListener("click", this.handleSoftwareSignClick)
 
         this.signWithJadeButton.addEventListener("click", this.handleSignWithJadeClick)
+
+        this.signWithLedgerButton.addEventListener("click", this.handleSignWithLedgerClick)
 
         if (STATE.pset != null) {
             this.pset.value = STATE.pset.toString()
@@ -1042,6 +1044,25 @@ class SignTransaction extends HTMLElement {
             let pset = new lwk.Pset(psetString)
             let jade = await new lwk.Jade(network, true)
             let signedPset = await jade.sign(pset)
+            this.pset.value = signedPset
+            this.renderAnalyze()
+            this.messageDiv.innerHTML = success("Transaction signed!")
+        } catch (e) {
+            this.messageDiv.innerHTML = warning(e.toString())
+        } finally {
+            setBusyDisabled(this.signWithJadeButton, false)
+        }
+    }
+
+
+    handleSignWithLedgerClick = async (_e) => {
+        setBusyDisabled(this.signWithLedgerButton, true)
+        try {
+            let psetString = this.pset.value
+            let pset = new lwk.Pset(psetString)
+            let device = await lwk.searchLedgerDevice()
+            let ledger = new lwk.LedgerWeb(device)
+            let signedPset = await ledger.sign(pset)
             this.pset.value = signedPset
             this.renderAnalyze()
             this.messageDiv.innerHTML = success("Transaction signed!")
