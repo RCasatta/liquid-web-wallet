@@ -6,6 +6,7 @@ STATE.wollet = lwk.Wollet
 STATE.wolletSelected possible values: ShWpkh Wpkh, <multisig wallets>
 STATE.scan.running bool
 STATE.jade = lwk.Jade
+STATE.jadeStandardDerivations = {String: String} # bip: xpub
 STATE.xpub = String
 STATE.multiWallets = [String]
 STATE.swSigner = lwk.Signer # only for testnet
@@ -26,6 +27,7 @@ async function init() {
     let descriptorTextarea = document.getElementById("descriptor-textarea")
     let descriptorMessage = document.getElementById("descriptor-message")
     let exampleDescriptor = document.getElementById("example-descriptor-link")
+    let loadingBar = document.getElementById("loading-wasm");
 
     connectJade.addEventListener("click", async (_e) => {
         let connectJadeMessage = document.getElementById("connect-jade-message")
@@ -36,9 +38,12 @@ async function init() {
             console.log("filter out do it yourself " + filter)
 
             STATE.jade = await new lwk.Jade(network, filter)
-            connectJadeMessage.innerHTML = warning("Insert the PIN on the Jade")
+            loadingBar.setAttribute("style", "visibility: visible;")
+            connectJadeMessage.innerHTML = warning("Insert the PIN on the Jade if locked")
             STATE.xpub = await STATE.jade.getMasterXpub() // asking something that requires unlock
             STATE.multiWallets = await STATE.jade.getRegisteredMultisigs()
+            STATE.jadeStandardDerivations = await jadeStandardDerivations()
+            loadingBar.setAttribute("style", "visibility: hidden;") // by using visibility we avoid layout shifts
             document.dispatchEvent(new CustomEvent('jade-initialized'))
         } catch (e) {
             // TODO network is the most common error but we can have other error,
@@ -69,7 +74,7 @@ async function init() {
     watchOnlyButton.disabled = false
     exampleDescriptor.disabled = false
 
-    document.getElementById("loading-wasm").setAttribute("style", "visibility: hidden;") // by using visibility we avoid layout shifts
+    loadingBar.setAttribute("style", "visibility: hidden;") // by using visibility we avoid layout shifts
 
     let randomWalletButton = document.getElementById("random-wallet-button");
     if (!network.isMainnet()) {
@@ -1308,8 +1313,8 @@ class WalletAmp2 extends HTMLElement {
         }
     }
 
-    render = async (_) => {
-        let keyoriginXpub = await keyoriginXpubUnified(lwk.Bip.bip87());
+    render = () => {
+        let keyoriginXpub = keyoriginXpubUnified(lwk.Bip.bip87());
         let uuid_descriptor = localStorage.getItem(AMP2_DATA_KEY_PREFIX + keyoriginXpub)
         if (uuid_descriptor == null) {
             this.uuid.parentElement.hidden = true
@@ -1360,18 +1365,20 @@ class WalletXpubs extends HTMLElement {
             // TODO should remove also the "Xpubs" subtitle
             for (let i = 0; i < 3; i++) {
                 this.labels[i].childNodes[0].nodeValue = this.bips[i].toString()
+                this.textareas[i].value = keyoriginXpubUnified(this.bips[i])
             }
-
-            this.render()
         }
     }
+}
 
-    render = async (_) => {
-        for (let i = 0; i < 3; i++) {
-            this.textareas[i].value = await keyoriginXpubUnified(this.bips[i]);
-        }
+async function jadeStandardDerivations() {
+    const derivations = {}
+    const bips = [lwk.Bip.bip49(), lwk.Bip.bip84(), lwk.Bip.bip87()];
+    for (let i = 0; i < 3; i++) {
+        const xpub = await STATE.jade.keyoriginXpub(bips[i]).catch(err => console.error("Error jade.keyoriginXpub:", err))
+        derivations[bips[i].toString()] = xpub
     }
-
+    return derivations
 }
 
 
@@ -1629,10 +1636,9 @@ function esploraClient() {
     return client
 }
 
-async function keyoriginXpubUnified(bip) {
+function keyoriginXpubUnified(bip) {
     if (STATE.jade != null) {
-        return await
-            STATE.jade.keyoriginXpub(bip)
+        return STATE.jadeStandardDerivations[bip.toString()]
     } else if (STATE.swSigner != null) {
         return STATE.swSigner.keyoriginXpub(bip)
     } else {
