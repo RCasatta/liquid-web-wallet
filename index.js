@@ -78,6 +78,15 @@ async function init() {
 
     let randomWalletButton = document.getElementById("random-wallet-button");
     if (!network.isMainnet()) {
+        let ledgerDescriptorDiv = document.getElementById("ledger-descriptor-div")
+        let ledgerDescriptorButton = document.getElementById("ledger-descriptor-button")
+        ledgerDescriptorButton.addEventListener("click", async (_e) => {
+            let device = await lwk.searchLedgerDevice()
+            let ledger = new lwk.LedgerWeb(device)
+            let desc = await ledger.wpkhSlip77Descriptor()
+            descriptorTextarea.value = desc
+        })
+        ledgerDescriptorDiv.hidden = false
         document.getElementById("random-wallet-div").hidden = false
         randomWalletButton.disabled = false
         randomWalletButton.addEventListener("click", (_e) => {
