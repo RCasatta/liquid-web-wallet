@@ -77,15 +77,17 @@ async function init() {
     loadingBar.setAttribute("style", "visibility: hidden;") // by using visibility we avoid layout shifts
 
     let randomWalletButton = document.getElementById("random-wallet-button");
+
+    let ledgerDescriptorDiv = document.getElementById("ledger-descriptor-div")
+    let ledgerDescriptorButton = document.getElementById("ledger-descriptor-button")
+    ledgerDescriptorButton.addEventListener("click", async (_e) => {
+        let device = await lwk.searchLedgerDevice()
+        let ledger = new lwk.LedgerWeb(device, network)
+        let desc = await ledger.wpkhSlip77Descriptor()
+        descriptorTextarea.value = desc
+    })
+
     if (!network.isMainnet()) {
-        let ledgerDescriptorDiv = document.getElementById("ledger-descriptor-div")
-        let ledgerDescriptorButton = document.getElementById("ledger-descriptor-button")
-        ledgerDescriptorButton.addEventListener("click", async (_e) => {
-            let device = await lwk.searchLedgerDevice()
-            let ledger = new lwk.LedgerWeb(device)
-            let desc = await ledger.wpkhSlip77Descriptor()
-            descriptorTextarea.value = desc
-        })
         ledgerDescriptorDiv.hidden = false
         document.getElementById("random-wallet-div").hidden = false
         randomWalletButton.disabled = false
@@ -363,12 +365,30 @@ class AskAddress extends HTMLElement {
 
         this.button = this.querySelector("button")
         this.messageDiv = this.querySelector("div.message")
+        this.ledgerButton = this.querySelector("button.ledger")
 
         this.button.addEventListener("click", this.handleClick)
         if (STATE.jade == null) {
             this.button.innerText = "Show"
         }
+        this.ledgerButton.addEventListener("click", this.handleLedgerClick)
+    }
 
+    handleLedgerClick = async (_e) => {
+        let address = STATE.wollet.address(null)
+        let index = address.index()
+        console.log(address.address().toString())
+
+        let device = await lwk.searchLedgerDevice()
+        let ledger = new lwk.LedgerWeb(device, network)
+        let addressLedger = await ledger.getReceiveAddressSingle(index)
+
+        console.assert(addressLedger == address.address().toString(), "local and jade address are different!")
+
+        this.dispatchEvent(new CustomEvent('address-asked', {
+            bubbles: true,
+            detail: addressLedger
+        }))
     }
 
     handleClick = async (_e) => {
@@ -1047,9 +1067,9 @@ class SignTransaction extends HTMLElement {
             let psetString = this.pset.value
             let pset = new lwk.Pset(psetString)
             let device = await lwk.searchLedgerDevice()
-            let ledger = new lwk.LedgerWeb(device)
-            let signedPset = await ledger.sign(pset.toString())
-            this.pset.value = signedPset
+            let ledger = new lwk.LedgerWeb(device, network)
+            let signedPset = await ledger.sign(pset)
+            this.pset.value = signedPset.toString()
             this.renderAnalyze()
             this.messageDiv.innerHTML = success("Transaction signed!")
         } catch (e) {
@@ -1353,6 +1373,7 @@ class WalletXpubs extends HTMLElement {
 }
 
 async function jadeStandardDerivations() {
+    // these are cached also on the Jade, but caching here allow to get rid of the async in keyoriginXpubUnified
     const derivations = {}
     const bips = [lwk.Bip.bip49(), lwk.Bip.bip84(), lwk.Bip.bip87()];
     for (let i = 0; i < 3; i++) {
