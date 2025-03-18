@@ -1,6 +1,4 @@
 import { test, expect } from '@playwright/test';
-import * as lwk from "lwk_wasm"
-
 
 test.describe('Wallet Functionality', () => {
     test.beforeEach(async ({ page }) => {
@@ -76,6 +74,11 @@ test.describe('Wallet Functionality', () => {
         // Verify receive page elements
         await expect(page.getByRole('heading', { name: 'Receive' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Show' })).toBeVisible();
+        await page.getByRole('button', { name: 'Show' }).click();
+
+        // Get the address and see it maches the network
+        const address = await page.getByRole('code').textContent();
+        expect(address).toMatch(/^el1/);
     });
 
     test('should navigate to balance page', async ({ page }) => {
@@ -111,4 +114,25 @@ test.describe('Wallet Functionality', () => {
     test('should navigate to create page and make a pset', async ({ page }) => {
         await createTransaction(page);
     });
+
+    test('should sign a created pset', async ({ page }) => {
+        await createTransaction(page);
+
+        // Click on the "Sign with software signer" section
+        await page.getByText('Sign with software signer').click();
+
+        // Press the Sign button
+        await page.getByRole('button', { name: 'Sign', exact: true }).click();
+
+        // Verify that the Signatures section displays "Has" text
+        await expect(page.locator('h3:has-text("Signatures")').locator('~div table td:has-text("Has")')).toBeVisible();
+
+        // Press the Sign button
+        await page.getByRole('button', { name: 'Broadcast', exact: true }).click();
+
+        // Verify broadcast success message appears
+        await expect(page.getByText('Tx broadcasted')).toBeVisible();
+
+    });
+
 }); 
