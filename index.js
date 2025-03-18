@@ -15,7 +15,7 @@ STATE.page = String # id of the last rendered page
 STATE.contract = lwk.RegistryPost (contract, asset_id) # last issued contract
 */
 const STATE = {}
-const network = lwk.Network.testnet()
+const network = lwk.Network.regtestDefault()
 
 const RANDOM_MNEMONIC_KEY = "random_mnemonic"
 const AMP2_DATA_KEY_PREFIX = "amp2_data_v2_"
@@ -91,22 +91,31 @@ async function init() {
         ledgerDescriptorDiv.hidden = false
         document.getElementById("random-wallet-div").hidden = false
         randomWalletButton.disabled = false
+
+        if (network.isRegtest()) {
+            randomWalletButton.value = "Abandon wallet"
+        }
+
         randomWalletButton.addEventListener("click", (_e) => {
 
             let mnemonicFromCookie = localStorage.getItem(RANDOM_MNEMONIC_KEY)
-            var randomMnemonic
-            if (mnemonicFromCookie == null) {
-                randomMnemonic = lwk.Mnemonic.fromRandom(12)
-                localStorage.setItem(RANDOM_MNEMONIC_KEY, randomMnemonic.toString())
+            var mnemonicToUse
+            if (network.isRegtest()) {
+                mnemonicToUse = new lwk.Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
             } else {
-                try {
-                    randomMnemonic = new lwk.Mnemonic(mnemonicFromCookie)
-                } catch {
-                    randomMnemonic = lwk.Mnemonic.fromRandom(12)
-                    localStorage.setItem(RANDOM_MNEMONIC_KEY, randomMnemonic.toString())
+                if (mnemonicFromCookie == null) {
+                    mnemonicToUse = lwk.Mnemonic.fromRandom(12)
+                    localStorage.setItem(RANDOM_MNEMONIC_KEY, mnemonicToUse.toString())
+                } else {
+                    try {
+                        mnemonicToUse = new lwk.Mnemonic(mnemonicFromCookie)
+                    } catch {
+                        mnemonicToUse = lwk.Mnemonic.fromRandom(12)
+                        localStorage.setItem(RANDOM_MNEMONIC_KEY, mnemonicToUse.toString())
+                    }
                 }
             }
-            STATE.swSigner = new lwk.Signer(randomMnemonic, network)
+            STATE.swSigner = new lwk.Signer(mnemonicToUse, network)
             let desc = STATE.swSigner.wpkhSlip77Descriptor()
 
             descriptorTextarea.value = desc.toString()
@@ -1632,9 +1641,12 @@ function updatedAt(wolletLocal, node) {
 function esploraClient() {
     const mainnetUrl = "https://waterfalls.liquidwebwallet.org/liquid/api"
     const testnetUrl = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api"
-    const url = network.isMainnet() ? mainnetUrl : testnetUrl
+    const regtestUrl = "http://localhost:3000/"
+    const url = network.isMainnet() ? mainnetUrl : network.isTestnet() ? testnetUrl : regtestUrl
     const client = new lwk.EsploraClient(network, url, true)
-    client.set_waterfalls_server_recipient("age1xxzrgrfjm3yrwh3u6a7exgrldked0pdauvr3mx870wl6xzrwm5ps8s2h0p");
+    if (network.isMainnet() || network.isTestnet()) {
+        client.set_waterfalls_server_recipient("age1xxzrgrfjm3yrwh3u6a7exgrldked0pdauvr3mx870wl6xzrwm5ps8s2h0p");
+    }
     return client
 }
 
@@ -1767,6 +1779,8 @@ function _mapAssetHex(assetHex) {
         case "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d": return ["L-BTC", 8]
         case "fee": return ["fee", 8]
         case "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49": return ["tL-BTC", 8]
+
+        case "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225": return ["rL-BTC", 8]
 
         case "ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2": return ["USDt", 8]
         case "0e99c1a6da379d1f4151fb9df90449d40d0608f6cb33a5bcbfc8c265f42bab0a": return ["LCAD", 8]
