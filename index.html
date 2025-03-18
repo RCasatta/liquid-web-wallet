@@ -131,16 +131,18 @@
                 <article aria-busy="true"></article>
 
                 <div hidden>
-                    <h3>Add recipient</h3>
-                    <fieldset role="group">
-                        <input type="text" placeholder="Address" name="address">
-                        <input type="number" placeholder="Amount" name="amount">
-                        <select name="asset"></select>
-                        <!-- <input type="submit" value="+" id="create-transaction-button-add"
+                    <div id="add-recipient-div">
+                        <h3>Add recipient</h3>
+                        <fieldset role="group">
+                            <input type="text" placeholder="Address" name="address">
+                            <input type="number" placeholder="Amount" name="amount">
+                            <select name="asset"></select>
+                            <!-- <input type="submit" value="+" id="create-transaction-button-add"
                             onclick="alert('multiple recipients not yet implemented')"> -->
-                        <input type="submit" value="+">
+                            <input type="submit" value="+">
 
-                    </fieldset>
+                        </fieldset>
+                    </div>
 
                     <div class="message"></div>
 
