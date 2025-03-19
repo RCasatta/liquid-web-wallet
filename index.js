@@ -396,7 +396,7 @@ class AskAddress extends HTMLElement {
 
         this.dispatchEvent(new CustomEvent('address-asked', {
             bubbles: true,
-            detail: addressLedger
+            detail: address
         }))
     }
 
