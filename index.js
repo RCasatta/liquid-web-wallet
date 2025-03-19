@@ -1263,7 +1263,8 @@ class SignTransaction extends HTMLElement {
         const recipientsMap = new Map()
         for (const recipient of psetRecipients) {
             let address = recipient.address() != null ? recipient.address().toString() : "BURN"
-            recipientsMap.set(address + " " + mapAssetTicker(recipient.asset().toString()), recipient.value().toString())
+            let assetHex = recipient.asset().toString()
+            recipientsMap.set(address + " " + mapAssetTicker(assetHex), mapAssetPrecision(assetHex, recipient.value()))
         }
         this.recipientsDiv.innerHTML = "<h3>Recipients</h3>"
         this.recipientsDiv.appendChild(mapToTable(recipientsMap))
