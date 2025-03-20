@@ -138,7 +138,6 @@ export function getJadeStandardDerivations() {
 
 export function setJadeStandardDerivations(derivations) {
     _state.jadeStandardDerivations = derivations;
-    publish('jade-derivations-changed', derivations);
     return _state.jadeStandardDerivations;
 }
 
@@ -148,7 +147,6 @@ export function getXpub() {
 
 export function setXpub(xpub) {
     _state.xpub = xpub;
-    publish('xpub-changed', xpub);
     return _state.xpub;
 }
 
@@ -159,7 +157,6 @@ export function getMultiWallets() {
 
 export function setMultiWallets(wallets) {
     _state.multiWallets = wallets;
-    publish('multisig-wallets-changed', wallets);
     return _state.multiWallets;
 }
 
@@ -170,7 +167,6 @@ export function getSwSigner() {
 
 export function setSwSigner(signer) {
     _state.swSigner = signer;
-    publish('sw-signer-changed', signer);
     return _state.swSigner;
 }
 
@@ -191,32 +187,7 @@ export function getContract() {
 
 export function setContract(contract) {
     _state.contract = contract;
-    publish('contract-changed', contract);
     return _state.contract;
-}
-
-// Convenience function to access the entire state (for debugging only)
-export function getState() {
-    return { ..._state };
-}
-
-// Initialize empty state
-export function resetState() {
-    _state.page = null;
-    _state.wollet = null;
-    _state.wolletSelected = null;
-    _state.jade = null;
-    _state.jadeStandardDerivations = null;
-    _state.xpub = null;
-    _state.multiWallets = [];
-    _state.swSigner = null;
-    _state.scan = { running: false };
-    _state.scanLoop = null;
-    _state.pset = null;
-    _state.contract = null;
-
-    publish('state-reset', null);
-    return true;
 }
 
 // Future state management functions will be added here 

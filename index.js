@@ -6,7 +6,7 @@ import {
     getWollet, setWollet, getWolletSelected, setWolletSelected,
     getScanState, setScanRunning, getScanLoop, setScanLoop,
     getSwSigner, setSwSigner, getPset, setPset, getContract, setContract,
-    subscribe, publish, resetState
+    subscribe, publish
 } from './state.js'
 
 // Network setup (remains global as it's a configuration not state)
@@ -46,7 +46,6 @@ async function init() {
             const jadeDerivations = await jadeStandardDerivations()
             setJadeStandardDerivations(jadeDerivations)
             loadingBar.setAttribute("style", "visibility: hidden;") // by using visibility we avoid layout shifts
-            document.dispatchEvent(new CustomEvent('jade-initialized'))
         } catch (e) {
             // TODO network is the most common error but we can have other error,
             // should indeed take the error message from e instead of a static value
@@ -311,7 +310,6 @@ class MyNav extends HTMLElement {
         }
         if (id == "disconnect") {
             stopScanLoop()
-            resetState(); // Use our state reset function
             location.reload()
             return
         }
@@ -723,7 +721,7 @@ class CreateTransaction extends HTMLElement {
                 address,
                 assetInfo.tx()
             )
-            setPset(builder.finish(getWollet()),)
+            setPset(builder.finish(getWollet()))
 
         } catch (e) {
             this.messageReissuance.innerHTML = warning(e)
@@ -856,7 +854,7 @@ class CreateTransaction extends HTMLElement {
                     builder = builder.addRecipient(recipientAddress, satoshis, recipientAsset)
                 }
             }
-            setPset(builder.finish(getWollet()),)
+            setPset(builder.finish(getWollet()))
 
         } catch (e) {
             this.messageCreate.innerHTML = warning(e)
