@@ -1,8 +1,8 @@
 import * as lwk from "lwk_wasm"
 import {
     getCurrentPage, setCurrentPage,
-    getJade, setJade, getJadeStandardDerivations, setJadeStandardDerivations,
-    getXpub, setXpub, getMultiWallets, setMultiWallets,
+    getJade, setJade, getStandardDerivations,
+    getXpub, getMultiWallets,
     getWollet, setWollet, getWolletSelected, setWolletSelected,
     getScanState, setScanRunning, getScanLoop, setScanLoop,
     getSwSigner, setSwSigner, getPset, setPset, getContract, setContract,
@@ -36,15 +36,17 @@ async function init() {
             console.log("filter out do it yourself " + filter)
 
             const jade = await new lwk.Jade(network, filter)
-            setJade(jade)
             loadingBar.setAttribute("style", "visibility: visible;")
             connectJadeMessage.innerHTML = warning("Insert the PIN on the Jade if locked")
+
+            // Initialize jade and collect all related data
             const xpub = await jade.getMasterXpub() // asking something that requires unlock
-            setXpub(xpub)
             const multiWallets = await jade.getRegisteredMultisigs()
-            setMultiWallets(multiWallets)
             const jadeDerivations = await jadeStandardDerivations()
-            setJadeStandardDerivations(jadeDerivations)
+
+            // Set all jade-related state at once
+            setJade(jade, xpub, multiWallets, jadeDerivations)
+
             loadingBar.setAttribute("style", "visibility: hidden;") // by using visibility we avoid layout shifts
         } catch (e) {
             // TODO network is the most common error but we can have other error,
@@ -1698,7 +1700,7 @@ function esploraClient() {
 function keyoriginXpubUnified(bip) {
     const jade = getJade();
     const swSigner = getSwSigner();
-    const jadeDerivations = getJadeStandardDerivations();
+    const jadeDerivations = getStandardDerivations();
 
     if (jade != null && jadeDerivations != null) {
         return jadeDerivations[bip.toString()];

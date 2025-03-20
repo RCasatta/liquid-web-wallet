@@ -13,7 +13,7 @@ const _state = {
 
     // Device state
     jade: null, // lwk.Jade instance
-    jadeStandardDerivations: null, // {String: String} mapping bip to xpub
+    standardDerivations: null, // {String: String} mapping bip to xpub
     xpub: null, // String - master xpub from Jade
 
     // Multisig state
@@ -76,7 +76,6 @@ export function getCurrentPage() {
 
 export function setCurrentPage(pageId) {
     _state.page = pageId;
-    publish('page-changed', pageId);
     return _state.page;
 }
 
@@ -126,19 +125,27 @@ export function getJade() {
     return _state.jade;
 }
 
-export function setJade(jade) {
+export function setJade(jade, xpub, multiWallets, standardDerivations) {
+    if (jade === undefined || xpub === undefined || multiWallets === undefined || standardDerivations === undefined) {
+        throw new Error("setJade requires all parameters: jade, xpub, multiWallets, standardDerivations");
+    }
+
     _state.jade = jade;
+    _state.xpub = xpub;
+    _state.multiWallets = multiWallets;
+    _state.standardDerivations = standardDerivations;
+
     publish('jade-changed', jade);
     return _state.jade;
 }
 
-export function getJadeStandardDerivations() {
-    return _state.jadeStandardDerivations;
+export function getStandardDerivations() {
+    return _state.standardDerivations;
 }
 
-export function setJadeStandardDerivations(derivations) {
-    _state.jadeStandardDerivations = derivations;
-    return _state.jadeStandardDerivations;
+export function setStandardDerivations(derivations) {
+    _state.standardDerivations = derivations;
+    return _state.standardDerivations;
 }
 
 export function getXpub() {
