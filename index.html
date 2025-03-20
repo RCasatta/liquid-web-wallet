@@ -326,18 +326,22 @@
     <template id="receive-page-template">
         <section>
             <h2>Receive</h2>
-            <ask-address>
-                <p><button>Show on Jade</button></p>
+            <address-view>
+                <p><button class="show-jade">Show on Jade</button></p>
                 <div class="message">
                 </div>
-                <button class="ledger" hidden>Show on Ledger</button>
-
-            </ask-address>
-            <receive-address>
-                <p>&nbsp;</p>
-            </receive-address>
-
-
+                <button class="show-ledger">Show on Ledger</button>
+                <div class="address-display">
+                    <div class="address-text" hidden>
+                        <div style="word-break: break-word"><code></code></div>
+                    </div>
+                    <div class="address-qr" hidden>
+                        <a href="#">
+                            <img width="300px" style="image-rendering: pixelated; border: 20px solid white;">
+                        </a>
+                    </div>
+                </div>
+            </address-view>
         </section>
     </template>
 

@@ -401,51 +401,67 @@ class WalletSelector extends HTMLElement {
 }
 
 
-class AskAddress extends HTMLElement {
+class AddressView extends HTMLElement {
     constructor() {
         super()
 
-        this.button = this.querySelector("button")
+        this.showButton = this.querySelector("button.show-jade")
+        this.ledgerButton = this.querySelector("button.show-ledger")
         this.messageDiv = this.querySelector("div.message")
-        this.ledgerButton = this.querySelector("button.ledger")
+        this.addressDisplay = this.querySelector("div.address-display")
+        this.addressText = this.querySelector(".address-text")
+        this.addressCode = this.querySelector(".address-text code")
+        this.addressQR = this.querySelector(".address-qr")
+        this.addressLink = this.querySelector(".address-qr a")
+        this.addressImage = this.querySelector(".address-qr img")
 
-        this.button.addEventListener("click", this.handleClick)
+        this.showButton.addEventListener("click", this.handleShowOnJade)
+        this.ledgerButton.addEventListener("click", this.handleShowOnLedger)
+
         if (getJade() == null) {
-            this.button.innerText = "Show"
+            this.showButton.innerText = "Show"
         }
-        this.ledgerButton.addEventListener("click", this.handleLedgerClick)
     }
 
-    handleLedgerClick = async (_e) => {
-        let address = getWollet().address(null)
-        let index = address.index()
+    displayAddress(address) {
+        const addr = address.address()
+        const addrString = addr.toString()
+
+        // Update the address code element
+        this.addressCode.textContent = addrString
+        this.addressText.hidden = false
+
+        // Update the QR code link and image
+        this.addressLink.href = `liquidnetwork:${addrString}`
+        this.addressImage.src = addr.QRCodeUri(null)
+        this.addressQR.hidden = false
+    }
+
+    handleShowOnLedger = async (_e) => {
+        const address = getWollet().address(null)
+        const index = address.index()
         console.log(address.address().toString())
 
         let device = await lwk.searchLedgerDevice()
         let ledger = new lwk.LedgerWeb(device, network)
         let addressLedger = await ledger.getReceiveAddressSingle(index)
 
-        console.assert(addressLedger == address.address().toString(), "local and jade address are different!")
+        console.assert(addressLedger == address.address().toString(), "local and ledger address are different!")
 
-        this.dispatchEvent(new CustomEvent('address-asked', {
-            bubbles: true,
-            detail: address
-        }))
+        this.displayAddress(address)
     }
 
-    handleClick = async (_e) => {
-        setBusyDisabled(this.button, true)
-        let address = getWollet().address(null)
-        let index = address.index()
+    handleShowOnJade = async (_e) => {
+        setBusyDisabled(this.showButton, true)
+        const address = getWollet().address(null)
+        const index = address.index()
         console.log(address.address().toString())
 
-        this.dispatchEvent(new CustomEvent('address-asked', {
-            bubbles: true,
-            detail: address
-        }))
+        // Display the address anyway
+        this.displayAddress(address)
 
         if (getJade() == null) {
-            setBusyDisabled(this.button, false)
+            setBusyDisabled(this.showButton, false)
             this.messageDiv.innerHTML = warning("Address generated without double checking with the Jade are risky!")
             return
         }
@@ -461,30 +477,9 @@ class AskAddress extends HTMLElement {
             jadeAddress = await getJade().getReceiveAddressMulti(getWolletSelected(), [0, index])
         }
 
-
         console.assert(jadeAddress == address.address().toString(), "local and jade address are different!")
         this.messageDiv.hidden = true
-        setBusyDisabled(this.button, false)
-    }
-}
-
-class ReceiveAddress extends HTMLElement {
-    constructor() {
-        super()
-
-        document.addEventListener('address-asked', this.render)
-    }
-
-    render = (event) => {
-        console.log("Receive Address render")
-        let addr = event.detail.address()
-        let addrString = addr.toString()
-        this.innerHTML = `
-            <div style="word-break: break-word"><code>${addrString}</code></div><br>
-            <a href="liquidnetwork:${addrString}">
-                <img src="${addr.QRCodeUri(null)}" width="300px" style="image-rendering: pixelated; border: 20px solid white;"></img>
-            </a>
-        `
+        setBusyDisabled(this.showButton, false)
     }
 }
 
@@ -728,7 +723,7 @@ class CreateTransaction extends HTMLElement {
                 address,
                 assetInfo.tx()
             )
-            setPset(builder.finish(getWollet()))
+            setPset(builder.finish(getWollet()),)
 
         } catch (e) {
             this.messageReissuance.innerHTML = warning(e)
@@ -861,7 +856,7 @@ class CreateTransaction extends HTMLElement {
                     builder = builder.addRecipient(recipientAddress, satoshis, recipientAsset)
                 }
             }
-            setPset(builder.finish(getWollet())
+            setPset(builder.finish(getWollet()),)
 
         } catch (e) {
             this.messageCreate.innerHTML = warning(e)
@@ -1574,8 +1569,7 @@ customElements.define("my-nav", MyNav)
 customElements.define("my-footer", MyFooter)
 
 customElements.define("wallet-selector", WalletSelector)
-customElements.define("receive-address", ReceiveAddress)
-customElements.define("ask-address", AskAddress)
+customElements.define("address-view", AddressView)
 customElements.define("wallet-descriptor", WalletDescriptor)
 customElements.define("wallet-xpubs", WalletXpubs)
 customElements.define("wallet-amp2", WalletAmp2)
