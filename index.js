@@ -1,4 +1,5 @@
 import * as lwk from "lwk_wasm"
+import { getCurrentPage, setCurrentPage } from './state.js'
 
 // Global state
 /* 
@@ -11,11 +12,13 @@ STATE.xpub = String
 STATE.multiWallets = [String]
 STATE.swSigner = lwk.Signer # only for testnet
 STATE.scanLoop = interval
-STATE.page = String # id of the last rendered page
 STATE.contract = lwk.RegistryPost (contract, asset_id) # last issued contract
 */
 const STATE = {}
 const network = lwk.Network.regtestDefault()
+
+// Reference to the main application container
+const app = document.getElementById('app')
 
 const RANDOM_MNEMONIC_KEY = "random_mnemonic"
 const AMP2_DATA_KEY_PREFIX = "amp2_data_v2_"
@@ -261,9 +264,10 @@ class MyNav extends HTMLElement {
         })
 
         document.addEventListener('reload-page', (event) => {
-            if (STATE.page != null) {
-                if (STATE.page == "balance-page" || STATE.page == "transactions-page") {
-                    this.renderPage(STATE.page)
+            const currentPage = getCurrentPage()
+            if (currentPage != null) {
+                if (currentPage == "balance-page" || currentPage == "transactions-page") {
+                    this.renderPage(currentPage)
                 }
             }
         })
@@ -284,7 +288,7 @@ class MyNav extends HTMLElement {
     }
 
     renderPage(id) {
-        STATE.page = id
+        setCurrentPage(id)
         const template = document.getElementById(id + "-template").content.cloneNode(true)
 
         cleanChilds(app)
