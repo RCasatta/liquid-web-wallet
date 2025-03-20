@@ -160,8 +160,6 @@ async function handleWatchOnlyClick(_e) {
         setScanRunning(false)
         loadPersisted(wollet)
 
-        document.dispatchEvent(new CustomEvent('wallet-selected'))
-
         await fullScanAndApply(wollet, getScanState())
     } catch (e) {
         descriptorMessage.innerHTML = warning(e)
@@ -174,9 +172,23 @@ class MyFooter extends HTMLElement {
     constructor() {
         super()
         this.footer = this.querySelector('footer')
-        document.addEventListener('jade-initialized', this.render)
-        document.addEventListener('wallet-selected', this.render)
+
+        // Store subscriptions so we can unsubscribe later if needed
+        this.subscriptions = [];
+
+        // Replace document event listeners with state subscriptions
+        this.subscriptions.push(
+            subscribe('jade-changed', this.render),
+            subscribe('wallet-selected', this.render)
+        );
+
         this.render()
+    }
+
+    // Clean up subscriptions when the element is removed from the DOM
+    disconnectedCallback() {
+        // Unsubscribe from all state subscriptions
+        this.subscriptions.forEach(unsubscribe => unsubscribe());
     }
 
     handleClick = (_event) => {
@@ -192,7 +204,6 @@ class MyFooter extends HTMLElement {
     }
 
     render = () => {
-
         var footer = ''
         if (network.isMainnet()) {
             footer += `<a href="/">Home</a>`
@@ -224,8 +235,6 @@ class MyFooter extends HTMLElement {
         let idContact = this.querySelector("#contact")
         if (idContact) {
             idContact.addEventListener("click", this.handleContactClick)
-
-
         }
     }
 }
@@ -234,37 +243,52 @@ class MyNav extends HTMLElement {
     constructor() {
         super()
 
+        // Store subscriptions so we can unsubscribe later if needed
+        this.subscriptions = [];
+
+        // Initialize the component
         this.render()
 
+        // Keep direct DOM event listeners
         this.addEventListener("click", this.handleClick)
 
-        document.addEventListener('jade-initialized', this.render)
-        document.addEventListener('wallet-sync-end', this.render)
-        document.addEventListener('wallet-sync-start', this.render)
+        // Replace document event listeners with state subscriptions
+        this.subscriptions.push(
+            // State change subscriptions
+            subscribe('jade-changed', this.render),
+            subscribe('scan-state-changed', this.render),
 
-        document.addEventListener('wallet-selected', (event) => {
-            scanLoop()
-            this.render()
-            this.renderPage("balance-page")
-        })
+            // Handle wallet selection
+            subscribe('wallet-selected', () => {
+                scanLoop()
+                this.render()
+                this.renderPage("balance-page")
+            }),
 
-        document.addEventListener('pset-ready', (event) => {
-            this.renderPage("sign-page")
-        })
+            // Handle PSET changes
+            subscribe('pset-changed', (pset) => {
+                if (pset !== null) {
+                    this.renderPage("sign-page")
+                }
+            })
+        );
 
-        document.addEventListener('wallet-clicked', (event) => {
+        // We still need some DOM events for component interactions
+        // These could eventually be replaced with a more robust component communication system
+        document.addEventListener('wallet-clicked', () => {
             this.renderPage("wallet-page")
         })
 
-        document.addEventListener('register-clicked', (event) => {
+        document.addEventListener('register-clicked', () => {
             this.renderPage("register-multisig-page")
         })
 
-        document.addEventListener('contact-clicked', (event) => {
+        document.addEventListener('contact-clicked', () => {
             this.renderPage("contact-page")
         })
 
-        document.addEventListener('reload-page', (event) => {
+        // For reload-page, we could eventually create a dedicated state action
+        document.addEventListener('reload-page', () => {
             const currentPage = getCurrentPage()
             if (currentPage != null) {
                 if (currentPage == "balance-page" || currentPage == "transactions-page") {
@@ -274,6 +298,12 @@ class MyNav extends HTMLElement {
         })
     }
 
+    // Clean up subscriptions when the element is removed from the DOM
+    disconnectedCallback() {
+        // Unsubscribe from all state subscriptions
+        this.subscriptions.forEach(unsubscribe => unsubscribe());
+    }
+
     handleClick = async (event) => {
         let id = event.target.id
         if (id === "") {
@@ -281,6 +311,7 @@ class MyNav extends HTMLElement {
         }
         if (id == "disconnect") {
             stopScanLoop()
+            resetState(); // Use our state reset function
             location.reload()
             return
         }
@@ -364,10 +395,6 @@ class WalletSelector extends HTMLElement {
         setWollet(wollet)
         setScanRunning(false)
         loadPersisted(wollet)
-
-        this.dispatchEvent(new CustomEvent('wallet-selected', {
-            bubbles: true,
-        }))
 
         await fullScanAndApply(wollet, getScanState())
     }
@@ -467,12 +494,25 @@ class WalletBalance extends HTMLElement {
         this.subtitle = this.querySelector("p")
         this.div = this.querySelector("div")
         this.faucetRequest = this.querySelector("button")
-        document.addEventListener('wallet-sync-end', this.render)
+
+        // Store subscriptions so we can unsubscribe later if needed
+        this.subscriptions = [];
+
+        // Subscribe to scan state changes instead of using document events
+        this.subscriptions.push(
+            subscribe('scan-state-changed', this.render)
+        );
+
         this.faucetRequest.addEventListener('click', this.handleFaucetRequest)
         this.messageDiv = this.querySelector("div.message")
 
-
         this.render()
+    }
+
+    // Clean up subscriptions when the element is removed from the DOM
+    disconnectedCallback() {
+        // Unsubscribe from all state subscriptions
+        this.subscriptions.forEach(unsubscribe => unsubscribe());
     }
 
     handleFaucetRequest = async () => {
@@ -486,17 +526,18 @@ class WalletBalance extends HTMLElement {
     }
 
     render = () => {
-        if (getWollet().neverScanned()) {
+        const wollet = getWollet();
+        if (!wollet || wollet.neverScanned()) {
             return
         }
-        const balance = getWollet().balance()
+        const balance = wollet.balance()
 
         const lbtc = balance.get(network.policyAsset().toString())
         if (lbtc == 0 && !network.isMainnet()) {
             this.faucetRequest.hidden = false
         }
 
-        updatedAt(getWollet(), this.subtitle)
+        updatedAt(wollet, this.subtitle)
 
         cleanChilds(this.div)
         this.div.appendChild(mapToTable(mapBalance(balance)))
@@ -510,15 +551,30 @@ class WalletTransactions extends HTMLElement {
         this.txsTitle = this.querySelector("h2")
         this.subtitle = this.querySelector("p")
         this.div = this.querySelector("div")
-        document.addEventListener('wallet-sync-end', this.render)
+
+        // Store subscriptions so we can unsubscribe later if needed
+        this.subscriptions = [];
+
+        // Subscribe to scan state changes instead of using document events
+        this.subscriptions.push(
+            subscribe('scan-state-changed', this.render)
+        );
+
         this.render()
     }
 
+    // Clean up subscriptions when the element is removed from the DOM
+    disconnectedCallback() {
+        // Unsubscribe from all state subscriptions
+        this.subscriptions.forEach(unsubscribe => unsubscribe());
+    }
+
     render = () => {
-        if (getWollet().neverScanned()) {
+        const wollet = getWollet();
+        if (!wollet || wollet.neverScanned()) {
             return
         }
-        let transactions = getWollet().transactions()
+        let transactions = wollet.transactions()
         if (transactions.length > 1) {
             this.txsTitle.innerText = transactions.length + " Transactions"
         }
@@ -555,10 +611,9 @@ class WalletTransactions extends HTMLElement {
             newRow.appendChild(heightCell)
         })
 
-        updatedAt(getWollet(), this.subtitle)
+        updatedAt(wollet, this.subtitle)
         cleanChilds(this.div)
         this.div.appendChild(div)
-
     }
 }
 
@@ -675,9 +730,8 @@ class CreateTransaction extends HTMLElement {
             )
             setPset(builder.finish(getWollet()))
 
-            this.dispatchEvent(new CustomEvent('pset-ready', {
-                bubbles: true,
-            }))
+            // PSET is now handled through the state system via setPset
+            // No need to dispatch a custom event
 
         } catch (e) {
             this.messageReissuance.innerHTML = warning(e)
@@ -734,22 +788,21 @@ class CreateTransaction extends HTMLElement {
             const assetId = getPset().inputs()[0].issuanceAsset()
             setContract(new lwk.RegistryPost(contract, assetId))
 
-            this.dispatchEvent(new CustomEvent('pset-ready', {
-                bubbles: true,
-            }))
+            // PSET is now handled through the state system via setPset
+            // No need to dispatch a custom event
 
         } catch (e) {
             this.messageIssuance.innerHTML = warning(e)
             return
         }
-
     }
 
     render = () => {
-        if (getWollet().neverScanned()) {
+        const wollet = getWollet();
+        if (!wollet || wollet.neverScanned()) {
             return
         }
-        let balance = getWollet().balance()
+        let balance = wollet.balance()
 
         cleanChilds(this.selectAssetInRecipient)
         let option = document.createElement("option")
@@ -781,11 +834,9 @@ class CreateTransaction extends HTMLElement {
 
         this.busy.hidden = true
         this.div.hidden = false
-
     }
 
     handleCreate = (_e) => {
-
         this.messageCreate.innerHTML = ""
         // verify at least 1 row
 
@@ -817,14 +868,14 @@ class CreateTransaction extends HTMLElement {
                 }
             }
             setPset(builder.finish(getWollet()))
+
+            // PSET is now handled through the state system via setPset
+            // No need to dispatch a custom event
+
         } catch (e) {
             this.messageCreate.innerHTML = warning(e)
             return
         }
-
-        this.dispatchEvent(new CustomEvent('pset-ready', {
-            bubbles: true,
-        }))
     }
 
     checkEmptynessRecipient = (setAria) => {
@@ -1681,7 +1732,9 @@ async function fullScanAndApply(wolletLocal, scanState) {
     if (!scanState.running) {
         setScanRunning(true)
 
-        document.dispatchEvent(new CustomEvent('wallet-sync-start'))
+        // Publish a scan-start event instead of dispatching a DOM event
+        publish('scan-start', null)
+
         let client = esploraClient()
 
         try {
@@ -1709,9 +1762,12 @@ async function fullScanAndApply(wolletLocal, scanState) {
                     }
                 }
             }
-            document.dispatchEvent(new CustomEvent('wallet-sync-end'))
+
+            // Publish a scan-end event instead of dispatching a DOM event
+            publish('scan-end', { updated })
         } catch (e) {
             console.log("Error in fullScanAndApply: " + e)
+            publish('scan-error', e)
         } finally {
             setScanRunning(false)
         }
