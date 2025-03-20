@@ -135,4 +135,41 @@ test.describe('Wallet Functionality', () => {
 
     });
 
+    test('should create an issuance PSET', async ({ page }) => {
+        await loadWallet(page);
+
+        // Navigate to create page
+        await page.getByRole('link', { name: 'Create' }).click();
+
+        // Wait for the sync to complete by waiting for the loading indicator to disappear
+        await expect(page.locator('create-transaction article[aria-busy="true"]')).not.toBeVisible();
+
+        // Open the issuance details section
+        await page.getByRole('button', { name: 'Issuance', exact: true }).click();
+
+        // Fill in the issuance form
+        await page.locator('input[name="asset_amount"]').fill('1000');
+        await page.locator('input[name="token_amount"]').fill('1');
+        await page.locator('input[name="domain"]').fill('liquidtestnet.com');
+        await page.locator('input[name="name"]').fill('Test Asset');
+        await page.locator('input[name="ticker"]').fill('TEST');
+        await page.locator('input[name="precision"]').fill('8');
+
+        // Click the Issue assets button
+        await page.getByRole('button', { name: 'Issue assets' }).click();
+
+        // Verify we're on the sign page
+        await expect(page.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible();
+
+        // Verify PSET textarea is populated
+        const psetTextarea = page.locator('sign-transaction textarea').first();
+        await expect(psetTextarea).toHaveValue(/^cHNldP8/); // Base64 PSET prefix
+
+        // Verify contract textarea is visible and populated
+        const contractSection = page.locator('div.contract-section');
+        await expect(contractSection).toBeVisible();
+        const contractTextarea = contractSection.locator('textarea');
+        await expect(contractTextarea).toHaveValue(/^{/); // JSON contract starts with {
+    });
+
 }); 

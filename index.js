@@ -748,9 +748,11 @@ class CreateTransaction extends HTMLElement {
 
             // Check if ticker is already in use
             const tickerValue = this.ticker.value
-            const isTickerAvailable = await checkTickerAvailability(tickerValue);
-            if (!isTickerAvailable) {
-                throw new Error(`Ticker '${tickerValue}' is already in use. Please choose a different ticker.`);
+            if (!network.isRegtest()) {
+                const isTickerAvailable = await checkTickerAvailability(tickerValue);
+                if (!isTickerAvailable) {
+                    throw new Error(`Ticker '${tickerValue}' is already in use. Please choose a different ticker.`);
+                }
             }
 
             var builder = new lwk.TxBuilder(network)
@@ -766,20 +768,23 @@ class CreateTransaction extends HTMLElement {
                 0,
             )
 
-            // this.assetAmount.value and this.tokenAmount.value are strings, and it's right in release mode will be converted to bigint
-            // in debug mode it's an error
+            // Convert string values to bigint explicitly
+            const assetAmount = BigInt(this.assetAmount.value);
+            const tokenAmount = BigInt(this.tokenAmount.value);
+
             builder = builder.issueAsset(
-                this.assetAmount.value,
+                assetAmount,
                 assetAddr,
-                this.tokenAmount.value,
+                tokenAmount,
                 tokenAddr,
                 contract.clone()
             )
-            setPset(builder.finish(getWollet()))
+            const pset = builder.finish(getWollet())
 
-            const assetId = getPset().inputs()[0].issuanceAsset()
-            setContract(new lwk.RegistryPost(contract, assetId))
-
+            const assetId = pset.inputs()[0].issuanceAsset()
+            const postedContract = new lwk.RegistryPost(contract, assetId)
+            setContract(postedContract)
+            setPset(pset)
         } catch (e) {
             this.messageIssuance.innerHTML = warning(e)
             return
