@@ -6,7 +6,7 @@ import {
     getWollet, setWollet, getWolletSelected, setWolletSelected,
     getScanState, setScanRunning, getScanLoop, setScanLoop,
     getSwSigner, setSwSigner, getPset, setPset, getContract, setContract,
-    subscribe, publish, resetState, getState
+    subscribe, publish, resetState
 } from './state.js'
 
 // Network setup (remains global as it's a configuration not state)
@@ -730,9 +730,6 @@ class CreateTransaction extends HTMLElement {
             )
             setPset(builder.finish(getWollet()))
 
-            // PSET is now handled through the state system via setPset
-            // No need to dispatch a custom event
-
         } catch (e) {
             this.messageReissuance.innerHTML = warning(e)
             return
@@ -787,9 +784,6 @@ class CreateTransaction extends HTMLElement {
 
             const assetId = getPset().inputs()[0].issuanceAsset()
             setContract(new lwk.RegistryPost(contract, assetId))
-
-            // PSET is now handled through the state system via setPset
-            // No need to dispatch a custom event
 
         } catch (e) {
             this.messageIssuance.innerHTML = warning(e)
@@ -867,10 +861,7 @@ class CreateTransaction extends HTMLElement {
                     builder = builder.addRecipient(recipientAddress, satoshis, recipientAsset)
                 }
             }
-            setPset(builder.finish(getWollet()))
-
-            // PSET is now handled through the state system via setPset
-            // No need to dispatch a custom event
+            setPset(builder.finish(getWollet())
 
         } catch (e) {
             this.messageCreate.innerHTML = warning(e)
