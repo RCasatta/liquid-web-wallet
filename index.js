@@ -1,20 +1,15 @@
 import * as lwk from "lwk_wasm"
-import { getCurrentPage, setCurrentPage } from './state.js'
+import {
+    getCurrentPage, setCurrentPage,
+    getJade, setJade, getJadeStandardDerivations, setJadeStandardDerivations,
+    getXpub, setXpub, getMultiWallets, setMultiWallets,
+    getWollet, setWollet, getWolletSelected, setWolletSelected,
+    getScanState, setScanRunning, getScanLoop, setScanLoop,
+    getSwSigner, setSwSigner, getPset, setPset, getContract, setContract,
+    subscribe, publish, resetState, getState
+} from './state.js'
 
-// Global state
-/* 
-STATE.wollet = lwk.Wollet
-STATE.wolletSelected possible values: ShWpkh Wpkh, <multisig wallets>
-STATE.scan.running bool
-STATE.jade = lwk.Jade
-STATE.jadeStandardDerivations = {String: String} # bip: xpub
-STATE.xpub = String
-STATE.multiWallets = [String]
-STATE.swSigner = lwk.Signer # only for testnet
-STATE.scanLoop = interval
-STATE.contract = lwk.RegistryPost (contract, asset_id) # last issued contract
-*/
-const STATE = {}
+// Network setup (remains global as it's a configuration not state)
 const network = lwk.Network.regtestDefault()
 
 // Reference to the main application container
@@ -40,12 +35,16 @@ async function init() {
             let filter = !document.getElementById("diy-jade").checked
             console.log("filter out do it yourself " + filter)
 
-            STATE.jade = await new lwk.Jade(network, filter)
+            const jade = await new lwk.Jade(network, filter)
+            setJade(jade)
             loadingBar.setAttribute("style", "visibility: visible;")
             connectJadeMessage.innerHTML = warning("Insert the PIN on the Jade if locked")
-            STATE.xpub = await STATE.jade.getMasterXpub() // asking something that requires unlock
-            STATE.multiWallets = await STATE.jade.getRegisteredMultisigs()
-            STATE.jadeStandardDerivations = await jadeStandardDerivations()
+            const xpub = await jade.getMasterXpub() // asking something that requires unlock
+            setXpub(xpub)
+            const multiWallets = await jade.getRegisteredMultisigs()
+            setMultiWallets(multiWallets)
+            const jadeDerivations = await jadeStandardDerivations()
+            setJadeStandardDerivations(jadeDerivations)
             loadingBar.setAttribute("style", "visibility: hidden;") // by using visibility we avoid layout shifts
             document.dispatchEvent(new CustomEvent('jade-initialized'))
         } catch (e) {
@@ -118,8 +117,9 @@ async function init() {
                     }
                 }
             }
-            STATE.swSigner = new lwk.Signer(mnemonicToUse, network)
-            let desc = STATE.swSigner.wpkhSlip77Descriptor()
+            const swSigner = new lwk.Signer(mnemonicToUse, network)
+            setSwSigner(swSigner)
+            let desc = swSigner.wpkhSlip77Descriptor()
 
             descriptorTextarea.value = desc.toString()
             handleWatchOnlyClick()
@@ -154,14 +154,15 @@ async function handleWatchOnlyClick(_e) {
             throw new Error("The descriptor has wrong network")
         }
 
-        STATE.wollet = new lwk.Wollet(network, descriptor)
-        STATE.wolletSelected = "Descriptor"
-        STATE.scan = { running: false }
-        loadPersisted(STATE.wollet)
+        const wollet = new lwk.Wollet(network, descriptor)
+        setWollet(wollet)
+        setWolletSelected("Descriptor")
+        setScanRunning(false)
+        loadPersisted(wollet)
 
         document.dispatchEvent(new CustomEvent('wallet-selected'))
 
-        await fullScanAndApply(STATE.wollet, STATE.scan)
+        await fullScanAndApply(wollet, getScanState())
     } catch (e) {
         descriptorMessage.innerHTML = warning(e)
     }
@@ -203,11 +204,11 @@ class MyFooter extends HTMLElement {
         footer += `<span> | </span><a href="#" id="contact">Contact</a>`
 
         footer += `<span> | </span><span>${network}</span>`
-        if (STATE.jade != null) {
-            const jadeIdentifier = STATE.xpub.fingerprint()
+        if (getJade() != null) {
+            const jadeIdentifier = getXpub().fingerprint()
             footer += `<span> | </span><span><code>${jadeIdentifier}</code></span>`
         }
-        if (STATE.wolletSelected != null) {
+        if (getWolletSelected() != null) {
             footer += `<span> | </span><a href="#" id="wallet">Wallet</a>`
         }
         if (network.isMainnet()) {
@@ -296,14 +297,13 @@ class MyNav extends HTMLElement {
     }
 
     render = async (_e) => {
-
-        if (STATE.jade != null && STATE.wolletSelected == null) {
+        if (getJade() != null && getWolletSelected() == null) {
             this.innerHTML = `
                     <a href="#" id="disconnect">Disconnect</a>
                     <br><br>
                 `
             this.renderPage("wallets-page")
-        } else if (STATE.scan) {
+        } else if (getScanState()) {
             this.innerHTML = `
                     <a href="#" id="balance-page">Balance</a> |
                     <a href="#" id="transactions-page">Transactions</a> |
@@ -338,7 +338,7 @@ class WalletSelector extends HTMLElement {
     }
 
     addMulti = () => {
-        STATE.multiWallets.forEach((w) => {
+        getMultiWallets().forEach((w) => {
             let option = document.createElement("option")
             option.innerText = w + " (multisig)"
             option.setAttribute("value", w)
@@ -349,25 +349,27 @@ class WalletSelector extends HTMLElement {
     handleSelect = async () => {
         this.walletProgress.hidden = false
 
-        STATE.wolletSelected = this.walletSelector.value
+        setWolletSelected(this.walletSelector.value)
         var descriptor
-        if (STATE.wolletSelected == "Wpkh") {
-            descriptor = await STATE.jade.wpkh()
-        } else if (STATE.wolletSelected == "ShWpkh") {
-            descriptor = await STATE.jade.shWpkh()
+        const jade = getJade();
+        if (getWolletSelected() == "Wpkh") {
+            descriptor = await jade.wpkh()
+        } else if (getWolletSelected() == "ShWpkh") {
+            descriptor = await jade.shWpkh()
         } else {
-            descriptor = await STATE.jade.multi(STATE.wolletSelected)
+            descriptor = await jade.multi(getWolletSelected())
         }
         console.log(descriptor.toString())
-        STATE.wollet = new lwk.Wollet(network, descriptor)
-        STATE.scan = { running: false }
-        loadPersisted(STATE.wollet)
+        const wollet = new lwk.Wollet(network, descriptor)
+        setWollet(wollet)
+        setScanRunning(false)
+        loadPersisted(wollet)
 
         this.dispatchEvent(new CustomEvent('wallet-selected', {
             bubbles: true,
         }))
 
-        await fullScanAndApply(STATE.wollet, STATE.scan)
+        await fullScanAndApply(wollet, getScanState())
     }
 }
 
@@ -381,14 +383,14 @@ class AskAddress extends HTMLElement {
         this.ledgerButton = this.querySelector("button.ledger")
 
         this.button.addEventListener("click", this.handleClick)
-        if (STATE.jade == null) {
+        if (getJade() == null) {
             this.button.innerText = "Show"
         }
         this.ledgerButton.addEventListener("click", this.handleLedgerClick)
     }
 
     handleLedgerClick = async (_e) => {
-        let address = STATE.wollet.address(null)
+        let address = getWollet().address(null)
         let index = address.index()
         console.log(address.address().toString())
 
@@ -406,7 +408,7 @@ class AskAddress extends HTMLElement {
 
     handleClick = async (_e) => {
         setBusyDisabled(this.button, true)
-        let address = STATE.wollet.address(null)
+        let address = getWollet().address(null)
         let index = address.index()
         console.log(address.address().toString())
 
@@ -415,21 +417,21 @@ class AskAddress extends HTMLElement {
             detail: address
         }))
 
-        if (STATE.jade == null) {
+        if (getJade() == null) {
             setBusyDisabled(this.button, false)
             this.messageDiv.innerHTML = warning("Address generated without double checking with the Jade are risky!")
             return
         }
         this.messageDiv.innerHTML = warning("Check the address on the Jade!")
         var jadeAddress
-        if (STATE.wolletSelected === "Wpkh" || STATE.wolletSelected === "ShWpkh") {
+        if (getWolletSelected() === "Wpkh" || getWolletSelected() === "ShWpkh") {
             // FIXME it breakes if someone call his registered wallet "Wpkh" or "ShWpkh"
-            let fullPath = STATE.wollet.addressFullPath(index)
-            let variant = lwk.Singlesig.from(STATE.wolletSelected)
-            jadeAddress = await STATE.jade.getReceiveAddressSingle(variant, fullPath)
+            let fullPath = getWollet().addressFullPath(index)
+            let variant = lwk.Singlesig.from(getWolletSelected())
+            jadeAddress = await getJade().getReceiveAddressSingle(variant, fullPath)
         } else {
             // 0 means external chain
-            jadeAddress = await STATE.jade.getReceiveAddressMulti(STATE.wolletSelected, [0, index])
+            jadeAddress = await getJade().getReceiveAddressMulti(getWolletSelected(), [0, index])
         }
 
 
@@ -475,7 +477,7 @@ class WalletBalance extends HTMLElement {
 
     handleFaucetRequest = async () => {
         this.faucetRequest.hidden = true
-        const address = STATE.wollet.address(null).address().toString()
+        const address = getWollet().address(null).address().toString()
         const url = `https://liquidtestnet.com/api/faucet?address=${address}&action=lbtc`
         console.log(url)
         this.messageDiv.innerHTML = success("Sending request to the faucet...")
@@ -484,17 +486,17 @@ class WalletBalance extends HTMLElement {
     }
 
     render = () => {
-        if (STATE.wollet.neverScanned()) {
+        if (getWollet().neverScanned()) {
             return
         }
-        const balance = STATE.wollet.balance()
+        const balance = getWollet().balance()
 
         const lbtc = balance.get(network.policyAsset().toString())
         if (lbtc == 0 && !network.isMainnet()) {
             this.faucetRequest.hidden = false
         }
 
-        updatedAt(STATE.wollet, this.subtitle)
+        updatedAt(getWollet(), this.subtitle)
 
         cleanChilds(this.div)
         this.div.appendChild(mapToTable(mapBalance(balance)))
@@ -513,10 +515,10 @@ class WalletTransactions extends HTMLElement {
     }
 
     render = () => {
-        if (STATE.wollet.neverScanned()) {
+        if (getWollet().neverScanned()) {
             return
         }
-        let transactions = STATE.wollet.transactions()
+        let transactions = getWollet().transactions()
         if (transactions.length > 1) {
             this.txsTitle.innerText = transactions.length + " Transactions"
         }
@@ -553,7 +555,7 @@ class WalletTransactions extends HTMLElement {
             newRow.appendChild(heightCell)
         })
 
-        updatedAt(STATE.wollet, this.subtitle)
+        updatedAt(getWollet(), this.subtitle)
         cleanChilds(this.div)
         this.div.appendChild(div)
 
@@ -654,7 +656,7 @@ class CreateTransaction extends HTMLElement {
             // Get the address or use the wallet's address if empty
             let address
             if (this.reissuanceAddress.value.trim() === "") {
-                address = STATE.wollet.address(null).address()
+                address = getWollet().address(null).address()
             } else {
                 address = new lwk.Address(this.reissuanceAddress.value)
                 if (!address.isBlinded()) {
@@ -671,7 +673,7 @@ class CreateTransaction extends HTMLElement {
                 address,
                 assetInfo.tx()
             )
-            STATE.pset = builder.finish(STATE.wollet)
+            setPset(builder.finish(getWollet()))
 
             this.dispatchEvent(new CustomEvent('pset-ready', {
                 bubbles: true,
@@ -727,10 +729,10 @@ class CreateTransaction extends HTMLElement {
                 tokenAddr,
                 contract.clone()
             )
-            STATE.pset = builder.finish(STATE.wollet)
+            setPset(builder.finish(getWollet()))
 
-            const assetId = STATE.pset.inputs()[0].issuanceAsset()
-            STATE.contract = new lwk.RegistryPost(contract, assetId)
+            const assetId = getPset().inputs()[0].issuanceAsset()
+            setContract(new lwk.RegistryPost(contract, assetId))
 
             this.dispatchEvent(new CustomEvent('pset-ready', {
                 bubbles: true,
@@ -744,10 +746,10 @@ class CreateTransaction extends HTMLElement {
     }
 
     render = () => {
-        if (STATE.wollet.neverScanned()) {
+        if (getWollet().neverScanned()) {
             return
         }
-        let balance = STATE.wollet.balance()
+        let balance = getWollet().balance()
 
         cleanChilds(this.selectAssetInRecipient)
         let option = document.createElement("option")
@@ -814,7 +816,7 @@ class CreateTransaction extends HTMLElement {
                     builder = builder.addRecipient(recipientAddress, satoshis, recipientAsset)
                 }
             }
-            STATE.pset = builder.finish(STATE.wollet)
+            setPset(builder.finish(getWollet()))
         } catch (e) {
             this.messageCreate.innerHTML = warning(e)
             return
@@ -1026,26 +1028,26 @@ class SignTransaction extends HTMLElement {
 
         this.signWithLedgerButton.addEventListener("click", this.handleSignWithLedgerClick)
 
-        if (STATE.pset != null) {
-            this.pset.value = STATE.pset.toString()
-            STATE.pset = null
+        if (getPset() != null) {
+            this.pset.value = getPset().toString()
+            setPset(null)
         }
 
-        if (STATE.contract != null) {
-            this.contract.value = STATE.contract.toString()
+        if (getContract() != null) {
+            this.contract.value = getContract().toString()
             this.contractSection.hidden = false
         }
 
-        if (STATE.jade == null) {
+        if (getJade() == null) {
             this.signButton.hidden = true
         }
 
-        if (STATE.swSigner != null) {
-            this.mnemonic.value = STATE.swSigner.mnemonic()
+        if (getSwSigner() != null) {
+            this.mnemonic.value = getSwSigner().mnemonic()
             this.mnemonic.disabled = true
         }
 
-        if (STATE.jade == null && STATE.swSigner == null) {
+        if (getJade() == null && getSwSigner() == null) {
             this.signWithJadeButton.hidden = false
             if (!network.isMainnet()) {
                 this.signWithLedgerButton.hidden = false
@@ -1119,7 +1121,7 @@ class SignTransaction extends HTMLElement {
         try {
             let psetString = this.pset.value
             let pset = new lwk.Pset(psetString)
-            let psetFinalized = STATE.wollet.finalize(pset)
+            let psetFinalized = getWollet().finalize(pset)
             let tx = psetFinalized.extractTx().toString()
             console.log("broadcasting:")
             console.log(tx)
@@ -1137,18 +1139,18 @@ class SignTransaction extends HTMLElement {
     }
 
     broadcastContractIfAny = async () => {
-        if (STATE.contract != null) {
+        if (getContract() != null) {
             console.log("Will start broadcasting contract in 30 seconds...")
 
             // Initial delay before first attempt
             setTimeout(() => {
                 const attemptBroadcast = async () => {
                     console.log("Attempting to broadcast contract...")
-                    const successBroadcast = await broadcastContract(STATE.contract)
+                    const successBroadcast = await broadcastContract(getContract())
 
                     if (successBroadcast) {
                         console.log("Contract broadcast succeeded!")
-                        STATE.contract = null
+                        setContract(null)
                         this.contractDiv.innerHTML = success("Asset registered in the asset registry")
                     } else {
                         console.log("Contract broadcast failed, retrying in 30 seconds...")
@@ -1170,7 +1172,7 @@ class SignTransaction extends HTMLElement {
 
         this.messageDiv.innerHTML = warning("Check the transactions on the Jade")
 
-        let signedPset = await STATE.jade.sign(pset)
+        let signedPset = await getJade().sign(pset)
         setBusyDisabled(this.signButton, false)
 
         this.messageDiv.innerHTML = success("Transaction signed!")
@@ -1228,7 +1230,7 @@ class SignTransaction extends HTMLElement {
             return
         }
         let pset = new lwk.Pset(psetString)
-        let details = STATE.wollet.psetDetails(pset)
+        let details = getWollet().psetDetails(pset)
 
         cleanChilds(this.signDivAnalyze)
         let hgroup = document.createElement("hgroup")
@@ -1279,20 +1281,23 @@ class SignTransaction extends HTMLElement {
 }
 
 function scanLoop() {
-    if (STATE.scanLoop == null) {
-        STATE.scanLoop = setInterval(
+    if (getScanLoop() == null) {
+        const intervalId = setInterval(
             async function () {
-                await fullScanAndApply(STATE.wollet, STATE.scan)
+                await fullScanAndApply(getWollet(), getScanState())
                 // TODO dispatch only on effective change
                 window.dispatchEvent(new CustomEvent("reload-page"))
             },
             10000
-        )
+        );
+        setScanLoop(intervalId);
     }
 }
+
 function stopScanLoop() {
-    if (STATE.scanLoop != null) {
-        clearInterval(STATE.scanLoop)
+    if (getScanLoop() != null) {
+        clearInterval(getScanLoop())
+        setScanLoop(null)
     }
 }
 
@@ -1302,7 +1307,7 @@ class WalletDescriptor extends HTMLElement {
         this.textarea = this.querySelector("textarea")
         this.quickLink = this.querySelector("a")
 
-        let descriptor = STATE.wollet.descriptor().toString()
+        let descriptor = getWollet().descriptor().toString()
         this.textarea.innerText = descriptor
         this.quickLink.href = "#" + encodeRFC3986URIComponent(descriptor)
     }
@@ -1390,8 +1395,9 @@ async function jadeStandardDerivations() {
     // these are cached also on the Jade, but caching here allow to get rid of the async in keyoriginXpubUnified
     const derivations = {}
     const bips = [lwk.Bip.bip49(), lwk.Bip.bip84(), lwk.Bip.bip87()];
+    const jade = getJade();
     for (let i = 0; i < 3; i++) {
-        const xpub = await STATE.jade.keyoriginXpub(bips[i]).catch(err => console.error("Error jade.keyoriginXpub:", err))
+        const xpub = await jade.keyoriginXpub(bips[i]).catch(err => console.error("Error jade.keyoriginXpub:", err))
         derivations[bips[i].toString()] = xpub
     }
     return derivations
@@ -1448,7 +1454,7 @@ class RegisterWallet extends HTMLElement {
         try {
             setBusyDisabled(this.register, true)
             this.messageDivRegister.innerHTML = warning("Check confirmation on Jade")
-            let result = await STATE.jade.registerDescriptor(jadeName, descriptor)
+            let result = await getJade().registerDescriptor(jadeName, descriptor)
             if (result) {
                 this.messageDivRegister.innerHTML = success("Wallet registered on the Jade!")
             } else {
@@ -1503,7 +1509,7 @@ class RegisterWallet extends HTMLElement {
 
     handleAddJade = async (_) => {
         this.addJade.setAttribute("aria-busy", true)
-        const jadePart = await STATE.jade.keyoriginXpubBip87()
+        const jadePart = await getJade().keyoriginXpubBip87()
         this.addValidParticipant(jadePart)
         this.addJade.removeAttribute("aria-busy")
     }
@@ -1656,20 +1662,24 @@ function esploraClient() {
 }
 
 function keyoriginXpubUnified(bip) {
-    if (STATE.jade != null) {
-        return STATE.jadeStandardDerivations[bip.toString()]
-    } else if (STATE.swSigner != null) {
-        return STATE.swSigner.keyoriginXpub(bip)
+    const jade = getJade();
+    const swSigner = getSwSigner();
+    const jadeDerivations = getJadeStandardDerivations();
+
+    if (jade != null && jadeDerivations != null) {
+        return jadeDerivations[bip.toString()];
+    } else if (swSigner != null) {
+        return swSigner.keyoriginXpub(bip);
     } else {
-        return null
+        return null;
     }
 }
 
-async function fullScanAndApply(wolletLocal, scanLocal) {
+async function fullScanAndApply(wolletLocal, scanState) {
     var updated = false
 
-    if (!scanLocal.running) {
-        scanLocal.running = true
+    if (!scanState.running) {
+        setScanRunning(true)
 
         document.dispatchEvent(new CustomEvent('wallet-sync-start'))
         let client = esploraClient()
@@ -1703,9 +1713,8 @@ async function fullScanAndApply(wolletLocal, scanLocal) {
         } catch (e) {
             console.log("Error in fullScanAndApply: " + e)
         } finally {
-            scanLocal.running = false
+            setScanRunning(false)
         }
-
     }
     return updated
 }
@@ -1759,12 +1768,15 @@ function mapAssetPrecision(assetHex, value) {
 
 /// returns the jade if exists, or the softare signer, or null for watch-only
 function jadeOrSwSigner() {
-    if (STATE.jade != null)
-        return STATE.jade
-    else if (STATE.swSigner != null)
-        return STATE.swSigner
+    const jade = getJade();
+    const swSigner = getSwSigner();
+
+    if (jade != null)
+        return jade;
+    else if (swSigner != null)
+        return swSigner;
     else
-        return null
+        return null;
 }
 
 function formatPrecision(value, precision) {
