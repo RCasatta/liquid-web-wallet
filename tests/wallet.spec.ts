@@ -55,7 +55,6 @@ test.describe('Wallet Functionality', () => {
     }
 
     async function createIssuancePset(page) {
-        await loadWallet(page);
 
         // Navigate to create page
         await page.getByRole('link', { name: 'Create' }).click();
@@ -227,10 +226,6 @@ test.describe('Wallet Functionality', () => {
         expect(transactionCount).toBeGreaterThan(0);
     });
 
-    test('should navigate to create page and make a pset', async ({ page }) => {
-        await createTransaction(page);
-    });
-
     test('should sign a created pset', async ({ page }) => {
         await createTransaction(page);
         const txid = await signAndBroadcastPset(page);
@@ -238,13 +233,8 @@ test.describe('Wallet Functionality', () => {
         expect(txFound).toBe(true);
     });
 
-    test('should create an issuance PSET', async ({ page }) => {
-        const { assetId, contract } = await createIssuancePset(page);
-        expect(assetId).toBeDefined();
-        expect(assetId).toMatch(/^[0-9a-f]{64}$/); // Asset ID should be a 32-byte hex string
-    });
-
     test('issuance/reissuance/burn', async ({ page }) => {
+        await loadWallet(page);
         const { assetId } = await createIssuancePset(page);
         const txid = await signAndBroadcastPset(page);
 
