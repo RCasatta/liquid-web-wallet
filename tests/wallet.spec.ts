@@ -230,24 +230,7 @@ test.describe('Wallet Functionality', () => {
         expect(assetId).toMatch(/^[0-9a-f]{64}$/); // Asset ID should be a 32-byte hex string
     });
 
-    test('should sign and broadcast an issuance PSET', async ({ page }) => {
-        const { assetId } = await createIssuancePset(page);
-        const txid = await signAndBroadcastPset(page);
-        const txFound = await waitForTransactionToAppear(page, txid);
-        expect(txFound).toBe(true);
-
-        // Navigate to balance page to verify the newly issued asset
-        await page.getByRole('link', { name: 'Balance' }).click();
-
-        // Wait for balance to load
-        await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible();
-
-        // Get the balance content and verify the asset ID is present
-        const balanceContent = await page.locator('wallet-balance').textContent();
-        expect(balanceContent).toContain(assetId);
-    });
-
-    test('should do a reissuance (wait for asset registered)', async ({ page }) => {
+    test('issuance/reissuance/burn', async ({ page }) => {
         const { assetId } = await createIssuancePset(page);
         const txid = await signAndBroadcastPset(page);
 
@@ -294,6 +277,50 @@ test.describe('Wallet Functionality', () => {
         await expect(assetRow).toBeVisible();
         const assetAmount = await assetRow.locator('td:last-child').textContent();
         expect(assetAmount?.trim()).toBe('1500'); // 1000 from issuance + 500 from reissuance
+
+        // Navigate to create page for burn
+        await page.getByRole('link', { name: 'Create' }).click();
+
+        // Wait for the sync to complete
+        await expect(page.locator('create-transaction article[aria-busy="true"]')).not.toBeVisible();
+
+        // Open the burn section
+        await page.getByRole('button', { name: 'Burn assets', exact: true }).click();
+
+        const detailsBurn = page.locator('details.burn-assets');
+        // Fill in the burn form
+        await detailsBurn.locator('input[name="amount"]').fill('300');
+
+        // Select the asset id
+        await detailsBurn.locator('select[name="asset"]').selectOption({ label: assetId });
+
+        // Click the + button
+        await detailsBurn.getByRole('button', { name: '+' }).click();
+
+        // Click create button
+        await page.getByRole('button', { name: 'Create' }).click();
+
+        // Verify we're on the sign page
+        await expect(page.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible();
+
+        // Sign and broadcast the burn
+        const txidBurn = await signAndBroadcastPset(page);
+        const txFoundBurn = await waitForTransactionToAppear(page, txidBurn);
+        expect(txFoundBurn).toBe(true);
+
+        // Navigate to balance page to verify total amount
+        await page.getByRole('link', { name: 'Balance' }).click();
+
+        // Wait for balance to load
+        await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible();
+
+
+        // Find the specific row containing our asset ID and verify the amount
+        const assetRow2 = page.locator(`wallet-balance table tr:has-text("${assetId}")`);
+        await expect(assetRow2).toBeVisible();
+        const assetAmount2 = await assetRow2.locator('td:last-child').textContent();
+        expect(assetAmount2?.trim()).toBe('1200'); // 1000 from issuance + 500 from reissuance - 300 burn
     });
+
 
 }); 
