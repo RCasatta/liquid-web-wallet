@@ -156,6 +156,20 @@ test.describe('Wallet Functionality', () => {
         return false;
     }
 
+    async function checkAssetBalance(page, assetId, expectedAmount) {
+        // Navigate to balance page to verify total amount
+        await page.getByRole('link', { name: 'Balance' }).click();
+
+        // Wait for balance to load
+        await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible();
+
+        // Find the specific row containing our asset ID and verify the amount
+        const assetRow = page.locator(`wallet-balance table tr:has-text("${assetId}")`);
+        await expect(assetRow).toBeVisible();
+        const assetAmount = await assetRow.locator('td:last-child').textContent();
+        expect(assetAmount?.trim()).toBe(expectedAmount.toString());
+    }
+
     test('should show wallet navigation options', async ({ page }) => {
         await loadWallet(page);
 
@@ -264,19 +278,9 @@ test.describe('Wallet Functionality', () => {
         const txidReissuance = await signAndBroadcastPset(page);
         const txFoundReissuance = await waitForTransactionToAppear(page, txidReissuance);
         expect(txFoundReissuance).toBe(true);
-        // console.log('Reissuance completed for asset:', assetId);
 
-        // Navigate to balance page to verify total amount
-        await page.getByRole('link', { name: 'Balance' }).click();
-
-        // Wait for balance to load
-        await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible();
-
-        // Find the specific row containing our asset ID and verify the amount
-        const assetRow = page.locator(`wallet-balance table tr:has-text("${assetId}")`);
-        await expect(assetRow).toBeVisible();
-        const assetAmount = await assetRow.locator('td:last-child').textContent();
-        expect(assetAmount?.trim()).toBe('1500'); // 1000 from issuance + 500 from reissuance
+        // Check balance after reissuance
+        await checkAssetBalance(page, assetId, 1500); // 1000 from issuance + 500 from reissuance
 
         // Navigate to create page for burn
         await page.getByRole('link', { name: 'Create' }).click();
@@ -308,18 +312,8 @@ test.describe('Wallet Functionality', () => {
         const txFoundBurn = await waitForTransactionToAppear(page, txidBurn);
         expect(txFoundBurn).toBe(true);
 
-        // Navigate to balance page to verify total amount
-        await page.getByRole('link', { name: 'Balance' }).click();
-
-        // Wait for balance to load
-        await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible();
-
-
-        // Find the specific row containing our asset ID and verify the amount
-        const assetRow2 = page.locator(`wallet-balance table tr:has-text("${assetId}")`);
-        await expect(assetRow2).toBeVisible();
-        const assetAmount2 = await assetRow2.locator('td:last-child').textContent();
-        expect(assetAmount2?.trim()).toBe('1200'); // 1000 from issuance + 500 from reissuance - 300 burn
+        // Check balance after burn
+        await checkAssetBalance(page, assetId, 1200); // 1000 from issuance + 500 from reissuance - 300 burn
     });
 
 
