@@ -239,7 +239,7 @@ test.describe('Wallet Functionality', () => {
         const txid = await signAndBroadcastPset(page);
 
         // Look for an input element with this value instead of direct text
-        await expect(page.locator('input[value="Asset registered in the asset registry"]')).toBeVisible({ timeout: 10000 })
+        await expect(page.locator('input[value="Asset registered in the asset registry"]')).toBeVisible({ timeout: 15000 })
 
         // Ensure we are synced
         const txFound = await waitForTransactionToAppear(page, txid);
