@@ -54,6 +54,67 @@ test.describe('Wallet Functionality', () => {
         await expect(page.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible();
     }
 
+    async function createIssuancePset(page) {
+        await loadWallet(page);
+
+        // Navigate to create page
+        await page.getByRole('link', { name: 'Create' }).click();
+
+        // Wait for the sync to complete by waiting for the loading indicator to disappear
+        await expect(page.locator('create-transaction article[aria-busy="true"]')).not.toBeVisible();
+
+        // Open the issuance details section
+        await page.getByRole('button', { name: 'Issuance', exact: true }).click();
+
+        // Fill in the issuance form
+        await page.locator('input[name="asset_amount"]').fill('1000');
+        await page.locator('input[name="token_amount"]').fill('1');
+        await page.locator('input[name="domain"]').fill('liquidtestnet.com');
+        await page.locator('input[name="name"]').fill('Test Asset');
+        await page.locator('input[name="ticker"]').fill('TEST');
+        await page.locator('input[name="precision"]').fill('8');
+
+        // Click the Issue assets button
+        await page.getByRole('button', { name: 'Issue assets' }).click();
+
+        // Verify we're on the sign page
+        await expect(page.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible();
+
+        // Verify PSET textarea is populated
+        const psetTextarea = page.locator('sign-transaction textarea').first();
+        await expect(psetTextarea).toHaveValue(/^cHNldP8/); // Base64 PSET prefix
+
+        // Verify contract textarea is visible and populated
+        const contractSection = page.locator('div.contract-section');
+        await expect(contractSection).toBeVisible();
+        const contractTextarea = contractSection.locator('textarea');
+        await expect(contractTextarea).toHaveValue(/^{/); // JSON contract starts with {
+
+        // Get and parse the contract JSON to extract the asset ID
+        const contractJson = await contractTextarea.inputValue();
+        const contract = JSON.parse(contractJson);
+        const assetId = contract.asset_id;
+
+        return { assetId, contract };
+    }
+
+    async function signAndBroadcastPset(page) {
+        // Click on the "Sign with software signer" section
+        await page.getByText('Sign with software signer').click();
+
+        // Press the Sign button
+        await page.getByRole('button', { name: 'Sign', exact: true }).click();
+
+        // Verify that the Signatures section displays "Has" text
+        await expect(page.locator('h3:has-text("Signatures")').locator('~div table td:has-text("Has")')).toBeVisible();
+
+        // Press the Sign button
+        await page.getByRole('button', { name: 'Broadcast', exact: true }).click();
+
+        // Verify broadcast success message appears
+        await expect(page.getByText('Tx broadcasted')).toBeVisible();
+    }
+
     test('should show wallet navigation options', async ({ page }) => {
         await loadWallet(page);
 
@@ -117,59 +178,58 @@ test.describe('Wallet Functionality', () => {
 
     test('should sign a created pset', async ({ page }) => {
         await createTransaction(page);
-
-        // Click on the "Sign with software signer" section
-        await page.getByText('Sign with software signer').click();
-
-        // Press the Sign button
-        await page.getByRole('button', { name: 'Sign', exact: true }).click();
-
-        // Verify that the Signatures section displays "Has" text
-        await expect(page.locator('h3:has-text("Signatures")').locator('~div table td:has-text("Has")')).toBeVisible();
-
-        // Press the Sign button
-        await page.getByRole('button', { name: 'Broadcast', exact: true }).click();
-
-        // Verify broadcast success message appears
-        await expect(page.getByText('Tx broadcasted')).toBeVisible();
-
+        await signAndBroadcastPset(page);
     });
 
     test('should create an issuance PSET', async ({ page }) => {
-        await loadWallet(page);
+        const { assetId, contract } = await createIssuancePset(page);
+        expect(assetId).toBeDefined();
+        expect(assetId).toMatch(/^[0-9a-f]{64}$/); // Asset ID should be a 32-byte hex string
+    });
 
-        // Navigate to create page
+    test('should sign and broadcast an issuance PSET', async ({ page }) => {
+        const { assetId } = await createIssuancePset(page);
+        await signAndBroadcastPset(page);
+
+        await expect(page.getByText('Asset registered in the asset registry')).toBeVisible();
+    });
+
+    test('should do a reissuance', async ({ page }) => {
+        const { assetId } = await createIssuancePset(page);
+        await signAndBroadcastPset(page);
+
+        await expect(page.getByText('Asset registered in the asset registry')).toBeVisible();
+
+        // Navigate to create page for reissuance
         await page.getByRole('link', { name: 'Create' }).click();
 
-        // Wait for the sync to complete by waiting for the loading indicator to disappear
+        // Wait for the sync to complete
         await expect(page.locator('create-transaction article[aria-busy="true"]')).not.toBeVisible();
 
-        // Open the issuance details section
-        await page.getByRole('button', { name: 'Issuance', exact: true }).click();
+        // Open the reissuance section
+        await page.getByRole('button', { name: 'Reissuance', exact: true }).click();
 
-        // Fill in the issuance form
-        await page.locator('input[name="asset_amount"]').fill('1000');
-        await page.locator('input[name="token_amount"]').fill('1');
-        await page.locator('input[name="domain"]').fill('liquidtestnet.com');
-        await page.locator('input[name="name"]').fill('Test Asset');
-        await page.locator('input[name="ticker"]').fill('TEST');
-        await page.locator('input[name="precision"]').fill('8');
+        // Fill in the reissuance form
+        await page.locator('input[name="reissuance_asset_id"]').fill(assetId);
+        await page.locator('input[name="reissuance_satoshi"]').fill('500');
 
-        // Click the Issue assets button
-        await page.getByRole('button', { name: 'Issue assets' }).click();
+        // Click the Reissue assets button
+        await page.getByRole('button', { name: 'Reissue assets' }).click();
 
         // Verify we're on the sign page
         await expect(page.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible();
 
-        // Verify PSET textarea is populated
-        const psetTextarea = page.locator('sign-transaction textarea').first();
-        await expect(psetTextarea).toHaveValue(/^cHNldP8/); // Base64 PSET prefix
+        // Sign and broadcast the reissuance
+        await signAndBroadcastPset(page);
+        console.log('Reissuance completed for asset:', assetId);
 
-        // Verify contract textarea is visible and populated
-        const contractSection = page.locator('div.contract-section');
-        await expect(contractSection).toBeVisible();
-        const contractTextarea = contractSection.locator('textarea');
-        await expect(contractTextarea).toHaveValue(/^{/); // JSON contract starts with {
+        // Verify the reissuance appears in transactions
+        await page.getByRole('link', { name: 'Transactions' }).click();
+        await expect(page.locator('wallet-transactions article[aria-busy="true"]')).not.toBeVisible();
+
+        // The transactions page should show both the issuance and reissuance
+        const transactionRows = page.locator('wallet-transactions table tr');
+        await expect(transactionRows).toHaveCount(2);
     });
 
 }); 

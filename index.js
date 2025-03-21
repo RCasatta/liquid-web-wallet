@@ -1176,6 +1176,7 @@ class SignTransaction extends HTMLElement {
 
         } catch (e) {
             this.messageDiv.innerHTML = warning("Cannot broadcast tx, is it signed?")
+            console.error(e)
         }
         setBusyDisabled(this.broadcastButton, false)
     }
