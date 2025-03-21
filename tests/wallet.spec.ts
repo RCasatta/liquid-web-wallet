@@ -71,7 +71,7 @@ test.describe('Wallet Functionality', () => {
         await page.locator('input[name="token_amount"]').fill('1');
         await page.locator('input[name="domain"]').fill('liquidtestnet.com');
         await page.locator('input[name="name"]').fill('Test Asset');
-        await page.locator('input[name="ticker"]').fill('TEST');
+        await page.locator('input[name="ticker"]').fill([...Array(5)].map(() => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[Math.floor(Math.random() * 36)]).join(''));
         await page.locator('input[name="precision"]').fill('8');
 
         // Click the Issue assets button
@@ -113,6 +113,47 @@ test.describe('Wallet Functionality', () => {
 
         // Verify broadcast success message appears
         await expect(page.getByText('Tx broadcasted')).toBeVisible();
+
+        // Get the txid from the broadcast success message
+        const txElement = page.getByText('Tx broadcasted').locator('..');
+        const txid = await txElement.getByRole('textbox').inputValue();
+        return txid;
+    }
+
+    async function waitForTransactionToAppear(page, txid) {
+        // Navigate to transactions page
+        await page.getByRole('link', { name: 'Transactions' }).click();
+
+        // Wait for the transactions page to load
+        await expect(page.locator('wallet-transactions article[aria-busy="true"]')).not.toBeVisible();
+
+        // Get the first 8 characters of the txid to search for
+        const txidPrefix = txid.substring(0, 8);
+
+        // Try up to 5 times with 1 second delay between attempts
+        for (let attempt = 0; attempt < 5; attempt++) {
+            // Get the transactions list content
+            const transactionsContent = await page.locator('wallet-transactions table').textContent();
+
+            // Check if the txid prefix is in the transactions list
+            if (transactionsContent.includes(txidPrefix)) {
+                // console.log(`Transaction ${txidPrefix}... found on attempt ${attempt + 1}`);
+                return true;
+            }
+
+            // console.log(`Transaction ${txidPrefix}... not found on attempt ${attempt + 1}, waiting...`);
+
+            // Wait 1 second before the next attempt (if not the last attempt)
+            if (attempt < 4) {
+                await page.waitForTimeout(1000);
+                // Refresh the transactions list by clicking on Transactions link again
+                await page.getByRole('link', { name: 'Transactions' }).click();
+                await expect(page.locator('wallet-transactions article[aria-busy="true"]')).not.toBeVisible();
+            }
+        }
+
+        console.log(`Transaction ${txidPrefix}... not found after 5 attempts`);
+        return false;
     }
 
     test('should show wallet navigation options', async ({ page }) => {
@@ -178,7 +219,9 @@ test.describe('Wallet Functionality', () => {
 
     test('should sign a created pset', async ({ page }) => {
         await createTransaction(page);
-        await signAndBroadcastPset(page);
+        const txid = await signAndBroadcastPset(page);
+        const txFound = await waitForTransactionToAppear(page, txid);
+        expect(txFound).toBe(true);
     });
 
     test('should create an issuance PSET', async ({ page }) => {
@@ -189,16 +232,31 @@ test.describe('Wallet Functionality', () => {
 
     test('should sign and broadcast an issuance PSET', async ({ page }) => {
         const { assetId } = await createIssuancePset(page);
-        await signAndBroadcastPset(page);
+        const txid = await signAndBroadcastPset(page);
+        const txFound = await waitForTransactionToAppear(page, txid);
+        expect(txFound).toBe(true);
 
-        await expect(page.getByText('Asset registered in the asset registry')).toBeVisible();
+        // Navigate to balance page to verify the newly issued asset
+        await page.getByRole('link', { name: 'Balance' }).click();
+
+        // Wait for balance to load
+        await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible();
+
+        // Get the balance content and verify the asset ID is present
+        const balanceContent = await page.locator('wallet-balance').textContent();
+        expect(balanceContent).toContain(assetId);
     });
 
-    test('should do a reissuance', async ({ page }) => {
+    test('should do a reissuance (wait for asset registered)', async ({ page }) => {
         const { assetId } = await createIssuancePset(page);
-        await signAndBroadcastPset(page);
+        const txid = await signAndBroadcastPset(page);
 
-        await expect(page.getByText('Asset registered in the asset registry')).toBeVisible();
+        // Look for an input element with this value instead of direct text
+        await expect(page.locator('input[value="Asset registered in the asset registry"]')).toBeVisible({ timeout: 10000 })
+
+        // Ensure we are synced
+        const txFound = await waitForTransactionToAppear(page, txid);
+        expect(txFound).toBe(true);
 
         // Navigate to create page for reissuance
         await page.getByRole('link', { name: 'Create' }).click();
@@ -220,16 +278,22 @@ test.describe('Wallet Functionality', () => {
         await expect(page.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible();
 
         // Sign and broadcast the reissuance
-        await signAndBroadcastPset(page);
-        console.log('Reissuance completed for asset:', assetId);
+        const txidReissuance = await signAndBroadcastPset(page);
+        const txFoundReissuance = await waitForTransactionToAppear(page, txidReissuance);
+        expect(txFoundReissuance).toBe(true);
+        // console.log('Reissuance completed for asset:', assetId);
 
-        // Verify the reissuance appears in transactions
-        await page.getByRole('link', { name: 'Transactions' }).click();
-        await expect(page.locator('wallet-transactions article[aria-busy="true"]')).not.toBeVisible();
+        // Navigate to balance page to verify total amount
+        await page.getByRole('link', { name: 'Balance' }).click();
 
-        // The transactions page should show both the issuance and reissuance
-        const transactionRows = page.locator('wallet-transactions table tr');
-        await expect(transactionRows).toHaveCount(2);
+        // Wait for balance to load
+        await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible();
+
+        // Find the specific row containing our asset ID and verify the amount
+        const assetRow = page.locator(`wallet-balance table tr:has-text("${assetId}")`);
+        await expect(assetRow).toBeVisible();
+        const assetAmount = await assetRow.locator('td:last-child').textContent();
+        expect(assetAmount?.trim()).toBe('1500'); // 1000 from issuance + 500 from reissuance
     });
 
 }); 

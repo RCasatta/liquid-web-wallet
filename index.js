@@ -1183,7 +1183,9 @@ class SignTransaction extends HTMLElement {
 
     broadcastContractIfAny = async () => {
         if (getContract() != null) {
-            console.log("Will start broadcasting contract in 30 seconds...")
+            const broadcastEvery = network.isRegtest() ? 1 : 10
+            console.log(`Will start broadcasting contract in ${broadcastEvery} seconds...`)
+            console.log("Contract:", getContract().toString())
 
             // Initial delay before first attempt
             setTimeout(() => {
@@ -1196,15 +1198,15 @@ class SignTransaction extends HTMLElement {
                         setContract(null)
                         this.contractDiv.innerHTML = success("Asset registered in the asset registry")
                     } else {
-                        console.log("Contract broadcast failed, retrying in 30 seconds...")
+                        console.log(`Contract broadcast failed, retrying in ${broadcastEvery} seconds...`)
                         // Schedule another attempt in 30 seconds
-                        setTimeout(attemptBroadcast, 30 * 1000)
+                        setTimeout(attemptBroadcast, broadcastEvery * 1000)
                     }
                 }
 
                 // Start the first attempt
                 attemptBroadcast()
-            }, 30 * 1000)
+            }, broadcastEvery * 1000)
         }
     }
 
@@ -1324,6 +1326,7 @@ class SignTransaction extends HTMLElement {
 }
 
 function scanLoop() {
+    const scanEvery = network.isRegtest() ? 1000 : 10000
     if (getScanLoop() == null) {
         const intervalId = setInterval(
             async function () {
@@ -1331,7 +1334,7 @@ function scanLoop() {
                 // TODO dispatch only on effective change
                 window.dispatchEvent(new CustomEvent("reload-page"))
             },
-            10000
+            scanEvery
         );
         setScanLoop(intervalId);
     }
@@ -1876,7 +1879,7 @@ async function broadcastContract(contract) {
         console.log('Asset registered successfully');
         return true; // Success
     } catch (error) {
-        console.error('Error registering asset:', error);
+        console.log('Error registering asset:', error);
         return false; // Failed
     }
 }
