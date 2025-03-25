@@ -188,8 +188,8 @@ test.describe('Wallet Functionality', () => {
 
         // Verify receive page elements
         await expect(page.getByRole('heading', { name: 'Receive' })).toBeVisible();
-        await expect(page.getByRole('button', { name: 'Show', exact: true })).toBeVisible();
-        await page.getByRole('button', { name: 'Show', exact: true }).click();
+        await expect(page.getByRole('button', { name: 'Show address', exact: true })).toBeVisible();
+        await page.getByRole('button', { name: 'Show address', exact: true }).click();
 
         // Get the address and see it maches the network
         const address = await page.getByRole('code').textContent();

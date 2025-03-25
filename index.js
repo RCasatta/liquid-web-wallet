@@ -12,7 +12,7 @@ import {
 } from './state.js'
 
 // Network setup (remains global as it's a configuration not state)
-const network = lwk.Network.testnet()
+const network = lwk.Network.regtestDefault()
 
 // Reference to the main application container
 const app = document.getElementById('app')
@@ -920,19 +920,22 @@ class CreateTransaction extends HTMLElement {
         this.messageCreate.innerHTML = ""
         // verify at least 1 row
 
-        const inputsEmpty = this.checkEmptynessRecipient(false)
-        if (inputsEmpty.length == 0) {
-            this.messageCreate.innerHTML = warning("Click '+' to add the output")
-            return
-        }
-
-        const recipients = Array.from(this.querySelectorAll("fieldset.recipients"))
-        if (recipients.length == 0) {
-            this.messageCreate.innerHTML = warning("Cannot create a transaction with no recipients")
-            return
-        }
+        console.log("handleCreate")
+        setBusyDisabled(this.createButton, true)
 
         try {
+            const inputsEmpty = this.checkEmptynessRecipient(false)
+            if (inputsEmpty.length == 0) {
+                this.messageCreate.innerHTML = warning("Click '+' to add the output")
+                return
+            }
+
+            const recipients = Array.from(this.querySelectorAll("fieldset.recipients"))
+            if (recipients.length == 0) {
+                this.messageCreate.innerHTML = warning("Cannot create a transaction with no recipients")
+                return
+            }
+
             var builder = new lwk.TxBuilder(network)
 
             for (const recipient of recipients) {
@@ -952,6 +955,8 @@ class CreateTransaction extends HTMLElement {
         } catch (e) {
             this.messageCreate.innerHTML = warning(e)
             return
+        } finally {
+            setBusyDisabled(this.createButton, false)
         }
     }
 
