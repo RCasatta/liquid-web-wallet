@@ -6,6 +6,7 @@ import {
     getWollet, setWollet, getWolletSelected, setWolletSelected,
     getScanState, setScanRunning, getScanLoop, setScanLoop,
     getSwSigner, setSwSigner, getPset, setPset, getContract, setContract,
+    getDevMode, setDevMode,
     subscribe, publish
 } from './state.js'
 
@@ -26,13 +27,26 @@ async function init() {
     let descriptorMessage = document.getElementById("descriptor-message")
     let exampleDescriptor = document.getElementById("example-descriptor-link")
     let loadingBar = document.getElementById("loading-wasm");
+    let devMode = document.getElementById("dev-mode")
+
+    // Initialize dev mode from stored state or default to false
+    devMode.checked = getDevMode() || false
+
+    // Define handleDevMode function to update state when checkbox changes
+    const handleDevMode = function (e) {
+        const isDevMode = e.target.checked
+        setDevMode(isDevMode)
+        console.log("Dev mode set to: " + isDevMode)
+    }
+
+    devMode.onchange = handleDevMode
 
     connectJade.addEventListener("click", async (_e) => {
         let connectJadeMessage = document.getElementById("connect-jade-message")
         try {
             setBusyDisabled(connectJade, true)
 
-            let filter = !document.getElementById("diy-jade").checked
+            let filter = !getDevMode()
             console.log("filter out do it yourself " + filter)
 
             const jade = await new lwk.Jade(network, filter)

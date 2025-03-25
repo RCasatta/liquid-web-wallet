@@ -28,8 +28,20 @@ const _state = {
 
     // Transaction state
     pset: null, // Current PSET being worked on
-    contract: null // lwk.RegistryPost (contract, asset_id) - last issued contract
+    contract: null, // lwk.RegistryPost (contract, asset_id) - last issued contract
+
+    // Developer mode state
+    devMode: false // Whether developer mode is enabled
 };
+
+// Initialize state from localStorage if available
+(function initState() {
+    // Initialize dev mode from localStorage
+    const savedDevMode = localStorage.getItem('devMode');
+    if (savedDevMode !== null) {
+        _state.devMode = savedDevMode === 'true';
+    }
+})();
 
 /**
  * Subscribers for state changes
@@ -195,6 +207,18 @@ export function getContract() {
 export function setContract(contract) {
     _state.contract = contract;
     return _state.contract;
+}
+
+// Dev mode state management
+export function getDevMode() {
+    return _state.devMode;
+}
+
+export function setDevMode(isDevMode) {
+    _state.devMode = isDevMode;
+    localStorage.setItem('devMode', isDevMode.toString());
+    publish('dev-mode-changed', isDevMode);
+    return _state.devMode;
 }
 
 // Future state management functions will be added here 
