@@ -29,14 +29,18 @@ async function init() {
     let loadingBar = document.getElementById("loading-wasm");
     let devMode = document.getElementById("dev-mode")
 
-    // Initialize dev mode from stored state or default to false
-    devMode.checked = getDevMode() || false
+    // Diagnostic logging for dev mode state
+    if (getDevMode()) {
+        console.log("Dev mode is enabled");
+    }
+
+    devMode.checked = getDevMode()
 
     // Define handleDevMode function to update state when checkbox changes
     const handleDevMode = function (e) {
         const isDevMode = e.target.checked
+        console.log("Dev mode checkbox changed to:", isDevMode);
         setDevMode(isDevMode)
-        console.log("Dev mode set to: " + isDevMode)
     }
 
     devMode.onchange = handleDevMode
@@ -104,8 +108,32 @@ async function init() {
         descriptorTextarea.value = desc
     })
 
+    // Function to update ledger UI elements based on devMode and network
+    const updateLedgerVisibility = (isDevMode) => {
+        // Only show if dev mode is enabled
+        if (isDevMode) {
+            // Show the container div
+            ledgerDescriptorDiv.hidden = false;
+
+            // Show and style the button
+            ledgerDescriptorButton.hidden = false;
+            ledgerDescriptorButton.disabled = false;
+            ledgerDescriptorButton.textContent = "Connect to Ledger";
+        } else {
+            // Hide completely when not in dev mode
+            ledgerDescriptorDiv.hidden = true;
+            ledgerDescriptorButton.hidden = true;
+            ledgerDescriptorButton.disabled = true;
+        }
+    }
+
+    // Initialize ledger visibility based on current dev mode
+    updateLedgerVisibility(getDevMode())
+
+    // Subscribe to dev mode changes to update ledger visibility
+    subscribe('dev-mode-changed', updateLedgerVisibility)
+
     if (!network.isMainnet()) {
-        ledgerDescriptorDiv.hidden = false
         document.getElementById("random-wallet-div").hidden = false
         randomWalletButton.disabled = false
 

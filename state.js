@@ -40,6 +40,7 @@ const _state = {
     const savedDevMode = localStorage.getItem('devMode');
     if (savedDevMode !== null) {
         _state.devMode = savedDevMode === 'true';
+        console.log("Loaded dev mode from localStorage:", _state.devMode);
     }
 })();
 
@@ -215,9 +216,15 @@ export function getDevMode() {
 }
 
 export function setDevMode(isDevMode) {
-    _state.devMode = isDevMode;
-    localStorage.setItem('devMode', isDevMode.toString());
-    publish('dev-mode-changed', isDevMode);
+    // Update state, checking boolean explicitly to ensure consistency
+    _state.devMode = isDevMode === true;
+
+    // Save to localStorage
+    localStorage.setItem('devMode', _state.devMode.toString());
+
+    // Notify subscribers
+    publish('dev-mode-changed', _state.devMode);
+
     return _state.devMode;
 }
 
