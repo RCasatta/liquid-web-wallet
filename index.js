@@ -12,7 +12,7 @@ import {
 } from './state.js'
 
 // Network setup (remains global as it's a configuration not state)
-const network = lwk.Network.mainnet()
+const network = lwk.Network.testnet()
 
 // Reference to the main application container
 const app = document.getElementById('app')
@@ -1124,11 +1124,9 @@ class SignTransaction extends HTMLElement {
         this.analyzeButton = this.querySelector("button.analyze")
         this.signButton = this.querySelector("button.sign")
         this.cosignButton = this.querySelector("button.cosign")
-        this.signWithJadeButton = this.querySelector("button.sign-with-jade")
-        this.signWithLedgerButton = this.querySelector("button.sign-with-ledger")
-        this.softwareSignButton = this.querySelector("button.ss")
         this.broadcastButton = this.querySelector("button.broadcast")
         this.combineButton = this.querySelector("button.combine")
+        this.saveMnemonicButton = this.querySelector("button.saveMnemonic")
 
         this.messageDiv = this.querySelector("div.message")
         this.contractDiv = this.querySelector("div.contract")
@@ -1150,11 +1148,7 @@ class SignTransaction extends HTMLElement {
 
         this.combineButton.addEventListener("click", this.handleCombineClick)
 
-        this.softwareSignButton.addEventListener("click", this.handleSoftwareSignClick)
-
-        this.signWithJadeButton.addEventListener("click", this.handleSignWithJadeClick)
-
-        this.signWithLedgerButton.addEventListener("click", this.handleSignWithLedgerClick)
+        this.saveMnemonicButton.addEventListener("click", this.handleSaveMnemonicClick)
 
         if (getPset() != null) {
             this.pset.value = getPset().toString()
@@ -1166,22 +1160,9 @@ class SignTransaction extends HTMLElement {
             this.contractSection.hidden = false
         }
 
-        if (getJade() == null) {
-            this.signButton.hidden = true
-        }
-
         if (getSwSigner() != null) {
             this.mnemonic.value = getSwSigner().mnemonic()
-            this.mnemonic.disabled = true
         }
-
-        if (getJade() == null && getSwSigner() == null) {
-            this.signWithJadeButton.hidden = false
-            if (!network.isMainnet()) {
-                this.signWithLedgerButton.hidden = false
-            }
-        }
-
 
         this.renderAnalyze()
     }
@@ -1297,19 +1278,52 @@ class SignTransaction extends HTMLElement {
     }
 
     handleSignClick = async (_e) => {
-        let psetString = this.pset.value
-        let pset = new lwk.Pset(psetString)
-        setBusyDisabled(this.signButton, true)
+        try {
+            // Get the PSET string and parse it
+            let psetString = this.pset.value
+            if (!psetString.trim()) {
+                throw new Error("PSET cannot be empty")
+            }
+            let pset = new lwk.Pset(psetString)
 
-        this.messageDiv.innerHTML = warning("Check the transactions on the Jade")
+            // Set button to busy state at the beginning
+            setBusyDisabled(this.signButton, true)
 
-        let signedPset = await getJade().sign(pset)
-        setBusyDisabled(this.signButton, false)
+            let signedPset;
 
-        this.messageDiv.innerHTML = success("Transaction signed!")
+            // Try to sign with Jade first if available
+            if (getJade() != null) {
+                this.messageDiv.innerHTML = warning("Check the transaction on the Jade")
+                signedPset = await getJade().sign(pset)
+            }
+            // Try to sign with Ledger if available
+            else if (getLedger() != null) {
+                this.messageDiv.innerHTML = warning("Check the transaction on the Ledger")
+                let ledger = getLedger()
+                signedPset = await ledger.sign(pset)
+                signedPset = signedPset.toString() // Ensure consistent return type
+            }
+            // Try software signer as last resort
+            else if (getSwSigner() != null) {
+                const signer = getSwSigner()
+                signedPset = signer.sign(pset)
+            }
+            // No signing method available
+            else {
+                throw new Error("No wallet available for signing")
+            }
 
-        this.pset.value = signedPset
-        this.renderAnalyze()
+            // Update the UI with the signed PSET
+            this.pset.value = signedPset
+            this.renderAnalyze()
+            this.messageDiv.innerHTML = success("Transaction signed!")
+
+        } catch (error) {
+            this.messageDiv.innerHTML = warning(error.toString())
+        } finally {
+            // Always reset button state when operation is complete
+            setBusyDisabled(this.signButton, false)
+        }
     }
 
 
@@ -1351,6 +1365,37 @@ class SignTransaction extends HTMLElement {
             this.messageDiv.innerHTML = success("PSET combined!")
         } catch (e) {
             this.messageDiv.innerHTML = warning(e.toString())
+        }
+    }
+
+    handleSaveMnemonicClick = async (_e) => {
+        try {
+            setBusyDisabled(this.saveMnemonicButton, true)
+
+            const mnemonicStr = this.mnemonic.value.trim()
+            if (!mnemonicStr) {
+                throw new Error("Mnemonic cannot be empty")
+            }
+
+            // Validate the mnemonic by creating a Mnemonic object
+            const mnemonic = new lwk.Mnemonic(mnemonicStr)
+
+            // Create a signer with the validated mnemonic
+            const signer = new lwk.Signer(mnemonic, network)
+
+            // Save to state
+            setSwSigner(signer)
+
+            // Also save raw mnemonic to localStorage for persistence
+            localStorage.setItem(RANDOM_MNEMONIC_KEY, mnemonicStr)
+
+            // Update UI
+            this.mnemonic.disabled = true
+            this.messageDiv.innerHTML = success("Mnemonic saved successfully")
+        } catch (e) {
+            this.messageDiv.innerHTML = warning(e.toString())
+        } finally {
+            setBusyDisabled(this.saveMnemonicButton, false)
         }
     }
 
