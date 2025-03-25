@@ -129,7 +129,7 @@ async function init() {
 
         } catch (e) {
             console.error("Error getting descriptor:", e)
-            connectLedgerMessage.innerHTML = warning("Error. Is the Ledger network set to " + network + "?")
+            connectLedgerMessage.innerHTML = warning("Error. Is the Ledger unlocked and app is " + network + "?")
         } finally {
             loadingBar.setAttribute("style", "visibility: hidden;")
         }
@@ -528,13 +528,15 @@ class AddressView extends HTMLElement {
         // Display the address so that it can be compared
         this.displayAddress(address)
 
-        let device = await lwk.searchLedgerDevice()
-        let ledger = new lwk.LedgerWeb(device, network)
+        this.messageDiv.innerHTML = warning("Check the address on the Ledger!")
+
+        let ledger = getLedger()
         let addressLedger = await ledger.getReceiveAddressSingle(index)
 
         console.assert(addressLedger == address.address().toString(), "local and ledger address are different!")
 
-        this.displayAddress(address)
+        this.messageDiv.innerHTML = ""
+
     }
 
     handleShowOnJade = async (_e) => {
@@ -547,7 +549,7 @@ class AddressView extends HTMLElement {
         this.displayAddress(address)
 
         if (getJade() == null) {
-            this.messageDiv.innerHTML = warning("Address generated without double checking with the Jade are risky!")
+            this.messageDiv.innerHTML = warning("Address generated without double checking without the hardware wallet are risky!")
             return
         }
         this.messageDiv.innerHTML = warning("Check the address on the Jade!")
