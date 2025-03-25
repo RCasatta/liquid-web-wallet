@@ -501,12 +501,22 @@ class AddressView extends HTMLElement {
     }
 
     handleShow = async (_e) => {
-        if (getJade() != null) {
-            this.handleShowOnJade()
-        } else if (getLedger() != null) {
-            this.handleShowOnLedger()
-        } else {
-            this.displayAddress(getWollet().address(null))
+        try {
+            // Set button to busy state at the beginning
+            setBusyDisabled(this.showButton, true)
+
+            if (getJade() != null) {
+                await this.handleShowOnJade()
+            } else if (getLedger() != null) {
+                await this.handleShowOnLedger()
+            } else {
+                this.displayAddress(getWollet().address(null))
+            }
+        } catch (error) {
+            this.messageDiv.innerHTML = warning(error.toString())
+        } finally {
+            // Always reset button state when operation is complete
+            setBusyDisabled(this.showButton, false)
         }
     }
 
@@ -514,6 +524,9 @@ class AddressView extends HTMLElement {
         const address = getWollet().address(null)
         const index = address.index()
         console.log(address.address().toString())
+
+        // Display the address so that it can be compared
+        this.displayAddress(address)
 
         let device = await lwk.searchLedgerDevice()
         let ledger = new lwk.LedgerWeb(device, network)
@@ -525,16 +538,15 @@ class AddressView extends HTMLElement {
     }
 
     handleShowOnJade = async (_e) => {
-        setBusyDisabled(this.showButton, true)
+        // We don't need to set busy state here since it's now handled in handleShow
         const address = getWollet().address(null)
         const index = address.index()
         console.log(address.address().toString())
 
-        // Display the address anyway
+        // Display the address so that it can be compared
         this.displayAddress(address)
 
         if (getJade() == null) {
-            setBusyDisabled(this.showButton, false)
             this.messageDiv.innerHTML = warning("Address generated without double checking with the Jade are risky!")
             return
         }
@@ -552,7 +564,6 @@ class AddressView extends HTMLElement {
 
         console.assert(jadeAddress == address.address().toString(), "local and jade address are different!")
         this.messageDiv.hidden = true
-        setBusyDisabled(this.showButton, false)
     }
 }
 
