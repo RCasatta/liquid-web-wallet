@@ -2,6 +2,7 @@ import * as lwk from "lwk_wasm"
 import {
     getCurrentPage, setCurrentPage,
     getJade, setJade, getStandardDerivations,
+    getLedger, setLedger,
     getXpub, getMultiWallets,
     getWollet, setWollet, getWolletSelected, setWolletSelected,
     getScanState, setScanRunning, getScanLoop, setScanLoop,
@@ -113,11 +114,24 @@ async function init() {
             connectLedgerMessage.innerHTML = warning("Error. Is the Ledger connected and unlocked?")
         }
         try {
+            loadingBar.setAttribute("style", "visibility: visible;")
+
             let desc = await ledger.wpkhSlip77Descriptor()
-            descriptorTextarea.value = desc
+
+            let wollet = new lwk.Wollet(network, desc)
+            console.log("wollet", wollet)
+            setLedger(ledger)
+            setWollet(wollet)
+            setWolletSelected("Ledger")
+            setScanRunning(false)
+            loadPersisted(wollet)
+            await fullScanAndApply(wollet, getScanState())
+
         } catch (e) {
             console.error("Error getting descriptor:", e)
             connectLedgerMessage.innerHTML = warning("Error. Is the Ledger network set to " + network + "?")
+        } finally {
+            loadingBar.setAttribute("style", "visibility: hidden;")
         }
     })
 

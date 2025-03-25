@@ -13,6 +13,7 @@ const _state = {
 
     // Device state
     jade: null, // lwk.Jade instance
+    ledger: null, // lwk.LedgerWeb instance
     standardDerivations: null, // {String: String} mapping bip to xpub
     xpub: null, // String - master xpub from Jade
 
@@ -150,6 +151,17 @@ export function setJade(jade, xpub, multiWallets, standardDerivations) {
 
     publish('jade-changed', jade);
     return _state.jade;
+}
+
+// Ledger state management
+export function getLedger() {
+    return _state.ledger;
+}
+
+export function setLedger(ledger) {
+    _state.ledger = ledger;
+    publish('ledger-changed', ledger);
+    return _state.ledger;
 }
 
 export function getStandardDerivations() {
