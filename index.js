@@ -322,11 +322,12 @@ class MyNav extends HTMLElement {
         // Keep direct DOM event listeners
         this.addEventListener("click", this.handleClick)
 
-        // Replace document event listeners with state subscriptions
         this.subscriptions.push(
             // State change subscriptions
-            subscribe('jade-changed', this.render),
-            subscribe('scan-state-changed', this.render),
+            subscribe('jade-changed', () => {
+                this.render()
+                this.renderPage("wallets-page")
+            }),
 
             // Handle wallet selection
             subscribe('wallet-selected', () => {
@@ -397,13 +398,7 @@ class MyNav extends HTMLElement {
     }
 
     render = async (_e) => {
-        if (getJade() != null && getWolletSelected() == null) {
-            this.innerHTML = `
-                    <a href="#" id="disconnect">Disconnect</a>
-                    <br><br>
-                `
-            this.renderPage("wallets-page")
-        } else if (getScanState()) {
+        if (getWolletSelected() != null) {
             this.innerHTML = `
                     <a href="#" id="balance-page">Balance</a> |
                     <a href="#" id="transactions-page">Transactions</a> |
