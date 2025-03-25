@@ -474,8 +474,7 @@ class AddressView extends HTMLElement {
     constructor() {
         super()
 
-        this.showButton = this.querySelector("button.show-jade")
-        this.ledgerButton = this.querySelector("button.show-ledger")
+        this.showButton = this.querySelector("button.show-address")
         this.messageDiv = this.querySelector("div.message")
         this.addressDisplay = this.querySelector("div.address-display")
         this.addressText = this.querySelector(".address-text")
@@ -484,12 +483,7 @@ class AddressView extends HTMLElement {
         this.addressLink = this.querySelector(".address-qr a")
         this.addressImage = this.querySelector(".address-qr img")
 
-        this.showButton.addEventListener("click", this.handleShowOnJade)
-        this.ledgerButton.addEventListener("click", this.handleShowOnLedger)
-
-        if (getJade() == null) {
-            this.showButton.innerText = "Show"
-        }
+        this.showButton.addEventListener("click", this.handleShow)
     }
 
     displayAddress(address) {
@@ -504,6 +498,16 @@ class AddressView extends HTMLElement {
         this.addressLink.href = `liquidnetwork:${addrString}`
         this.addressImage.src = addr.QRCodeUri(null)
         this.addressQR.hidden = false
+    }
+
+    handleShow = async (_e) => {
+        if (getJade() != null) {
+            this.handleShowOnJade()
+        } else if (getLedger() != null) {
+            this.handleShowOnLedger()
+        } else {
+            this.displayAddress(getWollet().address(null))
+        }
     }
 
     handleShowOnLedger = async (_e) => {
