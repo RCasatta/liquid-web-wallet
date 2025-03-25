@@ -11,7 +11,7 @@ import {
 } from './state.js'
 
 // Network setup (remains global as it's a configuration not state)
-const network = lwk.Network.regtestDefault()
+const network = lwk.Network.mainnet()
 
 // Reference to the main application container
 const app = document.getElementById('app')
@@ -100,12 +100,25 @@ async function init() {
     let randomWalletButton = document.getElementById("random-wallet-button");
 
     let ledgerDescriptorDiv = document.getElementById("ledger-descriptor-div")
-    let ledgerDescriptorButton = document.getElementById("ledger-descriptor-button")
+    let ledgerDescriptorButton = document.getElementById("ledger-connect-button")
     ledgerDescriptorButton.addEventListener("click", async (_e) => {
-        let device = await lwk.searchLedgerDevice()
-        let ledger = new lwk.LedgerWeb(device, network)
-        let desc = await ledger.wpkhSlip77Descriptor()
-        descriptorTextarea.value = desc
+        let connectLedgerMessage = document.getElementById("connect-ledger-message")
+
+        var ledger
+        try {
+            let device = await lwk.searchLedgerDevice()
+            ledger = new lwk.LedgerWeb(device, network)
+        } catch (e) {
+            console.error("Error connecting to Ledger:", e)
+            connectLedgerMessage.innerHTML = warning("Error. Is the Ledger connected and unlocked?")
+        }
+        try {
+            let desc = await ledger.wpkhSlip77Descriptor()
+            descriptorTextarea.value = desc
+        } catch (e) {
+            console.error("Error getting descriptor:", e)
+            connectLedgerMessage.innerHTML = warning("Error. Is the Ledger network set to " + network + "?")
+        }
     })
 
     // Function to update ledger UI elements based on devMode and network
