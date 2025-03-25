@@ -61,7 +61,7 @@ async function init() {
             // Initialize jade and collect all related data
             const xpub = await jade.getMasterXpub() // asking something that requires unlock
             const multiWallets = await jade.getRegisteredMultisigs()
-            const jadeDerivations = await jadeStandardDerivations()
+            const jadeDerivations = await jadeStandardDerivations(jade)
 
             // Set all jade-related state at once
             setJade(jade, xpub, multiWallets, jadeDerivations)
@@ -1521,11 +1521,10 @@ class WalletXpubs extends HTMLElement {
     }
 }
 
-async function jadeStandardDerivations() {
+async function jadeStandardDerivations(jade) {
     // these are cached also on the Jade, but caching here allow to get rid of the async in keyoriginXpubUnified
     const derivations = {}
     const bips = [lwk.Bip.bip49(), lwk.Bip.bip84(), lwk.Bip.bip87()];
-    const jade = getJade();
     for (let i = 0; i < 3; i++) {
         const xpub = await jade.keyoriginXpub(bips[i]).catch(err => console.error("Error jade.keyoriginXpub:", err))
         derivations[bips[i].toString()] = xpub
