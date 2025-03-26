@@ -11,6 +11,11 @@ import {
     subscribe, publish
 } from './state.js'
 
+// Import the jsQR library for QR code scanning
+const jsQRScript = document.createElement('script');
+jsQRScript.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+document.head.appendChild(jsQRScript);
+
 // Network setup (remains global as it's a configuration not state)
 const network = lwk.Network.regtestDefault()
 
@@ -709,6 +714,35 @@ class CreateTransaction extends HTMLElement {
         this.addRecipient = inputs[2]
         this.addRecipient.addEventListener("click", this.handleAdd)
 
+        // Setup QR Code scanner
+        this.qrScanButton = this.querySelector("button.qr-scan-button")
+        this.qrScanButton.addEventListener("click", this.handleQrScan)
+        this.qrScannerModal = document.getElementById("qr-scanner-modal")
+        this.qrVideo = document.getElementById("qr-video")
+        this.qrCloseButton = document.getElementById("qr-scanner-close")
+        this.qrCloseButton.addEventListener("click", this.closeQrScanner)
+
+        // Additional QR scan buttons
+        this.qrScanButtonAsset = this.querySelector("button.qr-scan-button-asset")
+        if (this.qrScanButtonAsset) {
+            this.qrScanButtonAsset.addEventListener("click", () => this.handleQrScan("asset"))
+        }
+
+        this.qrScanButtonToken = this.querySelector("button.qr-scan-button-token")
+        if (this.qrScanButtonToken) {
+            this.qrScanButtonToken.addEventListener("click", () => this.handleQrScan("token"))
+        }
+
+        this.qrScanButtonReissuance = this.querySelector("button.qr-scan-button-reissuance")
+        if (this.qrScanButtonReissuance) {
+            this.qrScanButtonReissuance.addEventListener("click", () => this.handleQrScan("reissuance"))
+        }
+
+        // Set up QR code scanning
+        this.videoStream = null
+        this.scanInterval = null
+        this.currentScanTarget = null
+
         this.message = this.querySelector("div.message")
         this.messageCreate = this.querySelector("div.messageCreate")
 
@@ -754,6 +788,144 @@ class CreateTransaction extends HTMLElement {
         this.messageBurn = burnSection.querySelector("div.messageBurn")
 
         this.render()
+    }
+
+    handleQrScan = async (targetField = "main") => {
+        try {
+            // Store which field we're scanning for
+            this.currentScanTarget = targetField;
+
+            // Make sure jsQR is loaded
+            if (typeof jsQR !== 'function') {
+                this.message.innerHTML = warning("QR code scanner is not ready yet. Please try again in a moment.");
+                return;
+            }
+
+            // Reset message
+            this.message.innerHTML = "";
+
+            // Open the modal
+            this.qrScannerModal.showModal();
+
+            // Access the camera
+            const constraints = {
+                video: {
+                    facingMode: "environment",
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            };
+
+            this.videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+            this.qrVideo.srcObject = this.videoStream;
+
+            // Set up canvas for processing video frames
+            const canvas = document.createElement('canvas');
+            const canvasContext = canvas.getContext('2d');
+
+            // Start scanning
+            this.scanInterval = setInterval(() => {
+                if (this.qrVideo.readyState === this.qrVideo.HAVE_ENOUGH_DATA) {
+                    canvas.height = this.qrVideo.videoHeight;
+                    canvas.width = this.qrVideo.videoWidth;
+                    canvasContext.drawImage(this.qrVideo, 0, 0, canvas.width, canvas.height);
+
+                    const imageData = canvasContext.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: "dontInvert",
+                    });
+
+                    if (code) {
+                        // QR code detected
+                        this.processQrResult(code.data);
+                    }
+                }
+            }, 200); // Check every 200ms
+
+        } catch (error) {
+            this.closeQrScanner();
+
+            let errorMessage = "Could not access camera: " + error.message;
+
+            // More user-friendly error messages for common cases
+            if (error.name === 'NotAllowedError') {
+                errorMessage = "Camera access was denied. Please allow camera access to scan QR codes.";
+            } else if (error.name === 'NotFoundError') {
+                errorMessage = "No camera detected on your device.";
+            } else if (error.name === 'NotReadableError') {
+                errorMessage = "Camera is already in use by another application.";
+            }
+
+            // Display the error message in the appropriate location based on the current target
+            switch (this.currentScanTarget) {
+                case "asset":
+                case "token":
+                    this.messageIssuance.innerHTML = warning(errorMessage);
+                    break;
+                case "reissuance":
+                    this.messageReissuance.innerHTML = warning(errorMessage);
+                    break;
+                default:
+                    this.message.innerHTML = warning(errorMessage);
+                    break;
+            }
+
+            // Reset the current scan target
+            this.currentScanTarget = null;
+        }
+    }
+
+    closeQrScanner = () => {
+        // Stop video stream and scanning
+        if (this.videoStream) {
+            this.videoStream.getTracks().forEach(track => track.stop());
+            this.videoStream = null;
+        }
+
+        if (this.scanInterval) {
+            clearInterval(this.scanInterval);
+            this.scanInterval = null;
+        }
+
+        // Close modal
+        this.qrScannerModal.close();
+    }
+
+    processQrResult = (result) => {
+        // Clean up the scan result if needed
+        let address = result;
+
+        // If it's a URI scheme like liquidnetwork:address, extract just the address
+        if (result.startsWith('liquidnetwork:')) {
+            address = result.substring('liquidnetwork:'.length);
+        }
+
+        // Close the scanner
+        this.closeQrScanner();
+
+        // Set the address in the target input field based on currentScanTarget
+        switch (this.currentScanTarget) {
+            case "asset":
+                this.assetAddress.value = address;
+                this.messageIssuance.innerHTML = success("Asset address QR code scanned successfully!");
+                break;
+            case "token":
+                this.tokenAddress.value = address;
+                this.messageIssuance.innerHTML = success("Token address QR code scanned successfully!");
+                break;
+            case "reissuance":
+                this.reissuanceAddress.value = address;
+                this.messageReissuance.innerHTML = success("Reissuance address QR code scanned successfully!");
+                break;
+            case "main":
+            default:
+                this.addressInput.value = address;
+                this.message.innerHTML = success("QR code scanned successfully!");
+                break;
+        }
+
+        // Reset the current scan target
+        this.currentScanTarget = null;
     }
 
     handleReissue = async (e) => {
