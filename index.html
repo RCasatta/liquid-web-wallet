@@ -9,6 +9,30 @@
     <title>Home</title>
     <link rel="stylesheet" href="/pico.min.css">
     <link rel="icon" type="image/x-icon" href="/favicon.webp">
+    <style>
+        #qr-scanner-container {
+            position: relative;
+            width: 100%;
+            height: 300px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        #qr-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        dialog#qr-scanner-modal::backdrop {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        .qr-scan-button {
+            padding: 0.4rem 0.6rem;
+            margin-right: 0.5rem;
+        }
+    </style>
 </head>
 
 <body>
@@ -135,12 +159,13 @@
                         <h3>Add recipient</h3>
                         <fieldset role="group">
                             <input type="text" placeholder="Address" name="address">
+                            <button type="button" class="qr-scan-button secondary outline"
+                                aria-label="Scan QR code">📷</button>
                             <input type="number" placeholder="Amount" name="amount">
                             <select name="asset"></select>
                             <!-- <input type="submit" value="+" id="create-transaction-button-add"
                             onclick="alert('multiple recipients not yet implemented')"> -->
                             <input type="submit" value="+">
-
                         </fieldset>
                     </div>
 
@@ -179,7 +204,11 @@
 
                             <label for="asset_address">Asset address. The address receiving the issued assets. If left
                                 empty, an address of current wallet is used.</label>
-                            <input type="text" lang="en" name="asset_address" placeholder="">
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="text" lang="en" name="asset_address" placeholder="" style="flex-grow: 1;">
+                                <button type="button" class="qr-scan-button-asset secondary outline"
+                                    aria-label="Scan QR code">📷</button>
+                            </div>
 
                             <label for="token_amount">Reissuance token amount. The number of reissuance tokens.</label>
                             <input type="number" step="1" min="0" lang="en" name="token_amount" required="required"
@@ -187,7 +216,11 @@
 
                             <label for="token_address">Token address. The address receiving the reissuance
                                 tokens. If left empty, an address of current wallet is used.</label>
-                            <input type="text" lang="en" name="token_address" placeholder="">
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="text" lang="en" name="token_address" placeholder="" style="flex-grow: 1;">
+                                <button type="button" class="qr-scan-button-token secondary outline"
+                                    aria-label="Scan QR code">📷</button>
+                            </div>
 
                             <label for="domain">Domain. The domain for the proof of ownership. Use "liquidtestnet.com"
                                 for automatic domain proof publishing.</label>
@@ -234,7 +267,12 @@
 
                             <label for="reissuance_address">Address. The address receiving the reissued assets. If left
                                 empty, an address of current wallet is used.</label>
-                            <input type="text" lang="en" name="reissuance_address" placeholder="">
+                            <div style="display: flex; gap: 0.5rem;">
+                                <input type="text" lang="en" name="reissuance_address" placeholder=""
+                                    style="flex-grow: 1;">
+                                <button type="button" class="qr-scan-button-reissuance secondary outline"
+                                    aria-label="Scan QR code">📷</button>
+                            </div>
 
                             <button type="submit" name="action" value="reissue">Reissue assets</button>
                         </form>
@@ -471,6 +509,23 @@
     </template>
 
     <script type="module" src="./bootstrap.js"></script>
+
+    <!-- QR Code Scanner Modal -->
+    <dialog id="qr-scanner-modal" class="container">
+        <article>
+            <header>
+                <h3>Scan QR Code</h3>
+                <p>Point your camera at a QR code containing a Liquid address</p>
+            </header>
+            <div id="qr-scanner-container">
+                <video id="qr-video" autoplay playsinline></video>
+            </div>
+            <footer>
+                <button id="qr-scanner-close" class="secondary">Cancel</button>
+            </footer>
+        </article>
+    </dialog>
+
 </body>
 
 </html>
