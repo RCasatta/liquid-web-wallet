@@ -752,8 +752,9 @@ class CreateTransaction extends HTMLElement {
         const details = this.querySelectorAll("details")
         let issuanceSection = details[0]
 
-        this.issueButton = issuanceSection.querySelector("button")
-        this.issueButton.addEventListener("click", this.handleIssue)
+        // Get the form instead of the button
+        this.issueForm = issuanceSection.querySelector("form")
+        this.issueForm.addEventListener("submit", this.handleIssue)
         const issuanceInputs = issuanceSection.querySelectorAll("input")
         this.assetAmount = issuanceInputs[0]
         this.assetAddress = issuanceInputs[1]
@@ -770,8 +771,9 @@ class CreateTransaction extends HTMLElement {
         // Add reissuance section components
         let reissuanceSection = details[1]
 
-        this.reissueButton = reissuanceSection.querySelector("button")
-        this.reissueButton.addEventListener("click", this.handleReissue)
+        // Get the form instead of the button
+        this.reissueForm = reissuanceSection.querySelector("form")
+        this.reissueForm.addEventListener("submit", this.handleReissue)
         const reissuanceInputs = reissuanceSection.querySelectorAll("input")
         this.reissuanceAssetId = reissuanceInputs[0]
         this.reissuanceSatoshi = reissuanceInputs[1]
@@ -931,7 +933,7 @@ class CreateTransaction extends HTMLElement {
     handleReissue = async (e) => {
         e.preventDefault()
         // Get form and validate using built-in HTML5 validation
-        const form = e.target.form
+        const form = e.target
 
         if (!form.checkValidity()) {
             form.reportValidity()
@@ -972,7 +974,7 @@ class CreateTransaction extends HTMLElement {
 
             // Build the reissuance transaction
             builder = builder.reissueAsset(assetId,
-                this.reissuanceSatoshi.value, // use string because bigint
+                BigInt(this.reissuanceSatoshi.value),
                 address,
                 assetInfo.tx()
             )
@@ -987,7 +989,7 @@ class CreateTransaction extends HTMLElement {
     handleIssue = async (e) => {
         e.preventDefault()
         // Get form and validate using built-in HTML5 validation
-        const form = e.target.form
+        const form = e.target
 
         // initIssuanceForm() // TODO: mockup data, remove this
 
