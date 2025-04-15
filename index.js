@@ -1071,7 +1071,7 @@ class CreateTransaction extends HTMLElement {
             this.selectAssetInRecipient.appendChild(option)
 
             if (key != network.policyAsset().toString()) {
-                // only show non-L-BTC assets in the burn section
+                // only show non-LBTC assets in the burn section
 
                 let optionBurn = document.createElement("option")
                 optionBurn.innerText = mapAssetTicker(key)
@@ -2147,11 +2147,11 @@ function parsePrecision(assetHex, value) {
 
 function _mapAssetHex(assetHex) {
     switch (assetHex) {
-        case "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d": return ["L-BTC", 8]
+        case "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d": return ["LBTC", 8]
         case "fee": return ["fee", 8]
-        case "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49": return ["tL-BTC", 8]
+        case "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49": return ["tLBTC", 8]
 
-        case "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225": return ["rL-BTC", 8]
+        case "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225": return ["rLBTC", 8]
 
         case "ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2": return ["USDt", 8]
         case "0e99c1a6da379d1f4151fb9df90449d40d0608f6cb33a5bcbfc8c265f42bab0a": return ["LCAD", 8]

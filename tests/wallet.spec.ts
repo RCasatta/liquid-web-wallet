@@ -41,8 +41,8 @@ test.describe('Wallet Functionality', () => {
         // Fill in the amount field - use the ID selector to be specific
         await page.locator('#add-recipient-div input[name="amount"]').fill('0.000023');
 
-        // Select rL-BTC by label
-        await page.locator('#add-recipient-div select[name="asset"]').selectOption({ label: 'rL-BTC' });
+        // Select rLBTC by label
+        await page.locator('#add-recipient-div select[name="asset"]').selectOption({ label: 'rLBTC' });
 
         // Click the + button
         await page.getByRole('button', { name: '+' }).click();
@@ -205,7 +205,7 @@ test.describe('Wallet Functionality', () => {
 
         // Wait for balance to load and check content
         const balanceContent = await page.locator('wallet-balance').textContent();
-        expect(balanceContent).toContain('rL-BTC');
+        expect(balanceContent).toContain('rLBTC');
         expect(balanceContent).not.toContain('0.00000000');
     });
 
