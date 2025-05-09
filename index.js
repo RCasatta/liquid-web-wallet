@@ -1377,8 +1377,56 @@ class CreateTransaction extends HTMLElement {
 
     handleCreateProposal = async (e) => {
         e.preventDefault()
-        // Implementation will go here
-        this.messageLiquidex.innerHTML = warning("Create proposal functionality not yet implemented")
+        this.messageLiquidex.innerHTML = ""
+
+        try {
+            // Check if a UTXO is selected
+            if (!this.utxoSelect.value) {
+                throw new Error("Please select a UTXO to offer")
+            }
+
+            // Parse the UTXO data from the select option
+            const utxoData = JSON.parse(this.utxoSelect.value)
+
+            // Create an OutPoint from the UTXO data
+            const outpoint = new lwk.OutPoint(`${utxoData.txid}:${utxoData.vout}`)
+
+            // Validate asset wanted
+            if (!this.assetWanted.value.trim()) {
+                throw new Error("Asset wanted cannot be empty")
+            }
+            const assetWanted = new lwk.AssetId(this.assetWanted.value.trim())
+
+            // Validate amount wanted
+            const amountWantedValue = parseFloat(this.amountWanted.value)
+            if (isNaN(amountWantedValue) || amountWantedValue <= 0) {
+                throw new Error("Amount wanted must be a positive number")
+            }
+
+            // Convert to satoshis using appropriate precision
+            const satoshisWanted = parsePrecision(assetWanted.toString(), this.amountWanted.value)
+
+            // Get the receiving address for the swap (using current wallet's address)
+            const address = getWollet().address(null).address()
+
+            // Create a new transaction builder
+            const builder = new lwk.TxBuilder(network)
+
+            // Use the liquidexMake method to create the proposal
+            const psetBuilder = builder.liquidexMake(outpoint, address, BigInt(satoshisWanted), assetWanted)
+
+            // Finish building the transaction
+            const pset = psetBuilder.finish(getWollet())
+
+            // Pass the PSET to the sign page
+            setPset(pset)
+
+            // Show success message
+            this.messageLiquidex.innerHTML = success("Proposal created successfully! Go to Sign page to continue.")
+
+        } catch (e) {
+            this.messageLiquidex.innerHTML = warning(e.toString())
+        }
     }
 
     handleAcceptProposal = async (e) => {
