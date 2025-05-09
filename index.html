@@ -294,6 +294,42 @@
 
                     </details>
 
+                    <br>
+
+                    <details>
+                        <summary role="button" class="secondary">Liquidex</summary>
+
+                        <h4>Maker</h4>
+                        <form>
+                            <label for="utxo">UTXO</label>
+                            <select name="utxo" id="utxo">
+                                <option value="">Select UTXO</option>
+                            </select>
+
+                            <label for="asset_wanted">Asset wanted</label>
+                            <input type="text" name="asset_wanted" placeholder="Asset ID">
+
+                            <label for="amount_wanted">Amount wanted</label>
+                            <input type="number" name="amount_wanted" placeholder="Amount" min="0">
+
+                            <button type="submit" name="action" value="create_proposal">Create unsigned PSET</button>
+                        </form>
+
+                        <br>
+
+                        <h4>Taker</h4>
+                        <form>
+                            <label for="proposal">Proposal</label>
+                            <textarea name="proposal" placeholder="Paste proposal details here"></textarea>
+
+                            <button type="submit" name="action" value="accept_proposal">Accept proposal (without
+                                signing)</button>
+                        </form>
+
+                        <br><br>
+                        <div class="messageLiquidex"></div>
+                    </details>
+
                 </div>
             </create-transaction>
         </section>

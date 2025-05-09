@@ -789,6 +789,34 @@ class CreateTransaction extends HTMLElement {
         this.addBurn.addEventListener("click", this.handleBurn)
         this.messageBurn = burnSection.querySelector("div.messageBurn")
 
+        // Add liquidex section components
+        let liquidexSection = details[3]
+
+        // Map Maker form
+        const liquidexForms = liquidexSection.querySelectorAll("form")
+        this.makerForm = liquidexForms[0]
+        this.takerForm = liquidexForms[1]
+
+        // Map Maker inputs
+        this.utxoSelect = this.makerForm.querySelector("select#utxo")
+        const makerInputs = this.makerForm.querySelectorAll("input")
+        this.assetWanted = makerInputs[0]
+        this.amountWanted = makerInputs[1]
+
+        // Map Maker button
+        this.createProposalButton = this.makerForm.querySelector("button")
+
+        // Map Taker textarea and button
+        this.proposalTextarea = this.takerForm.querySelector("textarea")
+        this.acceptProposalButton = this.takerForm.querySelector("button")
+
+        // Map message div
+        this.messageLiquidex = liquidexSection.querySelector("div.messageLiquidex")
+
+        // Add event listeners
+        this.makerForm.addEventListener("submit", this.handleCreateProposal)
+        this.takerForm.addEventListener("submit", this.handleAcceptProposal)
+
         this.render()
     }
 
@@ -1080,6 +1108,49 @@ class CreateTransaction extends HTMLElement {
             }
         })
 
+        // Initialize UTXO select dropdown for Liquidex
+        if (this.utxoSelect) {
+            cleanChilds(this.utxoSelect)
+
+            // Add default empty option
+            let defaultOption = document.createElement("option")
+            defaultOption.innerText = "Select UTXO"
+            defaultOption.setAttribute("value", "")
+            this.utxoSelect.appendChild(defaultOption)
+
+            // Add each UTXO from the wallet
+            const utxos = wollet.utxos()
+            if (utxos && utxos.length > 0) {
+                utxos.forEach((utxo, index) => {
+                    try {
+                        // Get unblinded information to access asset and value
+                        const unblinded = utxo.unblinded()
+                        const asset = unblinded.asset().toString()
+                        const value = mapAssetPrecision(asset, unblinded.value())
+                        const txid = utxo.outpoint().txid().toString()
+                        const truncatedTxid = txid.slice(0, 6) + '...' + txid.slice(-6)
+                        const vout = utxo.outpoint().vout()
+
+                        let option = document.createElement("option")
+                        option.innerText = `${truncatedTxid}:${vout} - ${value} ${mapAssetTicker(asset)}`
+
+                        // Store the full data as a value attribute in JSON format
+                        const utxoData = {
+                            txid: txid,
+                            vout: vout,
+                            asset: asset,
+                            value: unblinded.value().toString()
+                        }
+                        option.setAttribute("value", JSON.stringify(utxoData))
+
+                        this.utxoSelect.appendChild(option)
+                    } catch (e) {
+                        console.error('Error processing UTXO:', e)
+                        // Skip this UTXO if there's any issue accessing unblinded data
+                    }
+                })
+            }
+        }
 
         this.busy.hidden = true
         this.div.hidden = false
@@ -1280,6 +1351,18 @@ class CreateTransaction extends HTMLElement {
         this.satoshisInput.removeAttribute("aria-invalid")
         this.selectAssetInRecipient.removeAttribute("aria-invalid")
         // end reset fields
+    }
+
+    handleCreateProposal = async (e) => {
+        e.preventDefault()
+        // Implementation will go here
+        this.messageLiquidex.innerHTML = warning("Create proposal functionality not yet implemented")
+    }
+
+    handleAcceptProposal = async (e) => {
+        e.preventDefault()
+        // Implementation will go here
+        this.messageLiquidex.innerHTML = warning("Accept proposal functionality not yet implemented")
     }
 }
 
@@ -2003,7 +2086,7 @@ function esploraClient() {
     const testnetUrl = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api"
     const regtestUrl = "http://localhost:3000/"
     const url = network.isMainnet() ? mainnetUrl : network.isTestnet() ? testnetUrl : regtestUrl
-    const client = new lwk.EsploraClient(network, url, true)
+    const client = new lwk.EsploraClient(network, url, true, 4)
     if (network.isMainnet() || network.isTestnet()) {
         client.set_waterfalls_server_recipient("age1xxzrgrfjm3yrwh3u6a7exgrldked0pdauvr3mx870wl6xzrwm5ps8s2h0p");
     }
