@@ -1128,11 +1128,21 @@ class CreateTransaction extends HTMLElement {
                         const asset = unblinded.asset().toString()
                         const value = mapAssetPrecision(asset, unblinded.value())
                         const txid = utxo.outpoint().txid().toString()
-                        const truncatedTxid = txid.slice(0, 6) + '...' + txid.slice(-6)
+                        const truncatedTxid = truncateIdentifier(txid)
                         const vout = utxo.outpoint().vout()
 
                         let option = document.createElement("option")
-                        option.innerText = `${truncatedTxid}:${vout} - ${value} ${mapAssetTicker(asset)}`
+                        const assetTicker = mapAssetTicker(asset)
+
+                        // Format differently based on whether it's a known asset or not
+                        if (assetTicker !== asset) {
+                            // Known asset with ticker
+                            option.innerText = `${value} ${assetTicker} - ${truncatedTxid}:${vout}`
+                        } else {
+                            // Unknown asset, show truncated asset ID
+                            const truncatedAsset = truncateIdentifier(asset)
+                            option.innerText = `${value} [${truncatedAsset}] - ${truncatedTxid}:${vout}`
+                        }
 
                         // Store the full data as a value attribute in JSON format
                         const utxoData = {
@@ -2190,6 +2200,20 @@ function elapsedFrom(unixTs) {
     }
 
     return 'now';
+}
+
+/**
+ * Truncates long identifiers (like txids and asset IDs) for display purposes
+ * @param {string} identifier - The long identifier to truncate
+ * @param {number} prefixLength - Number of characters to keep at the start (default: 6)
+ * @param {number} suffixLength - Number of characters to keep at the end (default: 6)
+ * @returns {string} Truncated identifier with ellipsis in the middle
+ */
+function truncateIdentifier(identifier, prefixLength = 8, suffixLength = 8) {
+    if (!identifier || identifier.length <= prefixLength + suffixLength + 3) {
+        return identifier;
+    }
+    return `${identifier.slice(0, prefixLength)}...${identifier.slice(-suffixLength)}`;
 }
 
 /// returns the Ticker if the asset id maps to featured ones
