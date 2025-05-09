@@ -806,6 +806,12 @@ class CreateTransaction extends HTMLElement {
         // Map Maker button
         this.createProposalButton = this.makerForm.querySelector("button")
 
+        // Map LBTC button in the Asset ID field
+        this.lbtcButton = this.makerForm.querySelector("button.lbtc-button")
+        if (this.lbtcButton) {
+            this.lbtcButton.addEventListener("click", this.handleLbtcButtonClick)
+        }
+
         // Map Taker textarea and button
         this.proposalTextarea = this.takerForm.querySelector("textarea")
         this.acceptProposalButton = this.takerForm.querySelector("button")
@@ -818,6 +824,12 @@ class CreateTransaction extends HTMLElement {
         this.takerForm.addEventListener("submit", this.handleAcceptProposal)
 
         this.render()
+    }
+
+    // Handler for LBTC button click
+    handleLbtcButtonClick = () => {
+        // Set the asset_wanted field to the network's policy asset (LBTC)
+        this.assetWanted.value = network.policyAsset().toString()
     }
 
     handleQrScan = async (targetField = "main") => {
