@@ -286,7 +286,7 @@
                     <details class="burn-assets">
                         <summary role="button" class="secondary">Burn assets</summary>
                         <fieldset role="group">
-                            <input type="number" placeholder="Amount" name="amount">
+                            <input type="number" placeholder="Amount" name="amount" step="0.00000001">
                             <select name="asset"></select>
                             <input type="submit" value="+">
                         </fieldset>
@@ -313,7 +313,7 @@
                             </fieldset>
 
                             <label for="amount_wanted">Amount wanted</label>
-                            <input type="number" name="amount_wanted" placeholder="Amount" min="0">
+                            <input type="number" name="amount_wanted" placeholder="Amount" step="0.00000001">
 
                             <button type="submit" name="action" value="create_proposal">Create unsigned PSET</button>
                         </form>
