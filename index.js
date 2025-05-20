@@ -1431,8 +1431,43 @@ class CreateTransaction extends HTMLElement {
 
     handleAcceptProposal = async (e) => {
         e.preventDefault()
-        // Implementation will go here
-        this.messageLiquidex.innerHTML = warning("Accept proposal functionality not yet implemented")
+        this.messageLiquidex.innerHTML = ""
+
+        try {
+            // Get the proposal text from the textarea
+            const proposalText = this.proposalTextarea.value.trim()
+
+            if (!proposalText) {
+                throw new Error("Proposal text cannot be empty")
+            }
+
+            // Try to find the PSET part from the proposal text
+            let psetText = proposalText
+
+            // Create a UnvalidatedLiquidexProposal from the text
+            const unvalidatedProposal = lwk.UnvalidatedLiquidexProposal.new(psetText)
+
+            // Validate the proposal
+            // TODO: make full validation
+            const validatedProposal = unvalidatedProposal.insecure_validate()
+            console.log(validatedProposal)
+
+            // Create a transaction builder to accept the proposal
+            var builder = new lwk.TxBuilder(network)
+            builder = builder.liquidexTake([validatedProposal])
+
+            const wallet = getWollet()
+            const pset = builder.finish(wallet)
+
+            console.log(pset.outputs().length)
+            console.log(pset.inputs().length)
+
+            // Pass the PSET to the sign page
+            setPset(pset)
+
+        } catch (error) {
+            this.messageLiquidex.innerHTML = warning(error.toString())
+        }
     }
 }
 
