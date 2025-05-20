@@ -1452,6 +1452,7 @@ class SignTransaction extends HTMLElement {
         this.signButton = this.querySelector("button.sign")
         this.cosignButton = this.querySelector("button.cosign")
         this.broadcastButton = this.querySelector("button.broadcast")
+        this.proposalButton = this.querySelector("button.proposal")
         this.combineButton = this.querySelector("button.combine")
         this.saveMnemonicButton = this.querySelector("button.saveMnemonic")
 
@@ -1459,6 +1460,8 @@ class SignTransaction extends HTMLElement {
         this.contractDiv = this.querySelector("div.contract")
         this.signDivAnalyze = this.querySelector("div.analyze")
         this.recipientsDiv = this.querySelector("div.recipients")
+        this.proposalContainer = this.querySelector("div.proposal-container")
+        this.proposalText = this.querySelector("textarea.proposal-text")
 
         const details = this.querySelectorAll("details")
         this.signDetails = details[0]
@@ -1470,7 +1473,7 @@ class SignTransaction extends HTMLElement {
         })
         this.signButton.addEventListener("click", this.handleSignClick)
         this.cosignButton.addEventListener("click", this.handleCosignClick)
-
+        this.proposalButton.addEventListener("click", this.handleProposal)
         this.broadcastButton.addEventListener("click", this.handleBroadcastClick)
 
         this.combineButton.addEventListener("click", this.handleCombineClick)
@@ -1735,6 +1738,13 @@ class SignTransaction extends HTMLElement {
         let pset = new lwk.Pset(psetString)
         let details = getWollet().psetDetails(pset)
 
+        // Check if PSET has exactly 1 input and 1 output and show proposal button if true
+        if (pset.inputs().length === 1 && pset.outputs().length === 1 && details.fingerprintsHas().length > 0) {
+            this.proposalButton.hidden = false
+        } else {
+            this.proposalButton.hidden = true
+        }
+
         cleanChilds(this.signDivAnalyze)
         let hgroup = document.createElement("hgroup")
         hgroup.innerHTML = `
@@ -1780,6 +1790,33 @@ class SignTransaction extends HTMLElement {
 
 
         // TODO issuances
+    }
+
+    handleProposal = async (_e) => {
+        try {
+            const psetString = this.pset.value
+            if (!psetString.trim()) {
+                throw new Error("PSET cannot be empty")
+            }
+
+            setBusyDisabled(this.proposalButton, true)
+
+            // Create a Pset object from the string
+            const pset = new lwk.Pset(psetString)
+
+            // Convert to UnvalidatedLiquidexProposal
+            const proposal = lwk.UnvalidatedLiquidexProposal.from_pset(pset)
+
+            // Populate the proposal textarea and show it
+            this.proposalText.value = proposal.toString()
+            this.proposalContainer.hidden = false
+
+            this.messageDiv.innerHTML = success("Proposal generated!")
+        } catch (error) {
+            this.messageDiv.innerHTML = warning(error.toString())
+        } finally {
+            setBusyDisabled(this.proposalButton, false)
+        }
     }
 }
 

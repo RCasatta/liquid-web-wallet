@@ -375,9 +375,6 @@ test.describe('Wallet Functionality', () => {
         const psetTextarea = page.locator('sign-transaction textarea').first();
         await expect(psetTextarea).toHaveValue(/^cHNldP8/); // Base64 PSET prefix
 
-        // Analyze the PSET
-        await page.getByRole('button', { name: 'Analyze', exact: true }).click();
-
         // Check that signatures section shows we need to sign
         await expect(page.locator('h3:has-text("Signatures")').locator('~div table td:has-text("Missing")')).toBeVisible();
     });
