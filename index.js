@@ -793,7 +793,13 @@ class CreateTransaction extends HTMLElement {
         let liquidexMakerSection = details[3]
         let liquidexTakerSection = details[4]
 
-        // Map Maker form
+        // Show liquidex sections only in dev mode
+        if (getDevMode()) {
+            liquidexMakerSection.hidden = false
+            liquidexTakerSection.hidden = false
+        }
+
+        // Map forms
         const liquidexForms = this.querySelectorAll("form")
         this.makerForm = liquidexMakerSection.querySelector("form")
         this.takerForm = liquidexTakerSection.querySelector("form")
