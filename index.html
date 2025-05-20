@@ -296,10 +296,9 @@
 
                     <br>
 
-                    <details>
-                        <summary role="button" class="secondary">Liquidex</summary>
+                    <details class="liquidex-maker">
+                        <summary role="button" class="secondary">Liquidex - Maker</summary>
 
-                        <h4>Maker</h4>
                         <form>
                             <label for="utxo">UTXO</label>
                             <select name="utxo" id="utxo">
@@ -317,10 +316,13 @@
 
                             <button type="submit" name="action" value="create_proposal">Create unsigned PSET</button>
                         </form>
+                    </details>
 
-                        <br>
+                    <br>
 
-                        <h4>Taker</h4>
+                    <details class="liquidex-taker">
+                        <summary role="button" class="secondary">Liquidex - Taker</summary>
+
                         <form>
                             <label for="proposal">Proposal</label>
                             <textarea name="proposal" placeholder="Paste proposal details here"></textarea>
@@ -328,11 +330,10 @@
                             <button type="submit" name="action" value="accept_proposal">Accept proposal (without
                                 signing)</button>
                         </form>
-
-                        <br><br>
-                        <div class="messageLiquidex"></div>
                     </details>
 
+                    <br><br>
+                    <div class="messageLiquidex"></div>
                 </div>
             </create-transaction>
         </section>

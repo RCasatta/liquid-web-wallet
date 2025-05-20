@@ -790,12 +790,13 @@ class CreateTransaction extends HTMLElement {
         this.messageBurn = burnSection.querySelector("div.messageBurn")
 
         // Add liquidex section components
-        let liquidexSection = details[3]
+        let liquidexMakerSection = details[3]
+        let liquidexTakerSection = details[4]
 
         // Map Maker form
-        const liquidexForms = liquidexSection.querySelectorAll("form")
-        this.makerForm = liquidexForms[0]
-        this.takerForm = liquidexForms[1]
+        const liquidexForms = this.querySelectorAll("form")
+        this.makerForm = liquidexMakerSection.querySelector("form")
+        this.takerForm = liquidexTakerSection.querySelector("form")
 
         // Map Maker inputs
         this.utxoSelect = this.makerForm.querySelector("select#utxo")
@@ -804,7 +805,7 @@ class CreateTransaction extends HTMLElement {
         this.amountWanted = makerInputs[1]
 
         // Map Maker button
-        this.createProposalButton = this.makerForm.querySelector("button")
+        this.createProposalButton = this.makerForm.querySelector("button[type='submit']")
 
         // Map LBTC button in the Asset ID field
         this.lbtcButton = this.makerForm.querySelector("button.lbtc-button")
@@ -814,10 +815,10 @@ class CreateTransaction extends HTMLElement {
 
         // Map Taker textarea and button
         this.proposalTextarea = this.takerForm.querySelector("textarea")
-        this.acceptProposalButton = this.takerForm.querySelector("button")
+        this.acceptProposalButton = this.takerForm.querySelector("button[type='submit']")
 
-        // Map message div
-        this.messageLiquidex = liquidexSection.querySelector("div.messageLiquidex")
+        // Map message div (which is now outside both details elements)
+        this.messageLiquidex = this.querySelector("div.messageLiquidex")
 
         // Add event listeners
         this.makerForm.addEventListener("submit", this.handleCreateProposal)
@@ -1440,12 +1441,8 @@ class CreateTransaction extends HTMLElement {
             if (!proposalText) {
                 throw new Error("Proposal text cannot be empty")
             }
-
-            // Try to find the PSET part from the proposal text
-            let psetText = proposalText
-
             // Create a UnvalidatedLiquidexProposal from the text
-            const unvalidatedProposal = lwk.UnvalidatedLiquidexProposal.new(psetText)
+            const unvalidatedProposal = lwk.UnvalidatedLiquidexProposal.new(proposalText)
 
             // Validate the proposal
             // TODO: make full validation
