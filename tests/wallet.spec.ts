@@ -384,9 +384,48 @@ test.describe('Wallet Functionality', () => {
         // Verify proposal text is shown and copy is available
         const proposalText = page.locator('textarea.proposal-text');
         await expect(proposalText).toBeVisible();
+        const proposalTextString = await proposalText.inputValue();
 
         // Press the disconnect button (it's actually a link)
         await page.getByRole('link', { name: 'Disconnect' }).click();
 
+        // Click the Ledger test wallet button (now input type="button")
+        const ledgerTestWalletButton = page.getByRole('button', { name: 'Ledger test wallet' });
+        await expect(ledgerTestWalletButton).toBeVisible();
+        await ledgerTestWalletButton.click();
+
+        // Wait for the wallet to load
+        await expect(page.getByRole('heading', { name: 'Balance' })).toBeVisible();
+
+        // Navigate to create page
+        await page.getByRole('link', { name: 'Create' }).click();
+
+        // Wait for the sync to complete with increased timeout
+        await expect(page.locator('create-transaction article[aria-busy="true"]')).not.toBeVisible({ timeout: 15000 });
+
+        await page.getByRole('link', { name: 'Create' }).click();
+        await expect(page.locator('create-transaction article[aria-busy="true"]')).not.toBeVisible({ timeout: 15000 });
+
+        // Open the Liquidex - Taker section
+        await page.getByRole('button', { name: 'Liquidex - Taker', exact: true }).click();
+
+        // Paste the proposal into the textarea
+        await page.locator('textarea[name="proposal"]').fill(proposalTextString);
+
+        // Click the accept proposal button
+        await page.getByRole('button', { name: 'Accept proposal (without signing)' }).click();
+
+        // Verify we're on the sign page
+        await expect(page.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible();
+
+        // Check that signatures section shows we need to sign
+        await expect(page.locator('h3:has-text("Signatures")').locator('~div table td:has-text("Missing")')).toBeVisible();
+
+        // Use the existing signAndBroadcastPset function
+        const txid = await signAndBroadcastPset(page);
+
+        // Verify the transaction appears in the transactions list
+        const txFound = await waitForTransactionToAppear(page, txid);
+        expect(txFound).toBe(true);
     });
 }); 
