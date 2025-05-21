@@ -20,6 +20,7 @@ test.describe('Wallet Functionality', () => {
 
         // Wait for the sync to complete by waiting for the loading indicator to disappear
         await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible();
+        await page.waitForTimeout(500); // Add a small delay to ensure balance has fully synced
         // TODO without waiting for the balance to be ready, other pages may break
     }
 
@@ -397,14 +398,18 @@ test.describe('Wallet Functionality', () => {
         // Wait for the wallet to load
         await expect(page.getByRole('heading', { name: 'Balance' })).toBeVisible();
 
-        // Navigate to create page
+        // Wait for balance to fully load (added to ensure wallet is synced)
+        await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible();
+        await page.waitForTimeout(500); // Add a small delay to ensure balance has fully synced
+
+        // Navigate to create page with more stable approach
         await page.getByRole('link', { name: 'Create' }).click();
+
+        // Wait for page to stabilize and ensure the Create heading is visible
+        await expect(page.getByRole('heading', { name: 'Create' })).toBeVisible();
 
         // Wait for the sync to complete with increased timeout
-        await expect(page.locator('create-transaction article[aria-busy="true"]')).not.toBeVisible({ timeout: 15000 });
-
-        await page.getByRole('link', { name: 'Create' }).click();
-        await expect(page.locator('create-transaction article[aria-busy="true"]')).not.toBeVisible({ timeout: 15000 });
+        await expect(page.locator('create-transaction article[aria-busy="true"]')).not.toBeVisible();
 
         // Open the Liquidex - Taker section
         await page.getByRole('button', { name: 'Liquidex - Taker', exact: true }).click();
