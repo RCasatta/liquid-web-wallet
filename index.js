@@ -169,27 +169,47 @@ async function init() {
         document.getElementById("random-wallet-div").hidden = false
         randomWalletButton.disabled = false
 
+        // Function to handle wallet creation with a specific mnemonic
+        const createWalletWithMnemonic = (mnemonicStr) => {
+            const mnemonicToUse = new lwk.Mnemonic(mnemonicStr)
+            const swSigner = new lwk.Signer(mnemonicToUse, network)
+            setSwSigner(swSigner)
+            let desc = swSigner.wpkhSlip77Descriptor()
+            descriptorTextarea.value = desc.toString()
+            handleWatchOnlyClick()
+        }
+
+        // Show test-specific buttons only in regtest mode
         if (network.isRegtest()) {
-            randomWalletButton.value = "Abandon wallet"
+            const testButtonsDiv = document.getElementById("test-buttons-div")
+            testButtonsDiv.hidden = false
+
+            // Add event listener for "Abandon wallet" button
+            const abandonWalletButton = document.getElementById("abandon-wallet-button")
+            abandonWalletButton.addEventListener("click", () => {
+                createWalletWithMnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
+            })
+
+            // Add event listener for "Ledger test wallet" button
+            const ledgerTestWalletButton = document.getElementById("ledger-test-wallet-button")
+            ledgerTestWalletButton.addEventListener("click", () => {
+                createWalletWithMnemonic("glory promote mansion idle axis finger extra february uncover one trip resource lawn turtle enact monster seven myth punch hobby comfort wild raise skin")
+            })
         }
 
         randomWalletButton.addEventListener("click", (_e) => {
 
             let mnemonicFromCookie = localStorage.getItem(RANDOM_MNEMONIC_KEY)
             var mnemonicToUse
-            if (network.isRegtest()) {
-                mnemonicToUse = new lwk.Mnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about")
+            if (mnemonicFromCookie == null) {
+                mnemonicToUse = lwk.Mnemonic.fromRandom(12)
+                localStorage.setItem(RANDOM_MNEMONIC_KEY, mnemonicToUse.toString())
             } else {
-                if (mnemonicFromCookie == null) {
+                try {
+                    mnemonicToUse = new lwk.Mnemonic(mnemonicFromCookie)
+                } catch {
                     mnemonicToUse = lwk.Mnemonic.fromRandom(12)
                     localStorage.setItem(RANDOM_MNEMONIC_KEY, mnemonicToUse.toString())
-                } else {
-                    try {
-                        mnemonicToUse = new lwk.Mnemonic(mnemonicFromCookie)
-                    } catch {
-                        mnemonicToUse = lwk.Mnemonic.fromRandom(12)
-                        localStorage.setItem(RANDOM_MNEMONIC_KEY, mnemonicToUse.toString())
-                    }
                 }
             }
             const swSigner = new lwk.Signer(mnemonicToUse, network)
