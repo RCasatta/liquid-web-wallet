@@ -321,7 +321,7 @@ test.describe('Wallet Functionality', () => {
         await expect(page.locator('create-transaction article[aria-busy="true"]')).not.toBeVisible();
 
         // Open the liquidex section
-        await page.getByRole('button', { name: 'Liquidex', exact: true }).click();
+        await page.getByRole('button', { name: 'Liquidex - Maker', exact: true }).click();
 
         // Wait for any UTXO options to be available (besides the default)
         const utxoSelect = page.locator('select#utxo');
@@ -371,5 +371,22 @@ test.describe('Wallet Functionality', () => {
 
         // Check that signatures section shows we need to sign
         await expect(page.locator('h3:has-text("Signatures")').locator('~div table td:has-text("Missing")')).toBeVisible();
+
+        // Press the Sign button
+        await page.getByRole('button', { name: 'Sign', exact: true }).click();
+
+        // Verify that the Signatures section displays "Has" text
+        await expect(page.locator('h3:has-text("Signatures")').locator('~div table td:has-text("Has")')).toBeVisible();
+
+        // Get the proposal
+        await page.getByRole('button', { name: 'Proposal' }).click();
+
+        // Verify proposal text is shown and copy is available
+        const proposalText = page.locator('textarea.proposal-text');
+        await expect(proposalText).toBeVisible();
+
+        // Press the disconnect button (it's actually a link)
+        await page.getByRole('link', { name: 'Disconnect' }).click();
+
     });
 }); 
