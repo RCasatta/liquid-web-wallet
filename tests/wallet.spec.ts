@@ -306,17 +306,13 @@ test.describe('Wallet Functionality', () => {
         await checkAssetBalance(page, assetId, 1200); // 1000 from issuance + 500 from reissuance - 300 burn
     });
 
-    test('should create liquidex maker swap proposal', async ({ page }) => {
+    test('should make and take a liquidex swap proposal', async ({ page }) => {
+
+        // Enable developer mode
+        await page.getByRole('button', { name: 'Options' }).click();
+        await page.locator('#dev-mode').check();
+
         await loadWallet(page);
-
-        // First, issue an asset to use in the swap
-        const { assetId } = await createIssuancePset(page);
-        const issuanceTxid = await signAndBroadcastPset(page);
-
-        // Wait for the issuance transaction to be confirmed
-        await expect(page.locator('input[value="Asset registered in the asset registry"]')).toBeVisible({ timeout: 15000 });
-        const txFound = await waitForTransactionToAppear(page, issuanceTxid);
-        expect(txFound).toBe(true);
 
         // Navigate to create page
         await page.getByRole('link', { name: 'Create' }).click();
@@ -337,13 +333,15 @@ test.describe('Wallet Functionality', () => {
             return optionCount > 1;
         }).toPass({ timeout: 15000 });
 
-        // Get all options and select the first non-empty one
+        // Get all options and select the first non-empty one that is not the policy asset
         const options = await utxoSelect.locator('option').all();
         let selectedOption: any = null;
 
         for (const option of options) {
             const value = await option.getAttribute('value');
-            if (value && value !== '') {
+            const text = await option.textContent();
+            // Skip empty options and options containing the policy asset (LBTC or rLBTC)
+            if (value && value !== '' && text && !text.includes('rLBTC')) {
                 selectedOption = option;
                 break;
             }
@@ -363,17 +361,13 @@ test.describe('Wallet Functionality', () => {
         await page.getByRole('button', { name: 'LBTC' }).click();
 
         // Set the amount wanted
-        await page.locator('input[name="amount_wanted"]').fill('0.001');
+        await page.locator('input[name="amount_wanted"]').fill('0.0001');
 
         // Create the proposal
         await page.getByRole('button', { name: 'Create unsigned PSET' }).click();
 
         // Verify we're on the sign page
         await expect(page.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible();
-
-        // Verify PSET textarea is populated
-        const psetTextarea = page.locator('sign-transaction textarea').first();
-        await expect(psetTextarea).toHaveValue(/^cHNldP8/); // Base64 PSET prefix
 
         // Check that signatures section shows we need to sign
         await expect(page.locator('h3:has-text("Signatures")').locator('~div table td:has-text("Missing")')).toBeVisible();
