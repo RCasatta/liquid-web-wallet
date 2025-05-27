@@ -17,7 +17,7 @@ jsQRScript.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 document.head.appendChild(jsQRScript);
 
 // Network setup (remains global as it's a configuration not state)
-const network = lwk.Network.regtestDefault()
+const network = lwk.Network.testnet()
 
 // Reference to the main application container
 const app = document.getElementById('app')
@@ -518,6 +518,25 @@ class AddressView extends HTMLElement {
         this.addressLink.href = `liquidnetwork:${addrString}`
         this.addressImage.src = addr.QRCodeUri(null)
         this.addressQR.hidden = false
+
+        const unconfidential = addr.toUnconfidential().toString();
+        const subscribe = `SUBSCRIBE|||${unconfidential.length}|${unconfidential}`
+        console.log(subscribe)
+        const ws = websocketClient();
+
+        // Setup websocket message listener - only log to console
+        ws.onmessage = (event) => {
+            console.log("Received websocket message:", event.data)
+        }
+
+        ws.onopen = () => {
+            ws.send(subscribe);
+            console.log("Websocket connection opened and subscription sent")
+        }
+
+        ws.onerror = (error) => {
+            console.error("Websocket error:", error)
+        }
     }
 
     handleShow = async (_e) => {
@@ -2244,6 +2263,15 @@ function updatedAt(wolletLocal, node) {
         const unix_ts = wolletLocal.tip().timestamp()
         node.innerText = "updated at " + new Date(unix_ts * 1000).toLocaleString()
     }
+}
+
+function websocketClient() {
+    const mainnetUrl = "https://nexus.liquidwebwallet.org/"
+    const testnetUrl = "https://nexus.liquidwebwallet.org/testnet"
+    const regtestUrl = "http://localhost:3330/"
+    const wsUrl = network.isMainnet() ? mainnetUrl : network.isTestnet() ? testnetUrl : regtestUrl
+    const ws = new WebSocket(wsUrl);
+    return ws;
 }
 
 function esploraClient() {
