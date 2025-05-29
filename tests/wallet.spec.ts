@@ -194,6 +194,7 @@ test.describe('Wallet Functionality', () => {
 
         // Get the address and see it maches the network
         const address = await page.getByRole('code').textContent();
+        expect(address).not.toBeNull();
         expect(address).toMatch(/^el1/);
     });
 
@@ -432,5 +433,82 @@ test.describe('Wallet Functionality', () => {
         // Verify the transaction appears in the transactions list
         const txFound = await waitForTransactionToAppear(page, txid);
         expect(txFound).toBe(true);
+    });
+
+    test('should display payment received notification', async ({ browser }) => {
+        // Create two browser contexts to simulate different sessions
+        const context1 = await browser.newContext();
+        const context2 = await browser.newContext();
+
+        // Create pages for each context
+        const receiverPage = await context1.newPage();
+        const senderPage = await context2.newPage();
+
+        // Set up receiver wallet (first context)
+        await receiverPage.goto('/');
+        await receiverPage.waitForLoadState('networkidle');
+        await loadWallet(receiverPage);
+
+        // Navigate to receive page
+        await receiverPage.getByRole('link', { name: 'Receive' }).click();
+
+        // Wait for the receive page to load
+        await expect(receiverPage.getByRole('heading', { name: 'Receive' })).toBeVisible();
+
+        // Show the address
+        await receiverPage.getByRole('button', { name: 'Show address', exact: true }).click();
+
+        // Get the address that was generated
+        const addressText = await receiverPage.getByRole('code').textContent();
+        expect(addressText).not.toBeNull();
+        if (!addressText) {
+            throw new Error('Address text is null');
+        }
+        expect(addressText).toMatch(/^el1/);
+
+        // Set up sender wallet (second context)
+        await senderPage.goto('/');
+        await senderPage.waitForLoadState('networkidle');
+        await loadWallet(senderPage);
+
+        // Navigate to create page
+        await senderPage.getByRole('link', { name: 'Create' }).click();
+
+        // Wait for the sync to complete
+        await expect(senderPage.locator('create-transaction article[aria-busy="true"]')).not.toBeVisible();
+
+        // Fill in the recipient details with the address from the receiver
+        await senderPage.locator('#add-recipient-div input[name="address"]').fill(addressText);
+
+        // Fill in the amount field
+        await senderPage.locator('#add-recipient-div input[name="amount"]').fill('0.000042');
+
+        // Select rLBTC
+        await senderPage.locator('#add-recipient-div select[name="asset"]').selectOption({ label: 'rLBTC' });
+
+        // Click the + button to add the recipient
+        await senderPage.getByRole('button', { name: '+' }).click();
+
+        // Click create button
+        await senderPage.getByRole('button', { name: 'Create' }).click();
+
+        // Verify the PSET was created successfully and we're on the sign page
+        await expect(senderPage.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible();
+
+        // Sign and broadcast the transaction
+        const txid = await signAndBroadcastPset(senderPage);
+
+        // Verify broadcast success
+        expect(txid).toBeTruthy();
+
+        // Check for payment notification on the receiver page
+        // We may need to wait a bit for the WebSocket message to arrive
+        await expect(receiverPage.locator('.payment-notification input[value="Payment received!"]')).toBeVisible({
+            timeout: 30000 // Allow a longer timeout for the notification to appear
+        });
+
+        // Clean up
+        await context1.close();
+        await context2.close();
     });
 }); 
