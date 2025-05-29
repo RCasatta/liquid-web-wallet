@@ -1578,6 +1578,7 @@ class SignTransaction extends HTMLElement {
         this.cosignButton = this.querySelector("button.cosign")
         this.broadcastButton = this.querySelector("button.broadcast")
         this.proposalButton = this.querySelector("button.proposal")
+        this.publishButton = this.querySelector("button.publish-proposal")
         this.combineButton = this.querySelector("button.combine")
         this.saveMnemonicButton = this.querySelector("button.saveMnemonic")
 
@@ -1600,7 +1601,7 @@ class SignTransaction extends HTMLElement {
         this.cosignButton.addEventListener("click", this.handleCosignClick)
         this.proposalButton.addEventListener("click", this.handleProposal)
         this.broadcastButton.addEventListener("click", this.handleBroadcastClick)
-
+        this.publishButton.addEventListener("click", this.handlePublishProposal)
         this.combineButton.addEventListener("click", this.handleCombineClick)
 
         this.saveMnemonicButton.addEventListener("click", this.handleSaveMnemonicClick)
@@ -1936,11 +1937,59 @@ class SignTransaction extends HTMLElement {
             this.proposalText.value = proposal.toString()
             this.proposalContainer.hidden = false
 
+            // Show the publish button
+            this.publishButton.hidden = false
+
             this.messageDiv.innerHTML = success("Proposal generated!")
         } catch (error) {
             this.messageDiv.innerHTML = warning(error.toString())
         } finally {
             setBusyDisabled(this.proposalButton, false)
+        }
+    }
+
+    // Add handler for the publish proposal button
+    handlePublishProposal = async (_e) => {
+        try {
+            // Get the proposal from the textarea
+            const proposalText = this.proposalText.value.trim()
+            if (!proposalText) {
+                throw new Error("No proposal to publish")
+            }
+
+            // Set button to busy state
+            setBusyDisabled(this.publishButton, true)
+
+            // Get websocket client and send the proposal
+            const ws = websocketClient()
+
+            // Format the message for the websocket (PROPOSAL|||length|data)
+            const message = `PUBLISH_PROPOSAL|||${proposalText.length}|${proposalText}`
+
+            // Create a promise to handle the websocket connection
+            const publishPromise = new Promise((resolve, reject) => {
+                ws.onopen = () => {
+                    ws.send(message)
+                    console.log("Proposal published to websocket")
+                    resolve()
+                }
+
+                ws.onerror = (error) => {
+                    console.error("Websocket error:", error)
+                    reject(new Error("Failed to connect to server"))
+                }
+
+                // Set a timeout in case the connection hangs
+                setTimeout(() => reject(new Error("Connection timeout")), 10000)
+            })
+
+            await publishPromise
+
+            this.messageDiv.innerHTML = success("Proposal published!")
+        } catch (error) {
+            this.messageDiv.innerHTML = warning(error.toString())
+        } finally {
+            setBusyDisabled(this.publishButton, false)
         }
     }
 }
