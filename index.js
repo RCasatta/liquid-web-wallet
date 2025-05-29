@@ -502,11 +502,33 @@ class AddressView extends HTMLElement {
         this.addressQR = this.querySelector(".address-qr")
         this.addressLink = this.querySelector(".address-qr a")
         this.addressImage = this.querySelector(".address-qr img")
+        this.paymentNotification = this.querySelector(".payment-notification")
+        this.pingInterval = null
+        this.currentUnconfidential = null
 
         this.showButton.addEventListener("click", this.handleShow)
     }
 
+    disconnectedCallback() {
+        // Clear ping interval when component is removed
+        this.clearPingInterval();
+    }
+
+    clearPingInterval() {
+        if (this.pingInterval) {
+            clearInterval(this.pingInterval);
+            this.pingInterval = null;
+            console.log("Cleared websocket ping interval");
+        }
+    }
+
     displayAddress(address) {
+        // Clear any existing ping interval
+        this.clearPingInterval();
+
+        // Clear payment notification when showing a new address
+        this.paymentNotification.innerHTML = "";
+
         const addr = address.address()
         const addrString = addr.toString()
 
@@ -520,22 +542,48 @@ class AddressView extends HTMLElement {
         this.addressQR.hidden = false
 
         const unconfidential = addr.toUnconfidential().toString();
+        this.currentUnconfidential = unconfidential;
         const subscribe = `SUBSCRIBE|||${unconfidential.length}|${unconfidential}`
         console.log(subscribe)
         const ws = websocketClient();
 
-        // Setup websocket message listener - only log to console
+        // Setup websocket message listener - check for payments
         ws.onmessage = (event) => {
             console.log("Received websocket message:", event.data)
+
+            // Check if message contains the unconfidential address we're monitoring
+            if (typeof event.data === 'string' &&
+                this.currentUnconfidential &&
+                event.data.includes(this.currentUnconfidential)) {
+                // TODO: Trigger a full scan to update the wallet
+                // TODO: Here only the unconfidential address is monitored, 
+                // so if someone pay on the wrong blinding key, you still see payment received, 
+                // but you can't use those funds.
+                console.log("Payment detected for monitored address!");
+                this.paymentNotification.innerHTML = success("Payment received!");
+            }
         }
 
         ws.onopen = () => {
             ws.send(subscribe);
             console.log("Websocket connection opened and subscription sent")
+
+            // Set up a ping interval to keep the connection alive
+            this.pingInterval = setInterval(() => {
+                const ping = "PING||||";
+                ws.send(ping);
+                console.log("Sent ping to websocket");
+            }, 25000); // 25 seconds
         }
 
         ws.onerror = (error) => {
             console.error("Websocket error:", error)
+            this.clearPingInterval();
+        }
+
+        ws.onclose = () => {
+            console.log("Websocket connection closed");
+            this.clearPingInterval();
         }
     }
 
