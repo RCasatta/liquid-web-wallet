@@ -338,6 +338,7 @@ test.describe('Wallet Functionality', () => {
         // Get all options and select the first non-empty one that is not the policy asset
         const options = await utxoSelect.locator('option').all();
         let selectedOption: any = null;
+        let sellingAssetId: string = '';
 
         for (const option of options) {
             const value = await option.getAttribute('value');
@@ -345,6 +346,11 @@ test.describe('Wallet Functionality', () => {
             // Skip empty options and options containing the policy asset (LBTC or rLBTC)
             if (value && value !== '' && text && !text.includes('rLBTC')) {
                 selectedOption = option;
+                // Parse the JSON to extract the asset ID
+                if (value) {
+                    const utxoData = JSON.parse(value);
+                    sellingAssetId = utxoData.asset;
+                }
                 break;
             }
         }
@@ -361,6 +367,9 @@ test.describe('Wallet Functionality', () => {
         // Set the asset wanted to rLBTC
         await page.locator('input[name="asset_wanted"]').click();
         await page.getByRole('button', { name: 'LBTC' }).click();
+
+        // Get the buying asset ID (rLBTC in regtest)
+        const buyingAssetId = '5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225';
 
         // Set the amount wanted
         await page.locator('input[name="amount_wanted"]').fill('0.0001');
@@ -387,6 +396,74 @@ test.describe('Wallet Functionality', () => {
         const proposalText = page.locator('textarea.proposal-text');
         await expect(proposalText).toBeVisible();
         const proposalTextString = await proposalText.inputValue();
+
+        // Create WebSocket connection and subscribe to the proposal channel
+        await page.evaluateHandle(async ({ sellingAssetId, buyingAssetId }) => {
+            return new Promise((resolve) => {
+                // Create websocket - convert http to ws for the connection
+                const wsUrl = 'ws://localhost:3330/';
+                const ws = new WebSocket(wsUrl);
+
+                // Store on window object so we can access it later
+                (window as any).liquidexTestWs = ws;
+                (window as any).liquidexTestResults = [];
+
+                ws.onopen = () => {
+                    console.log('WebSocket connected');
+                    // Subscribe to the selling/buying asset pair
+                    const subscribeMsg = `SUBSCRIBE|||129|${sellingAssetId}_${buyingAssetId}`;
+                    console.log('Sending subscription:', subscribeMsg);
+                    ws.send(subscribeMsg);
+                    resolve(true);
+                };
+
+                ws.onmessage = (event) => {
+                    console.log('WebSocket message received:', event.data);
+                    (window as any).liquidexTestResults.push(event.data);
+                };
+
+                ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    resolve(false);
+                };
+            });
+        }, { sellingAssetId, buyingAssetId });
+
+        // Give the WebSocket time to connect
+        await page.waitForTimeout(1000);
+
+        // Click the Publish Proposal button
+        await page.getByRole('button', { name: 'Publish proposal' }).click();
+
+        // Wait for success message
+        await expect(page.locator('input[value="Proposal published!"]')).toBeVisible({ timeout: 10000 });
+
+        // Wait a bit for the WebSocket to receive the response
+        await page.waitForTimeout(2000);
+
+        // Get the WebSocket messages
+        const receivedMessages = await page.evaluate(() => {
+            return (window as any).liquidexTestResults || [];
+        });
+
+
+        // Verify we received at least one message and it contains "RESULT"
+        expect(receivedMessages.length).toBeGreaterThan(0);
+        expect(receivedMessages.some((msg: string) => msg.includes('RESULT'))).toBe(true);
+        const proposalReceived = receivedMessages.some(
+            (msg: string) => msg.includes(proposalTextString)
+        );
+
+        // Use a standard expect() without custom message to avoid linter issues
+        expect(proposalReceived).toBe(true);
+
+        // Clean up WebSocket
+        await page.evaluate(() => {
+            const ws = (window as any).liquidexTestWs;
+            if (ws) {
+                ws.close();
+            }
+        });
 
         // Press the disconnect button (it's actually a link)
         await page.getByRole('link', { name: 'Disconnect' }).click();
