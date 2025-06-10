@@ -447,9 +447,9 @@ test.describe('Wallet Functionality', () => {
         });
 
 
-        // Verify we received at least one message and it contains "RESULT"
+        // Verify we received at least one message and it contains "ACK"
         expect(receivedMessages.length).toBeGreaterThan(0);
-        expect(receivedMessages.some((msg: string) => msg.includes('RESULT'))).toBe(true);
+        expect(receivedMessages.some((msg: string) => msg.includes('ACK'))).toBe(true);
         const proposalReceived = receivedMessages.some(
             (msg: string) => msg.includes(proposalTextString)
         );
