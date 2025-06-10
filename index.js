@@ -2223,7 +2223,7 @@ class RegisterWallet extends HTMLElement {
 
     handleAddJade = async (_) => {
         this.addJade.setAttribute("aria-busy", true)
-        const jadePart = await getJade().keyoriginXpubBip87()
+        const jadePart = keyoriginXpubUnified(lwk.Bip.bip87())
         this.addValidParticipant(jadePart)
         this.addJade.removeAttribute("aria-busy")
     }
