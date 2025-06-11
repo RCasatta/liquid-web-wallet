@@ -80,6 +80,46 @@ async function init() {
         }
     })
 
+    if (network.isRegtest()) {
+        // Add WebSocket Jade connection functionality
+        let connectJadeWebSocket = document.getElementById("connect-jade-websocket-button")
+        connectJadeWebSocket.hidden = false
+        connectJadeWebSocket.disabled = false
+
+        connectJadeWebSocket.addEventListener("click", async (_e) => {
+            let connectJadeWebSocketMessage = document.getElementById("connect-jade-websocket-message")
+            try {
+                setBusyDisabled(connectJadeWebSocket, true)
+
+                // Connect to Jade via WebSocket on port 3331
+                const jadeWs = await new lwk.JadeWebSocket(network, "ws://localhost:3331")
+                loadingBar.setAttribute("style", "visibility: visible;")
+                connectJadeWebSocketMessage.innerHTML = warning("Connecting to Jade via WebSocket...")
+
+                // Call getVersion() and print result in console
+                const version = await jadeWs.getVersion()
+                console.log("Jade WebSocket version:", version)
+
+                // Initialize jade and collect all related data
+                const xpub = await jadeWs.getMasterXpub() // asking something that requires unlock
+                const multiWallets = await jadeWs.getRegisteredMultisigs()
+
+                // Create standard derivations for WebSocket Jade (similar to regular Jade)
+                const jadeDerivations = await jadeStandardDerivations(jadeWs)
+
+                // Set all jade-related state at once (reusing the same state as regular Jade)
+                setJade(jadeWs, xpub, multiWallets, jadeDerivations)
+
+                connectJadeWebSocketMessage.innerHTML = success("Connected to Jade via WebSocket successfully!")
+                loadingBar.setAttribute("style", "visibility: hidden;")
+            } catch (e) {
+                console.error("Error connecting to Jade via WebSocket:", e)
+                connectJadeWebSocketMessage.innerHTML = warning("Error connecting to Jade via WebSocket: " + e.message)
+                setBusyDisabled(connectJadeWebSocket, false)
+            }
+        })
+    }
+
     exampleDescriptor.addEventListener("click", (_e) => {
         if (descriptorTextarea.value == "") {
             const exampleTestnet = "ct(slip77(ac53739ddde9fdf6bba3dbc51e989b09aa8c9cdce7b7d7eddd49cec86ddf71f7),elwpkh([93970d14/84'/1'/0']tpubDC3BrFCCjXq4jAceV8k6UACxDDJCFb1eb7R7BiKYUGZdNagEhNfJoYtUrRdci9JFs1meiGGModvmNm8PrqkrEjJ6mpt6gA1DRNU8vu7GqXH/<0;1>/*))#u0y4axgs"

@@ -120,6 +120,25 @@ test.describe('Wallet Functionality', () => {
         return txid;
     }
 
+    async function signAndBroadcastPsetWithJade(page) {
+        // Press the Sign button
+        await page.getByRole('button', { name: 'Sign', exact: true }).click();
+
+        // Verify that the Signatures section displays "Has" text
+        await expect(page.locator('h3:has-text("Signatures")').locator('~div table td:has-text("Has")')).toBeVisible();
+
+        // Press the Sign button
+        await page.getByRole('button', { name: 'Broadcast', exact: true }).click();
+
+        // Verify broadcast success message appears
+        await expect(page.getByText('Tx broadcasted')).toBeVisible();
+
+        // Get the txid from the broadcast success message
+        const txElement = page.getByText('Tx broadcasted').locator('..');
+        const txid = await txElement.getByRole('textbox').inputValue();
+        return txid;
+    }
+
     async function waitForTransactionToAppear(page, txid) {
         // Navigate to transactions page
         await page.getByRole('link', { name: 'Transactions' }).click();
@@ -508,6 +527,40 @@ test.describe('Wallet Functionality', () => {
         const txid = await signAndBroadcastPset(page);
 
         // Verify the transaction appears in the transactions list
+        const txFound = await waitForTransactionToAppear(page, txid);
+        expect(txFound).toBe(true);
+    });
+
+    test('should sign a created pset with Jade', async ({ page }) => {
+        // 1. Press the connect-jade-websocket-button
+        await page.locator('#connect-jade-websocket-button').click();
+
+        // 2. Once the page load verify the present of the text e3ebcc79 (jade emulator identifier) in the page
+        await expect(page.getByRole('heading', { name: 'Wallets' })).toBeVisible();
+        await expect(page.locator('my-footer')).toContainText('e3ebcc79');
+
+        // 3. Select wallet: chose Wpkh option
+        await page.locator('wallet-selector select').selectOption('Wpkh');
+        await expect(page.getByRole('heading', { name: 'Balance' })).toBeVisible();
+        await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible();
+
+        // 4. Go to create page
+        await page.getByRole('link', { name: 'Create' }).click();
+        await expect(page.getByRole('heading', { name: 'Create' })).toBeVisible();
+        await expect(page.locator('create-transaction article[aria-busy="true"]')).not.toBeVisible();
+
+        // 5. Send 0.000001 rLBTC to el1qqwmdgx74h58nfufxvvmm2ny8evkc6fv39h682u0jtpurq6969jwlvv6fyn40gm5qd6rtx5m6ztupt9grp4e6wq47g0thyayh7 press + and create, should bring you to the sign page
+        await page.locator('#add-recipient-div input[name="address"]').fill('el1qqwmdgx74h58nfufxvvmm2ny8evkc6fv39h682u0jtpurq6969jwlvv6fyn40gm5qd6rtx5m6ztupt9grp4e6wq47g0thyayh7');
+        await page.locator('#add-recipient-div input[name="amount"]').fill('0.000001');
+        await page.locator('#add-recipient-div select[name="asset"]').selectOption({ label: 'rLBTC' });
+        await page.getByRole('button', { name: '+' }).click();
+        await page.getByRole('button', { name: 'Create' }).click();
+        await expect(page.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible();
+
+        // 6. Press sign & 7. Press broadcast
+        const txid = await signAndBroadcastPsetWithJade(page);
+
+        // 8. Verify the transasctions created is in the list
         const txFound = await waitForTransactionToAppear(page, txid);
         expect(txFound).toBe(true);
     });
