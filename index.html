@@ -347,9 +347,24 @@
         <section>
             <h2>Sign</h2>
             <sign-transaction>
-                <label>PSET
-                    <textarea></textarea>
-                </label>
+                <div style="position: relative;">
+                    <label>PSET
+                        <textarea></textarea>
+                    </label>
+                    <div
+                        style="position: absolute; top: 1.5rem; right: 0.5rem; display: flex; gap: 0.5rem; padding: 0.5rem;">
+                        <a href="#" class="download-pset-icon" data-tooltip="Download PSET" aria-label="Download PSET"
+                            style="color: var(--pico-contrast); text-decoration: none; font-size: 1.5rem;">
+                            📥
+                        </a>
+                        <label for="upload-pset-input" class="upload-pset-icon"
+                            style="margin-bottom: 0; cursor: pointer; color: var(--pico-contrast); display: inline-flex; align-items: center; font-size: 1.5rem;"
+                            data-tooltip="Upload PSET" aria-label="Upload PSET">
+                            📤
+                        </label>
+                    </div>
+                </div>
+                <input type="file" id="upload-pset-input" hidden>
                 <div class="contract-section" hidden>
                     <label>Contract
                         <textarea></textarea>

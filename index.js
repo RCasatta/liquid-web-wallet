@@ -1577,6 +1577,8 @@ class SignTransaction extends HTMLElement {
         this.signButton = this.querySelector("button.sign")
         this.cosignButton = this.querySelector("button.cosign")
         this.broadcastButton = this.querySelector("button.broadcast")
+        this.downloadPsetButton = this.querySelector("a.download-pset-icon")
+        this.uploadPsetFile = this.querySelector("#upload-pset-input")
         this.proposalButton = this.querySelector("button.proposal")
         this.publishButton = this.querySelector("button.publish-proposal")
         this.combineButton = this.querySelector("button.combine")
@@ -1601,6 +1603,8 @@ class SignTransaction extends HTMLElement {
         this.cosignButton.addEventListener("click", this.handleCosignClick)
         this.proposalButton.addEventListener("click", this.handleProposal)
         this.broadcastButton.addEventListener("click", this.handleBroadcastClick)
+        this.downloadPsetButton.addEventListener("click", this.handleDownloadPset)
+        this.uploadPsetFile.addEventListener("change", this.handleUploadPset)
         this.publishButton.addEventListener("click", this.handlePublishProposal)
         this.combineButton.addEventListener("click", this.handleCombineClick)
 
@@ -1991,6 +1995,43 @@ class SignTransaction extends HTMLElement {
         } finally {
             setBusyDisabled(this.publishButton, false)
         }
+    }
+
+    handleDownloadPset = (e) => {
+        e.preventDefault()
+        const psetText = this.pset.value
+        if (!psetText) {
+            this.messageDiv.innerHTML = warning("PSET is empty, nothing to download.")
+            return
+        }
+        const blob = new Blob([psetText], { type: "text/plain" })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = "pset.txt"
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+    }
+
+    handleUploadPset = (e) => {
+        const file = e.target.files[0]
+        if (!file) {
+            return
+        }
+        const reader = new FileReader()
+        reader.onload = (event) => {
+            const content = event.target.result
+            this.pset.value = content
+            this.renderAnalyze()
+            this.messageDiv.innerHTML = success("PSET loaded successfully.")
+        }
+        reader.onerror = (error) => {
+            this.messageDiv.innerHTML = warning(`Error reading file: ${error}`)
+        }
+        reader.readAsText(file)
+        e.target.value = "" // Reset file input
     }
 }
 
