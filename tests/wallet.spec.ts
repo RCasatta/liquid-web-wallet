@@ -641,4 +641,72 @@ test.describe('Wallet Functionality', () => {
         await context1.close();
         await context2.close();
     });
+
+    test('should create multisignature wallet between Jade and abandon wallet', async ({ browser }) => {
+        // Create two browser contexts to simulate different sessions
+        const context1 = await browser.newContext();
+        const context2 = await browser.newContext();
+
+        // Create pages for each context
+        const abandonPage = await context1.newPage();
+        const jadePage = await context2.newPage();
+
+        // Set up abandon wallet (first context)
+        await abandonPage.goto('/');
+        await abandonPage.waitForLoadState('networkidle');
+        await loadWallet(abandonPage);
+
+        // Navigate to wallet page by clicking the Wallet link in the footer
+        await abandonPage.getByRole('link', { name: 'Wallet' }).click();
+
+        // Wait for the wallet page to load
+        await expect(abandonPage.locator('wallet-descriptor h2')).toHaveText('Wallet');
+
+        // Get the Bip87 xpub with keyorigin
+        const bip87Xpub = await abandonPage.locator('wallet-xpubs textarea').nth(2).inputValue();
+        expect(bip87Xpub).toMatch(/^\[.*\]tpub/);
+
+        // Set up Jade wallet (second context)
+        await jadePage.goto('/');
+        await jadePage.waitForLoadState('networkidle');
+
+        // Connect to Jade emulator
+        await jadePage.locator('#connect-jade-websocket-button').click();
+        await expect(jadePage.getByRole('heading', { name: 'Wallets' })).toBeVisible();
+        await expect(jadePage.locator('my-footer')).toContainText('e3ebcc79');
+
+        // Click on "New multisig wallet on Jade" link
+        await jadePage.getByRole('link', { name: 'New multisig wallet on Jade' }).click();
+
+        // Wait for the register wallet page to load
+        await expect(jadePage.getByRole('heading', { name: 'New multisig wallet' })).toBeVisible();
+
+        // Set threshold to 2
+        await jadePage.locator('input[placeholder="Threshold"]').fill('2');
+
+        // Add the abandon wallet's xpub
+        await jadePage.locator('input[placeholder="Keyorigin Xpub"]').fill(bip87Xpub);
+        await jadePage.getByRole('button', { name: 'Add', exact: true }).click();
+
+        // Add connected Jade
+        await jadePage.getByRole('button', { name: 'Add connected Jade' }).click();
+
+        // Create the multisig wallet
+        await jadePage.getByRole('button', { name: 'Create' }).click();
+
+        // Get the generated descriptor
+        const descriptor = await jadePage.locator('textarea[placeholder="Descriptor"]').inputValue();
+        expect(descriptor).toMatch(/^ct\(slip77\([0-9a-f]{64}\),elwsh\(multi\(2,/);
+
+        // Register the wallet on Jade
+        await jadePage.locator('input[placeholder="Wallet name"]').fill('multi');
+        await jadePage.getByRole('button', { name: 'Register' }).click();
+
+        // Wait for success message
+        await expect(jadePage.locator('register-wallet div.message input')).toHaveValue('Wallet registered on the Jade!', { timeout: 15000 });
+
+        // Clean up
+        await context1.close();
+        await context2.close();
+    });
 }); 
