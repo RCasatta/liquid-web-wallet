@@ -647,6 +647,9 @@ test.describe('Wallet Functionality', () => {
         const context1 = await browser.newContext();
         const context2 = await browser.newContext();
 
+        // Descriptor for the multisig wallet, we are using this instead of the generated one to ensure the blinding key is always the same
+        const descriptor = "ct(slip77(74819a3e39ffccee0218f9f2164998e01c8fb0797017d62800761f466dd84b51),elwsh(multi(2,[73c5da0a/87h/1h/0h]tpubDCChhoz5Qdrkn7Z7KXawq6Ad6r3A4MUkCoVTqeWxfTkA6bHNJ3CHUEtALQdkNeixNz4446PcAmw4WKcj3mV2vb29H7sg9EPzbyCU1y2merw/<0;1>/*,[e3ebcc79/87h/1h/0h]tpubDDJ2wnPWhEeV4yxmgoe1YdjxffXP2QTuoVQ1wCGgyFyxZLLKbzXVijZoAXbhkNVJoMVp2UKW1V5NXxdYgENwvx2T4652P4wTxLM1ycTppcu/<0;1>/*)))#7ys7fhah"
+
         // Create pages for each context
         const abandonPage = await context1.newPage();
         const jadePage = await context2.newPage();
@@ -665,6 +668,9 @@ test.describe('Wallet Functionality', () => {
         // Get the Bip87 xpub with keyorigin
         const bip87Xpub = await abandonPage.locator('wallet-xpubs textarea').nth(2).inputValue();
         expect(bip87Xpub).toMatch(/^\[.*\]tpub/);
+
+        // Check that the descriptor contains the abandon wallet's xpub
+        expect(descriptor).toContain(bip87Xpub);
 
         // Set up Jade wallet (second context)
         await jadePage.goto('/');
@@ -691,12 +697,20 @@ test.describe('Wallet Functionality', () => {
         // Add connected Jade
         await jadePage.getByRole('button', { name: 'Add connected Jade' }).click();
 
+        // Get Jade's xpub from the participant list
+        const jadeXpub = await jadePage.locator('input.participant').last().inputValue();
+        // Check that the descriptor contains Jade's xpub
+        expect(descriptor).toContain(jadeXpub);
+
         // Create the multisig wallet
         await jadePage.getByRole('button', { name: 'Create' }).click();
 
-        // Get the generated descriptor
-        const descriptor = await jadePage.locator('textarea[placeholder="Descriptor"]').inputValue();
-        expect(descriptor).toMatch(/^ct\(slip77\([0-9a-f]{64}\),elwsh\(multi\(2,/);
+        // Get the generated descriptor, we are checking it out, but use the fixed one so that the blinding key is always the same
+        const generatedDescriptor = await jadePage.locator('textarea[placeholder="Descriptor"]').inputValue();
+        expect(generatedDescriptor).toMatch(/^ct\(slip77\([0-9a-f]{64}\),elwsh\(multi\(2,/);
+
+        // Replace the generated descriptor with the fixed one
+        await jadePage.locator('textarea[placeholder="Descriptor"]').fill(descriptor);
 
         // Register the wallet on Jade
         await jadePage.locator('input[placeholder="Wallet name"]').fill('multi');
@@ -704,6 +718,47 @@ test.describe('Wallet Functionality', () => {
 
         // Wait for success message
         await expect(jadePage.locator('register-wallet div.message input')).toHaveValue('Wallet registered on the Jade!', { timeout: 15000 });
+
+        // Reload page and reconnect to Jade
+        await jadePage.reload();
+        await jadePage.waitForLoadState('networkidle');
+        await jadePage.locator('#connect-jade-websocket-button').click();
+        await expect(jadePage.getByRole('heading', { name: 'Wallets' })).toBeVisible();
+        await expect(jadePage.locator('my-footer')).toContainText('e3ebcc79');
+
+        // Select the multisig wallet
+        await jadePage.locator('wallet-selector select').selectOption('multi');
+        await expect(jadePage.getByRole('heading', { name: 'Balance' })).toBeVisible();
+        await expect(jadePage.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible();
+
+        // Create a transaction
+        await jadePage.getByRole('link', { name: 'Create' }).click();
+        await expect(jadePage.getByRole('heading', { name: 'Create' })).toBeVisible();
+        await expect(jadePage.locator('create-transaction article[aria-busy="true"]')).not.toBeVisible();
+
+        // Fill in transaction details
+        await jadePage.locator('#add-recipient-div input[name="address"]').fill('el1qqwmdgx74h58nfufxvvmm2ny8evkc6fv39h682u0jtpurq6969jwlvv6fyn40gm5qd6rtx5m6ztupt9grp4e6wq47g0thyayh7');
+        await jadePage.locator('#add-recipient-div input[name="amount"]').fill('0.000001');
+        await jadePage.locator('#add-recipient-div select[name="asset"]').selectOption({ label: 'rLBTC' });
+        await jadePage.getByRole('button', { name: '+' }).click();
+        await jadePage.getByRole('button', { name: 'Create' }).click();
+
+        // Wait for sign page and sign with Jade
+        await expect(jadePage.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible();
+        await jadePage.getByRole('button', { name: 'Sign', exact: true }).click();
+        await expect(jadePage.locator('h3:has-text("Signatures")').locator('~div table td:has-text("Has")')).toBeVisible();
+
+        // Get the PSET
+        const pset = await jadePage.locator('sign-transaction textarea').first().inputValue();
+
+        // Switch to abandon wallet and sign/broadcast
+        await abandonPage.getByRole('link', { name: 'Sign' }).click();
+        await expect(abandonPage.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible();
+        await abandonPage.locator('sign-transaction textarea').first().fill(pset);
+        await abandonPage.getByRole('button', { name: 'Sign', exact: true }).click();
+        await expect(abandonPage.locator('h3:has-text("Signatures")').locator('~div table td:has-text("Has")')).toBeVisible();
+        await abandonPage.getByRole('button', { name: 'Broadcast', exact: true }).click();
+        await expect(abandonPage.getByText('Tx broadcasted')).toBeVisible();
 
         // Clean up
         await context1.close();
