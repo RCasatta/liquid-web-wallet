@@ -31,6 +31,9 @@ const _state = {
     pset: null, // Current PSET being worked on
     contract: null, // lwk.RegistryPost (contract, asset_id) - last issued contract
 
+    // Registry state
+    registry: null, // lwk.Registry instance
+
     // Developer mode state
     devMode: false // Whether developer mode is enabled
 };
@@ -220,6 +223,16 @@ export function getContract() {
 export function setContract(contract) {
     _state.contract = contract;
     return _state.contract;
+}
+
+// Registry state management
+export function getRegistry() {
+    return _state.registry;
+}
+
+export function setRegistry(registry) {
+    _state.registry = registry;
+    return _state.registry;
 }
 
 // Dev mode state management

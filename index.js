@@ -7,6 +7,7 @@ import {
     getWollet, setWollet, getWolletSelected, setWolletSelected,
     getScanState, setScanRunning, getScanLoop, setScanLoop,
     getSwSigner, setSwSigner, getPset, setPset, getContract, setContract,
+    getRegistry, setRegistry,
     getDevMode, setDevMode,
     subscribe, publish
 } from './state.js'
@@ -28,6 +29,9 @@ const AMP2_DATA_KEY_PREFIX = "amp2_data_v2_"
 /// Re-enables initially disabled buttons, and add listener to buttons on the first page
 /// First page doesn't use components because we want to be loaded before the wasm is loaded, which takes time
 async function init() {
+    // Initialize registry with default for network
+    setRegistry(lwk.Registry.defaultForNetwork(network));
+
     let connectJade = document.getElementById("connect-jade-button")
     let descriptorTextarea = document.getElementById("descriptor-textarea")
     let descriptorMessage = document.getElementById("descriptor-message")
@@ -1117,7 +1121,7 @@ class CreateTransaction extends HTMLElement {
         try {
             const esplora = esploraClient()
             const assetId = new lwk.AssetId(this.reissuanceAssetId.value)
-            const registry = lwk.Registry.defaultForNetwork(network);
+            const registry = getRegistry();
             const assetInfo = await registry.fetchWithTx(assetId, esplora)
             console.log(`assetId: ${assetId.toString()}`)
             console.log(`contract: ${assetInfo.contract().toString()}`)
@@ -2633,7 +2637,7 @@ function encodeRFC3986URIComponent(str) {
 
 async function broadcastContract(contract) {
     try {
-        const registry = lwk.Registry.defaultForNetwork(network);
+        const registry = getRegistry();
         const result = await registry.post(contract);
         console.log(result)
         console.log('Asset registered successfully');
