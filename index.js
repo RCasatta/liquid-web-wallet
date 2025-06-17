@@ -1137,13 +1137,7 @@ class CreateTransaction extends HTMLElement {
             if (this.reissuanceAddress.value.trim() === "") {
                 address = getWollet().address(null).address()
             } else {
-                address = new lwk.Address(this.reissuanceAddress.value)
-                if (!address.isBlinded()) {
-                    throw new Error('Address is not confidential')
-                }
-                if (network.isMainnet() != address.isMainnet()) {
-                    throw new Error("Invalid address network")
-                }
+                address = lwk.Address.parse(this.reissuanceAddress.value, network)
             }
 
             // Build the reissuance transaction
@@ -1450,13 +1444,7 @@ class CreateTransaction extends HTMLElement {
         this.addressInput.setAttribute("aria-invalid", false)
         var recipientAddress
         try {
-            recipientAddress = new lwk.Address(this.addressInput.value)
-            if (!recipientAddress.isBlinded()) {
-                throw new Error('Address is not confidential')
-            }
-            if (network.isMainnet() != recipientAddress.isMainnet()) {
-                throw new Error("Invalid address network")
-            }
+            recipientAddress = lwk.Address.parse(this.addressInput.value, network)
         } catch (e) {
             this.addressInput.setAttribute("aria-invalid", true)
             inputsValid += e.toString() + ". "
