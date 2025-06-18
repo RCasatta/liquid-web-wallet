@@ -6,7 +6,7 @@
     "testnet": "sed -i 's/const network = lwk\\.Network\\.[^(]\\+()\\?/const network = lwk.Network.testnet()/g' index.js",
     "regtest": "sed -i 's/const network = lwk\\.Network\\.[^(]\\+()\\?/const network = lwk.Network.regtestDefault()/g' index.js",
     "check-release-build": "node ./scripts/check-wasm-build.js",
-    "add-git-hash": "echo \"<!-- Git commit: $(git rev-parse HEAD) -->\" >> index.html",
+    "add-git-hash": "echo \"\n<!-- Git commit: $(git rev-parse HEAD) -->\" >> index.html",
     "remove-git-hash": "grep -v 'Git commit:' index.html > index.html.tmp && mv index.html.tmp index.html",
     "deploy-mainnet": "npm run check-release-build && npm run mainnet && npm run build && npm run sync-mainnet",
     "deploy-testnet": "npm run check-release-build && npm run testnet && npm run build && npm run sync-testnet",
