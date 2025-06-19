@@ -232,6 +232,7 @@ export function getRegistry() {
 
 export function setRegistry(registry) {
     _state.registry = registry;
+    publish('registry-changed', registry);
     return _state.registry;
 }
 

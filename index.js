@@ -18,7 +18,7 @@ jsQRScript.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 document.head.appendChild(jsQRScript);
 
 // Network setup (remains global as it's a configuration not state)
-const network = lwk.Network.regtestDefault()
+const network = lwk.Network.mainnet()
 
 // Reference to the main application container
 const app = document.getElementById('app')
@@ -29,8 +29,6 @@ const AMP2_DATA_KEY_PREFIX = "amp2_data_v2_"
 /// Re-enables initially disabled buttons, and add listener to buttons on the first page
 /// First page doesn't use components because we want to be loaded before the wasm is loaded, which takes time
 async function init() {
-    // Initialize registry with default for network
-    setRegistry(lwk.Registry.defaultForNetwork(network));
 
     let connectJade = document.getElementById("connect-jade-button")
     let descriptorTextarea = document.getElementById("descriptor-textarea")
@@ -43,6 +41,9 @@ async function init() {
     if (getDevMode()) {
         console.log("Dev mode is enabled");
     }
+
+    const registry = lwk.Registry.defaultHardcodedForNetwork(network)
+    setRegistry(registry)
 
     devMode.checked = getDevMode()
 
@@ -2505,6 +2506,7 @@ async function fullScanAndApply(wolletLocal, scanState) {
                         alert("Attempt to store too much data in the local storage, skipping")
                     }
                 }
+                await fetchRegistry()
             }
 
             // Publish a scan-end event instead of dispatching a DOM event
@@ -2606,25 +2608,25 @@ function parsePrecision(assetHex, value) {
 }
 
 function _mapAssetHex(assetHex) {
-    switch (assetHex) {
-        case "6f0279e9ed041c3d710a9f57d0c02928416460c4b722ae3457a11eec381c526d": return ["LBTC", 8]
-        case "fee": return ["fee", 8]
-        case "144c654344aa716d6f3abcc1ca90e5641e4e2a7f633bc09fe3baf64585819a49": return ["tLBTC", 8]
+    if (assetHex == "fee") {
+        // TODO: handle fee in different assets
+        return ["fee", 8]
+    }
+    const registry = getRegistry()
+    if (registry == null) {
+        return [assetHex, 0]
+    }
+    try {
+        const assetId = new lwk.AssetId(assetHex)
+        const asset = registry.get(assetId)
 
-        case "5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225": return ["rLBTC", 8]
-
-        case "ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2": return ["USDt", 8]
-        case "0e99c1a6da379d1f4151fb9df90449d40d0608f6cb33a5bcbfc8c265f42bab0a": return ["LCAD", 8]
-        case "18729918ab4bca843656f08d4dd877bed6641fbd596a0a963abbf199cfeb3cec": return ["EURx", 8]
-        case "78557eb89ea8439dc1a519f4eb0267c86b261068648a0f84a5c6b55ca39b66f1": return ["B-JDE", 0]
-        case "11f91cb5edd5d0822997ad81f068ed35002daec33986da173461a8427ac857e1": return ["BMN1", 2]
-        case "52d77159096eed69c73862a30b0d4012b88cedf92d518f98bc5fc8d34b6c27c9": return ["EXOeu", 0]
-        case "9c11715c79783d7ba09ecece1e82c652eccbb8d019aec50cf913f540310724a6": return ["EXOus", 0]
-        case "38fca2d939696061a8f76d4e6b5eecd54e3b4221c846f24a6b279e79952850a5": return ["TEST", 3] // testnet
-
-        case "26ac924263ba547b706251635550a8649545ee5c074fe5db8d7140557baaf32e": return ["MEX", 8]
-
-        default: return [assetHex, 0]
+        if (asset) {
+            return [asset.ticker(), asset.precision()]
+        } else {
+            return [assetHex, 0]
+        }
+    } catch (error) {
+        return [assetHex, 0]
     }
 }
 
@@ -2695,5 +2697,18 @@ async function checkTickerAvailability(ticker) {
         console.error("Error checking ticker availability:", error);
         // If there's an error in the check, we'll allow the ticker
         return true;
+    }
+}
+
+async function fetchRegistry() {
+    // Fetch assets metadata from the registry
+    console.log("fetching Registry")
+    const wollet = getWollet()
+    try {
+        const assetsOwned = wollet.assetsOwned()
+        const registry = await lwk.Registry.defaultForNetwork(network, assetsOwned)
+        setRegistry(registry)
+    } catch (error) {
+        console.error('Failed to initialize registry:', error)
     }
 }
