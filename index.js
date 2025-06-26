@@ -18,7 +18,7 @@ jsQRScript.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 document.head.appendChild(jsQRScript);
 
 // Network setup (remains global as it's a configuration not state)
-const network = lwk.Network.mainnet()
+const network = lwk.Network.regtestDefault()
 
 // Reference to the main application container
 const app = document.getElementById('app')

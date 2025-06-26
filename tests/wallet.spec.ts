@@ -66,12 +66,15 @@ test.describe('Wallet Functionality', () => {
         // Open the issuance details section
         await page.getByRole('button', { name: 'Issuance', exact: true }).click();
 
+        // Generate a random ticker
+        const ticker = [...Array(5)].map(() => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[Math.floor(Math.random() * 36)]).join('');
+
         // Fill in the issuance form
         await page.locator('input[name="asset_amount"]').fill('1000');
         await page.locator('input[name="token_amount"]').fill('1');
         await page.locator('input[name="domain"]').fill('liquidtestnet.com');
         await page.locator('input[name="name"]').fill('Test Asset');
-        await page.locator('input[name="ticker"]').fill([...Array(5)].map(() => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[Math.floor(Math.random() * 36)]).join(''));
+        await page.locator('input[name="ticker"]').fill(ticker);
         await page.locator('input[name="precision"]').fill('8');
 
         // Click the Issue assets button
@@ -95,7 +98,7 @@ test.describe('Wallet Functionality', () => {
         const contract = JSON.parse(contractJson);
         const assetId = contract.asset_id;
 
-        return { assetId, contract };
+        return { assetId, contract, ticker };
     }
 
     async function signAndBroadcastPset(page) {
@@ -175,18 +178,18 @@ test.describe('Wallet Functionality', () => {
         return false;
     }
 
-    async function checkAssetBalance(page, assetId, expectedAmount) {
+    async function checkAssetBalance(page, ticker, expectedAmount) {
         // Navigate to balance page to verify total amount
         await page.getByRole('link', { name: 'Balance' }).click();
 
         // Wait for balance to load
         await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible();
 
-        // Find the specific row containing our asset ID and verify the amount
-        const assetRow = page.locator(`wallet-balance table tr:has-text("${assetId}")`);
+        // Find the specific row containing our ticker and verify the amount
+        const assetRow = page.locator(`wallet-balance table tr:has-text("${ticker}")`);
         await expect(assetRow).toBeVisible();
         const assetAmount = await assetRow.locator('td:last-child').textContent();
-        expect(assetAmount?.trim()).toBe(expectedAmount.toString());
+        expect(assetAmount?.trim()).toBe(expectedAmount);
     }
 
     test('should show wallet navigation options', async ({ page }) => {
@@ -256,7 +259,7 @@ test.describe('Wallet Functionality', () => {
 
     test('issuance/reissuance/burn', async ({ page }) => {
         await loadWallet(page);
-        const { assetId } = await createIssuancePset(page);
+        const { assetId, ticker } = await createIssuancePset(page);
         const txid = await signAndBroadcastPset(page);
 
         // Look for an input element with this value instead of direct text
@@ -291,7 +294,7 @@ test.describe('Wallet Functionality', () => {
         expect(txFoundReissuance).toBe(true);
 
         // Check balance after reissuance
-        await checkAssetBalance(page, assetId, 1500); // 1000 from issuance + 500 from reissuance
+        await checkAssetBalance(page, ticker, "0.00001500"); // 1000 from issuance + 500 from reissuance
 
         // Navigate to create page for burn
         await page.getByRole('link', { name: 'Create' }).click();
@@ -304,10 +307,10 @@ test.describe('Wallet Functionality', () => {
 
         const detailsBurn = page.locator('details.burn-assets');
         // Fill in the burn form
-        await detailsBurn.locator('input[name="amount"]').fill('300');
+        await detailsBurn.locator('input[name="amount"]').fill('0.00000300');
 
         // Select the asset id
-        await detailsBurn.locator('select[name="asset"]').selectOption({ label: assetId });
+        await detailsBurn.locator('select[name="asset"]').selectOption({ label: ticker });
 
         // Click the + button
         await detailsBurn.getByRole('button', { name: '+' }).click();
@@ -324,7 +327,7 @@ test.describe('Wallet Functionality', () => {
         expect(txFoundBurn).toBe(true);
 
         // Check balance after burn
-        await checkAssetBalance(page, assetId, 1200); // 1000 from issuance + 500 from reissuance - 300 burn
+        await checkAssetBalance(page, ticker, "0.00001200"); // 1000 from issuance + 500 from reissuance - 300 burn
     });
 
     test('should make and take a liquidex swap proposal', async ({ page }) => {
