@@ -19,7 +19,7 @@ jsQRScript.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 document.head.appendChild(jsQRScript);
 
 // Network setup (remains global as it's a configuration not state)
-const network = lwk.Network.regtestDefault()
+const network = lwk.Network.testnet()
 
 // Reference to the main application container
 const app = document.getElementById('app')
@@ -2356,6 +2356,34 @@ function useCodeIfNecessary(value) {
     }
 }
 
+
+const DEFAULT_IMG = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iMTYiIGZpbGw9IiNlNWU3ZWIiLz4KPHN2ZyB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHZpZXdCb3g9IjAgMCAxNiAxNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4PSI4IiB5PSI4Ij4KPHBhdGggZD0iTTggMTRBNiA2IDAgMSAwIDggMkE2IDYgMCAwIDAgOCAxNFpNOCA0QTQgNCAwIDEgMSA4IDEyQTQgNCAwIDAgMSA4IDRaIiBmaWxsPSIjOWNhM2FmIi8+CjxwYXRoIGQ9Ik04IDZBMiAyIDAgMSAwIDggMTBBMiAyIDAgMCAwIDggNloiIGZpbGw9IiM5Y2EzYWYiLz4KPC9zdmc+Cjwvc3ZnPgo=';
+var notfound = new Set()
+function createAssetIconCell(assetId) {
+    let iconCell = document.createElement("td")
+    let icon = document.createElement("img")
+    icon.width = 64
+    icon.height = 64
+
+    if (notfound.has(assetId)) {
+        icon.src = DEFAULT_IMG
+    } else {
+        icon.src = iconUrl(assetId)
+        // Add error handler for fallback image
+        icon.onerror = function () {
+            // Set a default image when the original fails to load
+            this.src = DEFAULT_IMG
+            // Remove the onerror handler to prevent infinite loop if default image also fails
+            this.onerror = null
+            // Add the assetId to the notfound set so that we don't keep trying to load it
+            notfound.add(assetId)
+        }
+    }
+
+    iconCell.appendChild(icon)
+    return iconCell
+}
+
 function mapToTable(map) {
     let div = document.createElement("div")
     div.setAttribute("class", "overflow-auto")
@@ -2373,15 +2401,15 @@ function mapToTable(map) {
             let newRow = document.createElement("tr")
             table.appendChild(newRow)
 
+            let iconCell = createAssetIconCell(key)
+            newRow.appendChild(iconCell)
+
             let asset = document.createElement("td")
-
             asset.innerHTML = useCodeIfNecessary(mapAssetTicker(key))
-
             newRow.appendChild(asset)
 
             let secondCell = document.createElement("td")
             secondCell.setAttribute("style", "text-align:right")
-
             secondCell.innerHTML = useCodeIfNecessary(val)
 
             newRow.appendChild(secondCell)
@@ -2389,7 +2417,6 @@ function mapToTable(map) {
     }
     return div
 }
-
 
 function loadPersisted(wolletLocal) {
     const descriptor = wolletLocal.descriptor()
@@ -2721,5 +2748,15 @@ async function fetchRegistry() {
         publish('registry-fetched', null)
     } catch (error) {
         console.error('Failed to initialize registry:', error)
+    }
+}
+
+function iconUrl(assetId) {
+    if (network.isMainnet()) {
+        return `https://waterfalls.liquidwebwallet.org/icons/mainnet/${assetId}.png`
+    } else if (network.isTestnet()) {
+        return `https://waterfalls.liquidwebwallet.org/icons/testnet/${assetId}.png`
+    } else {
+        return `http://localhost:3000/icons/${assetId}.png`
     }
 }
