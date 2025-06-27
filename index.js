@@ -713,7 +713,7 @@ class WalletBalance extends HTMLElement {
 
         // Subscribe to scan state changes instead of using document events
         this.subscriptions.push(
-            subscribe('scan-state-changed', this.render)
+            subscribe('scan-update', this.render)
         );
 
         this.faucetRequest.addEventListener('click', this.handleFaucetRequest)
@@ -2486,6 +2486,8 @@ async function fullScanAndApply(wolletLocal, scanState) {
             var update = await client.fullScan(wolletLocal)
 
             if (update instanceof lwk.Update) {
+                console.log("update")
+                publish('scan-update', update)
                 updated = true
                 const walletStatus = wolletLocal.status()
                 wolletLocal.applyUpdate(update)
