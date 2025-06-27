@@ -9,6 +9,7 @@ import {
     getSwSigner, setSwSigner, getPset, setPset, getContract, setContract,
     getRegistry, setRegistry,
     getDevMode, setDevMode,
+    getRegistryFetched, setRegistryFetched,
     subscribe, publish
 } from './state.js'
 
@@ -713,7 +714,8 @@ class WalletBalance extends HTMLElement {
 
         // Subscribe to scan state changes instead of using document events
         this.subscriptions.push(
-            subscribe('scan-update', this.render)
+            subscribe('scan-update', this.render),
+            subscribe('registry-fetched', this.render)
         );
 
         this.faucetRequest.addEventListener('click', this.handleFaucetRequest)
@@ -739,6 +741,7 @@ class WalletBalance extends HTMLElement {
     }
 
     render = () => {
+        console.log("render balance")
         const wollet = getWollet();
         if (!wollet || wollet.neverScanned()) {
             return
@@ -2483,7 +2486,7 @@ async function fullScanAndApply(wolletLocal, scanState) {
         let client = esploraClient()
 
         try {
-            var update = await client.fullScan(wolletLocal)
+            const update = await client.fullScan(wolletLocal)
 
             if (update instanceof lwk.Update) {
                 console.log("update")
@@ -2508,7 +2511,11 @@ async function fullScanAndApply(wolletLocal, scanState) {
                         alert("Attempt to store too much data in the local storage, skipping")
                     }
                 }
-                await fetchRegistry()
+
+            }
+            if (!getRegistryFetched()) {
+                setRegistryFetched(true)
+                fetchRegistry()
             }
 
             // Publish a scan-end event instead of dispatching a DOM event
@@ -2643,6 +2650,7 @@ async function broadcastContract(contract) {
     try {
         const registry = getRegistry();
         const result = await registry.post(contract);
+        await fetchRegistry() // update our view of the registry
         console.log(result)
         console.log('Asset registered successfully');
         return true; // Success
@@ -2710,6 +2718,7 @@ async function fetchRegistry() {
         const assetsOwned = wollet.assetsOwned()
         const registry = await lwk.Registry.defaultForNetwork(network, assetsOwned)
         setRegistry(registry)
+        publish('registry-fetched', null)
     } catch (error) {
         console.error('Failed to initialize registry:', error)
     }

@@ -33,6 +33,7 @@ const _state = {
 
     // Registry state
     registry: null, // lwk.Registry instance
+    registryFetched: false, // Whether registry has been fetched
 
     // Developer mode state
     devMode: false // Whether developer mode is enabled
@@ -252,6 +253,16 @@ export function setDevMode(isDevMode) {
     publish('dev-mode-changed', _state.devMode);
 
     return _state.devMode;
+}
+
+// Registry fetched state management
+export function getRegistryFetched() {
+    return _state.registryFetched;
+}
+
+export function setRegistryFetched(isFetched) {
+    _state.registryFetched = isFetched === true;
+    return _state.registryFetched;
 }
 
 // Future state management functions will be added here 
