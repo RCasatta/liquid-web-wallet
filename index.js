@@ -19,7 +19,7 @@ jsQRScript.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 document.head.appendChild(jsQRScript);
 
 // Network setup (remains global as it's a configuration not state)
-const network = lwk.Network.testnet()
+const network = lwk.Network.mainnet()
 
 // Reference to the main application container
 const app = document.getElementById('app')
@@ -2349,7 +2349,9 @@ function useCodeIfNecessary(value) {
     } else {
         try {
             new lwk.AssetId(value)
-            return `<code>${value}</code>`
+            // Asset hex is 64 characters - wrap in div with word-break for line wrapping
+            // while keeping it selectable as one unit
+            return `<div style="word-break: break-word"><code>${value}</code></div>`
         } catch (_) {
             return value
         }
