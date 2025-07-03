@@ -1350,7 +1350,9 @@ class CreateTransaction extends HTMLElement {
                     builder = builder.addRecipient(recipientAddress, satoshis, recipientAsset)
                 }
             }
-            setPset(builder.finish(getWollet()))
+            const pset = builder.finish(getWollet())
+            const psetWithContracts = getRegistry().addContracts(pset);
+            setPset(psetWithContracts)
 
         } catch (e) {
             this.messageCreate.innerHTML = warning(e)
