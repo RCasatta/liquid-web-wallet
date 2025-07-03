@@ -1154,7 +1154,9 @@ class CreateTransaction extends HTMLElement {
                 address,
                 assetInfo.tx()
             )
-            setPset(builder.finish(getWollet()))
+            const reissuePset = builder.finish(getWollet())
+            const reissuePsetWithContracts = getRegistry().addContracts(reissuePset);
+            setPset(reissuePsetWithContracts)
 
         } catch (e) {
             this.messageReissuance.innerHTML = warning(e)
