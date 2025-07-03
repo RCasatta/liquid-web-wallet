@@ -2661,7 +2661,13 @@ function _mapAssetHex(assetHex) {
         if (asset) {
             return [asset.ticker(), asset.precision()]
         } else {
-            return [assetHex, 0]
+            // check if it's a reissuance token
+            const asset_of_token = registry.getAssetOfToken(assetId)
+            if (asset_of_token) {
+                return ["Reissuance of " + asset_of_token.ticker(), 0]
+            } else {
+                return [assetHex, 0]
+            }
         }
     } catch (error) {
         return [assetHex, 0]
