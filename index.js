@@ -756,7 +756,7 @@ class WalletBalance extends HTMLElement {
         updatedAt(wollet, this.subtitle)
 
         cleanChilds(this.div)
-        this.div.appendChild(mapToTable(mapBalance(balance)))
+        this.div.appendChild(mapToTable(mapBalance(balance), true))
     }
 }
 
@@ -1920,7 +1920,7 @@ class SignTransaction extends HTMLElement {
 
         var psetBalance = details.balance().balances()
         psetBalance.set("fee", details.balance().fee())
-        this.signDivAnalyze.appendChild(mapToTable(mapBalance(psetBalance), true, true))
+        this.signDivAnalyze.appendChild(mapToTable(mapBalance(psetBalance), true))
 
         let h3 = document.createElement("h3")
         h3.innerText = "Signatures"
@@ -2386,7 +2386,7 @@ function createAssetIconCell(assetId) {
     return iconCell
 }
 
-function mapToTable(map) {
+function mapToTable(map, add_icon = false) {
     let div = document.createElement("div")
     div.setAttribute("class", "overflow-auto")
     let table = document.createElement("table")
@@ -2403,8 +2403,10 @@ function mapToTable(map) {
             let newRow = document.createElement("tr")
             table.appendChild(newRow)
 
-            let iconCell = createAssetIconCell(key)
-            newRow.appendChild(iconCell)
+            if (add_icon) {
+                let iconCell = createAssetIconCell(key)
+                newRow.appendChild(iconCell)
+            }
 
             let asset = document.createElement("td")
             asset.innerHTML = useCodeIfNecessary(mapAssetTicker(key))
