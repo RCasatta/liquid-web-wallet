@@ -2367,6 +2367,7 @@ const DEFAULT_IMG = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iM
 var notfound = new Set()
 function createAssetIconCell(assetId) {
     let iconCell = document.createElement("td")
+    iconCell.setAttribute("width", "84")
     let icon = document.createElement("img")
     icon.width = 64
     icon.height = 64
