@@ -19,7 +19,7 @@ jsQRScript.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 document.head.appendChild(jsQRScript);
 
 // Network setup (remains global as it's a configuration not state)
-const network = lwk.Network.regtestDefault()
+const network = lwk.Network.testnet()
 
 // Reference to the main application container
 const app = document.getElementById('app')
@@ -715,7 +715,8 @@ class WalletBalance extends HTMLElement {
         // Subscribe to scan state changes instead of using document events
         this.subscriptions.push(
             subscribe('scan-update', this.render),
-            subscribe('registry-fetched', this.render)
+            subscribe('registry-fetched', this.render),
+            subscribe('persist-loaded', this.render),
         );
 
         this.faucetRequest.addEventListener('click', this.handleFaucetRequest)
@@ -2444,6 +2445,7 @@ function loadPersisted(wolletLocal) {
             wolletLocal.applyUpdate(update)
             loaded = true
             precStatus = walletStatus
+            publish('persist-loaded')
         } else {
             return loaded
         }
