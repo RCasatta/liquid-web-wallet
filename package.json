@@ -17,7 +17,8 @@
     "sync-regtest": "rsync -avh dist/ root@praga:/var/www/liquidwebwallet.org/regtest/ && rsync -avh dist/ root@gandi:/var/www/liquidwebwallet.org/regtest/",
     "test": "npm run regtest && playwright test",
     "test-liquidex": "npm run regtest && playwright test --grep liquidex --headed",
-    "test-multi": "npm run regtest && playwright test --grep multisignature --headed"
+    "test-multi": "npm run regtest && playwright test --grep multisignature --headed",
+    "test-issuance-reissuance-burn": "npm run regtest && playwright test --grep reissuance --headed"
   },
   "dependencies": {
     "lwk_wasm": "../lwk/lwk_wasm/pkg"

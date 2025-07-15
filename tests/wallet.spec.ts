@@ -186,8 +186,8 @@ test.describe('Wallet Functionality', () => {
         await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible();
 
         // Find the specific row containing our ticker and verify the amount
-        // Use first() to get the first matching row (the asset balance row, not reissuance rows)
-        const assetRow = page.locator(`wallet-balance table tr:has-text("${ticker}")`).first();
+        // Use a more specific selector to exclude reissuance token rows
+        const assetRow = page.locator(`wallet-balance table tr:has-text("${ticker}"):not(:has-text("Reissuance of"))`).first();
         await expect(assetRow).toBeVisible();
 
         const reissuanceRow = page.locator(`wallet-balance table tr:has-text("Reissuance of ${ticker}")`);
