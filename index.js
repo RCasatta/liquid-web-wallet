@@ -1635,7 +1635,7 @@ class SignTransaction extends HTMLElement {
         const details = this.querySelectorAll("details")
         this.signDetails = details[0]
 
-        this.signDetails.hidden = network.isMainnet()
+        this.signDetails.hidden = !getDevMode() && network.isMainnet()
 
         this.analyzeButton.addEventListener("click", (_e) => {
             this.renderAnalyze()
