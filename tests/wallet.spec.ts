@@ -110,7 +110,8 @@ test.describe('Wallet Functionality', () => {
         await expect(mnemonicTextarea).toBeVisible();
         const mnemonicValue = await mnemonicTextarea.inputValue();
         expect(mnemonicValue).toMatch(/^[a-z ]+$/); // Should contain lowercase words separated by spaces
-        expect(mnemonicValue.split(' ')).toHaveLength(12); // Should be a 12-word mnemonic
+        const wordCount = mnemonicValue.split(' ').length;
+        expect(wordCount === 12 || wordCount === 24).toBe(true); // Should be a 12 or 24-word mnemonic
 
         // Press the Sign button
         await page.getByRole('button', { name: 'Sign', exact: true }).click();

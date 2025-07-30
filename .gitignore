@@ -3,3 +3,4 @@ dist
 .bin/
 test-results/
 playwright-report/
+.direnv/
