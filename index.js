@@ -1609,10 +1609,10 @@ class SignTransaction extends HTMLElement {
         super()
 
         const textareas = this.querySelectorAll("textarea")
-        this.pset = textareas[0]
-        this.contract = textareas[1]
-        this.mnemonic = textareas[2]
-        this.combineTextarea = textareas[3]
+        this.pset = textareas[0]           // PSET textarea
+        this.contract = textareas[1]       // Contract textarea
+        this.mnemonic = textareas[3]       // Mnemonic textarea
+        this.combineTextarea = textareas[4] // Combine PSET textarea
         this.contractSection = this.querySelector("div.contract-section")
         this.analyzeButton = this.querySelector("button.analyze")
         this.signButton = this.querySelector("button.sign")
