@@ -2516,7 +2516,8 @@ function esploraClient() {
     const testnetUrl = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api"
     const regtestUrl = "http://localhost:3000/"
     const url = network.isMainnet() ? mainnetUrl : network.isTestnet() ? testnetUrl : regtestUrl
-    const client = new lwk.EsploraClient(network, url, true, 4)
+    const utxoOnly = getUtxoOnly()
+    const client = new lwk.EsploraClient(network, url, true, 4, utxoOnly)
     if (network.isMainnet() || network.isTestnet()) {
         client.set_waterfalls_server_recipient("age1xxzrgrfjm3yrwh3u6a7exgrldked0pdauvr3mx870wl6xzrwm5ps8s2h0p");
     }
