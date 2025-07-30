@@ -36,7 +36,10 @@ const _state = {
     registryFetched: false, // Whether registry has been fetched
 
     // Developer mode state
-    devMode: false // Whether developer mode is enabled
+    devMode: false, // Whether developer mode is enabled
+
+    // UTXO only mode state
+    utxoOnly: false // Whether UTXO only mode is enabled
 };
 
 // Initialize state from localStorage if available
@@ -46,6 +49,13 @@ const _state = {
     if (savedDevMode !== null) {
         _state.devMode = savedDevMode === 'true';
         console.log("Loaded dev mode from localStorage:", _state.devMode);
+    }
+
+    // Initialize UTXO only mode from localStorage
+    const savedUtxoOnly = localStorage.getItem('utxoOnly');
+    if (savedUtxoOnly !== null) {
+        _state.utxoOnly = savedUtxoOnly === 'true';
+        console.log("Loaded UTXO only mode from localStorage:", _state.utxoOnly);
     }
 })();
 
@@ -253,6 +263,24 @@ export function setDevMode(isDevMode) {
     publish('dev-mode-changed', _state.devMode);
 
     return _state.devMode;
+}
+
+// UTXO only mode state management
+export function getUtxoOnly() {
+    return _state.utxoOnly;
+}
+
+export function setUtxoOnly(isUtxoOnly) {
+    // Update state, checking boolean explicitly to ensure consistency
+    _state.utxoOnly = isUtxoOnly === true;
+
+    // Save to localStorage
+    localStorage.setItem('utxoOnly', _state.utxoOnly.toString());
+
+    // Notify subscribers
+    publish('utxo-only-changed', _state.utxoOnly);
+
+    return _state.utxoOnly;
 }
 
 // Registry fetched state management

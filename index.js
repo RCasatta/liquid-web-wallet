@@ -9,6 +9,7 @@ import {
     getSwSigner, setSwSigner, getPset, setPset, getContract, setContract,
     getRegistry, setRegistry,
     getDevMode, setDevMode,
+    getUtxoOnly, setUtxoOnly,
     getRegistryFetched, setRegistryFetched,
     subscribe, publish
 } from './state.js'
@@ -37,16 +38,23 @@ async function init() {
     let exampleDescriptor = document.getElementById("example-descriptor-link")
     let loadingBar = document.getElementById("loading-wasm");
     let devMode = document.getElementById("dev-mode")
+    let utxoOnly = document.getElementById("utxo-only")
 
     // Diagnostic logging for dev mode state
     if (getDevMode()) {
         console.log("Dev mode is enabled");
     }
 
+    // Diagnostic logging for UTXO only state
+    if (getUtxoOnly()) {
+        console.log("UTXO only mode is enabled");
+    }
+
     const registry = lwk.Registry.defaultHardcodedForNetwork(network)
     setRegistry(registry)
 
     devMode.checked = getDevMode()
+    utxoOnly.checked = getUtxoOnly()
 
     // Define handleDevMode function to update state when checkbox changes
     const handleDevMode = function (e) {
@@ -55,7 +63,15 @@ async function init() {
         setDevMode(isDevMode)
     }
 
+    // Define handleUtxoOnly function to update state when checkbox changes
+    const handleUtxoOnly = function (e) {
+        const isUtxoOnly = e.target.checked
+        console.log("UTXO only checkbox changed to:", isUtxoOnly);
+        setUtxoOnly(isUtxoOnly)
+    }
+
     devMode.onchange = handleDevMode
+    utxoOnly.onchange = handleUtxoOnly
 
     connectJade.addEventListener("click", async (_e) => {
         let connectJadeMessage = document.getElementById("connect-jade-message")
