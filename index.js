@@ -1892,7 +1892,7 @@ class SignTransaction extends HTMLElement {
 
             // Update UI
             this.mnemonic.disabled = true
-            this.messageDiv.innerHTML = success("Mnemonic saved successfully")
+            this.messageDiv.innerHTML = success("Mnemonic saved successfully, reload the page and select Random wallet")
         } catch (e) {
             this.messageDiv.innerHTML = warning(e.toString())
         } finally {
