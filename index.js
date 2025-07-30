@@ -813,6 +813,15 @@ class WalletTransactions extends HTMLElement {
         }
         let div = document.createElement("div")
         div.setAttribute("class", "overflow-auto")
+
+        // Add UTXO only mode explanation if enabled
+        if (getUtxoOnly()) {
+            let utxoInfo = document.createElement("p")
+            utxoInfo.setAttribute("class", "secondary")
+            utxoInfo.innerHTML = "<em>The following is not the full transaction history, in UTXO only mode only transactions contributing to the balance are shown.</em>"
+            div.appendChild(utxoInfo)
+        }
+
         let table = document.createElement("table")
         table.setAttribute("class", "striped")
         div.appendChild(table)
