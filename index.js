@@ -39,12 +39,6 @@ async function init() {
     let loadingBar = document.getElementById("loading-wasm");
     let devMode = document.getElementById("dev-mode")
     let utxoOnly = document.getElementById("utxo-only")
-    let utxoOnlySection = document.getElementById("utxo-only-section")
-
-    // Hide UTXO only mode on mainnet (not available)
-    if (network.isMainnet()) {
-        utxoOnlySection.style.display = 'none'
-    }
 
     // Diagnostic logging for dev mode state
     if (getDevMode()) {
