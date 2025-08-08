@@ -15,10 +15,10 @@
     "sync-mainnet": "rsync -avh dist/ root@praga:/var/www/liquidwebwallet.org/ && rsync -avh dist/ root@gandi:/var/www/liquidwebwallet.org/",
     "sync-testnet": "rsync -avh dist/ root@praga:/var/www/liquidwebwallet.org/testnet/ && rsync -avh dist/ root@gandi:/var/www/liquidwebwallet.org/testnet/",
     "sync-regtest": "rsync -avh dist/ root@praga:/var/www/liquidwebwallet.org/regtest/ && rsync -avh dist/ root@gandi:/var/www/liquidwebwallet.org/regtest/",
-    "test": "npm run regtest && playwright test",
-    "test-liquidex": "npm run regtest && playwright test --grep liquidex --headed",
-    "test-multi": "npm run regtest && playwright test --grep multisignature --headed",
-    "test-issuance-reissuance-burn": "npm run regtest && playwright test --grep reissuance --headed"
+    "test": "npm run regtest && playwright test --project regtest",
+    "test-liquidex": "npm run regtest && playwright test --project regtest --grep liquidex --headed",
+    "test-multi": "npm run regtest && playwright test --project regtest --grep multisignature --headed",
+    "test-issuance-reissuance-burn": "npm run regtest && playwright test --project regtest --grep reissuance --headed"
   },
   "dependencies": {
     "lwk_wasm": "../lwk/lwk_wasm/pkg"
