@@ -11,7 +11,7 @@ test.describe('Wallet Functionality', () => {
         await page.getByRole('button', { name: 'Options' }).click();
 
         // Click the example wallet button
-        const abandonWalletButton = page.getByRole('button', { name: 'Try example' });
+        const abandonWalletButton = page.getByRole('button', { name: 'Random wallet' });
         await expect(abandonWalletButton).toBeVisible();
         await abandonWalletButton.click();
 
@@ -33,5 +33,24 @@ test.describe('Wallet Functionality', () => {
         await expect(page.getByRole('link', { name: 'Create' })).toBeVisible();
         await expect(page.getByRole('link', { name: 'Sign' })).toBeVisible();
         await expect(page.getByRole('link', { name: 'Receive' })).toBeVisible();
+    });
+
+    test('should register AMP2 wallet', async ({ page }) => {
+        await loadWallet(page);
+
+        await page.getByRole('link', { name: 'Wallet' }).click();
+
+        await expect(page.locator('wallet-amp2 h3')).toHaveText('Amp2');
+
+        // Click the register wallet button
+        const registerWalletButton = page.getByRole('button', { name: 'Register wallet' });
+        await expect(registerWalletButton).toBeVisible();
+        await registerWalletButton.click();
+
+        // Wait for registration to complete and uuid to be shown
+        const uuidTextarea = page.getByLabel('uuid');
+        await expect(uuidTextarea).toBeVisible();
+        await expect(uuidTextarea).not.toHaveValue('');
+        await expect(registerWalletButton).toBeHidden();
     });
 });
