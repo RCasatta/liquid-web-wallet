@@ -18,7 +18,8 @@
     "test": "npm run regtest && playwright test --project regtest",
     "test-liquidex": "npm run regtest && playwright test --project regtest --grep liquidex --headed",
     "test-multi": "npm run regtest && playwright test --project regtest --grep multisignature --headed",
-    "test-issuance-reissuance-burn": "npm run regtest && playwright test --project regtest --grep reissuance --headed"
+    "test-issuance-reissuance-burn": "npm run regtest && playwright test --project regtest --grep reissuance --headed",
+    "test-testnet": "npm run testnet && playwright test --project testnet"
   },
   "dependencies": {
     "lwk_wasm": "../lwk/lwk_wasm/pkg"
