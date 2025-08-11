@@ -42,6 +42,7 @@
     <header class="container">
         <hgroup>
             <h1 style="font-display: swap;">Liquid Web Wallet</h1>
+            <p>A companion app for Liquid running in the browser</p>
         </hgroup>
 
         <my-nav></my-nav>
@@ -593,6 +594,25 @@
             <button type="submit">Pay 20 satoshi ⚡ to send</button>
 
         </form>
+    </template>
+
+    <template id="about-page-template">
+        <h2>About</h2>
+
+        <p>The <a href="https://blockstream.com/liquid/">Liquid</a> Web Wallet is mainly a showcase of what you can do
+            with the <a href="https://github.com/blockstream/lwk">LWK</a> library.</p>
+        <p>Nevertheless, it is fully usable as a companion app for <a href="https://blockstream.com/jade/">JADE</a>
+            running in the browser.
+            You can use you JADE hardware wallet to sign transactions, issue assets and more.</p>
+
+        <p>In Liquid testnet you can also use a software signer in the browser to sign transactions and try flows like
+            the <a href="https://blog.blockstream.com/liquidex-2-step-atomic-swaps-on-the-liquid-network/">LiquiDEX</a>
+            two-step swap
+        </p>
+
+        <p>Support for Ledger hardware wallets is coming soon.</p>
+
+        </p>
     </template>
 
     <script type="module" src="./bootstrap.js"></script>

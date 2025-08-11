@@ -360,6 +360,12 @@ class MyFooter extends HTMLElement {
         }))
     }
 
+    handleAboutClick = (_event) => {
+        this.dispatchEvent(new CustomEvent('about-clicked', {
+            bubbles: true,
+        }))
+    }
+
     render = () => {
         var footer = ''
         if (network.isMainnet()) {
@@ -370,6 +376,7 @@ class MyFooter extends HTMLElement {
 
         footer += `<span> | </span><a href="https://github.com/RCasatta/liquid-web-wallet">Source</a>`
         footer += `<span> | </span><a href="#" id="contact">Contact</a>`
+        footer += `<span> | </span><a href="#" id="about">About</a>`
 
         footer += `<span> | </span><span>${network}</span>`
         if (getJade() != null) {
@@ -392,6 +399,10 @@ class MyFooter extends HTMLElement {
         let idContact = this.querySelector("#contact")
         if (idContact) {
             idContact.addEventListener("click", this.handleContactClick)
+        }
+        let idAbout = this.querySelector("#about")
+        if (idAbout) {
+            idAbout.addEventListener("click", this.handleAboutClick)
         }
     }
 }
@@ -443,6 +454,10 @@ class MyNav extends HTMLElement {
 
         document.addEventListener('contact-clicked', () => {
             this.renderPage("contact-page")
+        })
+
+        document.addEventListener('about-clicked', () => {
+            this.renderPage("about-page")
         })
 
         // For reload-page, we could eventually create a dedicated state action
