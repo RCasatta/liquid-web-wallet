@@ -2216,9 +2216,16 @@ class WalletDescriptor extends HTMLElement {
         this.textarea = this.querySelector("textarea")
         this.quickLink = this.querySelector("a")
 
-        let descriptor = getWollet().descriptor().toString()
-        this.textarea.innerText = descriptor
-        this.quickLink.href = "#" + encodeRFC3986URIComponent(descriptor)
+        if (getAmp0() == null) {
+            let descriptor = getWollet().descriptor().toString()
+            this.textarea.innerText = descriptor
+            this.quickLink.href = "#" + encodeRFC3986URIComponent(descriptor)
+        }
+        else {
+            this.textarea.innerText = "Amp0 wallet";
+            this.quickLink.hidden = true;
+        }
+
     }
 }
 
