@@ -53,4 +53,37 @@ test.describe('Wallet Functionality', () => {
         await expect(uuidTextarea).not.toHaveValue('');
         await expect(registerWalletButton).toBeHidden();
     });
+
+    test('should login with Amp0 wallet', async ({ page }) => {
+        // Open options section
+        await page.getByRole('button', { name: 'Options' }).click();
+
+        // Check that Amp0 section is visible (only in testnet)
+        await expect(page.locator('#amp0-div')).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Amp0' })).toBeVisible();
+
+        // Fill in username and password
+        await page.locator('#amp0-user').fill('userleo34567');
+        await page.locator('#amp0-password').fill('userleo34567');
+
+        // Click login button with increased timeout (15 seconds)
+        const loginButton = page.locator('#amp0-login-button');
+        await expect(loginButton).toBeVisible();
+        await expect(loginButton).toBeEnabled();
+
+        await loginButton.click();
+
+        // Wait for the balance page to be shown
+        await expect(page.getByRole('heading', { name: 'Balance' })).toBeVisible({ timeout: 15000 });
+
+        // Wait for the sync to complete by waiting for the loading indicator to disappear
+        await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible();
+
+        // Verify navigation links are available
+        await expect(page.getByRole('link', { name: 'Balance' })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Transactions' })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Create' })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Sign' })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Receive' })).toBeVisible();
+    });
 });
