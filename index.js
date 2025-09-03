@@ -370,6 +370,14 @@ async function handleAmp0Login(_e) {
 
         // Show success message
         amp0Message.innerHTML = success("Login successful!")
+        const wollet = amp0.wollet()
+
+        setWollet(wollet)
+        setWolletSelected("Amp0")
+        setScanRunning(false)
+        loadPersisted(wollet)
+
+        await fullScanAndApply(wollet, getScanState())
 
     } catch (e) {
         amp0Message.innerHTML = warning("Login failed: " + e.toString())
