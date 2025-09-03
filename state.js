@@ -39,7 +39,10 @@ const _state = {
     devMode: false, // Whether developer mode is enabled
 
     // UTXO only mode state
-    utxoOnly: false // Whether UTXO only mode is enabled
+    utxoOnly: false, // Whether UTXO only mode is enabled
+
+    // Amp0 state
+    amp0: null // lwk.Amp0 instance
 };
 
 // Initialize state from localStorage if available
@@ -291,6 +294,17 @@ export function getRegistryFetched() {
 export function setRegistryFetched(isFetched) {
     _state.registryFetched = isFetched === true;
     return _state.registryFetched;
+}
+
+// Amp0 state management
+export function getAmp0() {
+    return _state.amp0;
+}
+
+export function setAmp0(amp0) {
+    _state.amp0 = amp0;
+    publish('amp0-changed', amp0);
+    return _state.amp0;
 }
 
 // Future state management functions will be added here 

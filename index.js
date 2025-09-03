@@ -11,6 +11,7 @@ import {
     getDevMode, setDevMode,
     getUtxoOnly, setUtxoOnly,
     getRegistryFetched, setRegistryFetched,
+    getAmp0, setAmp0,
     subscribe, publish
 } from './state.js'
 
@@ -39,6 +40,11 @@ async function init() {
     let loadingBar = document.getElementById("loading-wasm");
     let devMode = document.getElementById("dev-mode")
     let utxoOnly = document.getElementById("utxo-only")
+    let amp0Div = document.getElementById("amp0-div")
+    let amp0User = document.getElementById("amp0-user")
+    let amp0Password = document.getElementById("amp0-password")
+    let amp0LoginButton = document.getElementById("amp0-login-button")
+    let amp0Message = document.getElementById("amp0-message")
 
     // Diagnostic logging for dev mode state
     if (getDevMode()) {
@@ -227,6 +233,13 @@ async function init() {
     // Subscribe to dev mode changes to update ledger visibility
     subscribe('dev-mode-changed', updateLedgerVisibility)
 
+    // Show Amp0 section only in testnet
+    if (network.isTestnet()) {
+        amp0Div.hidden = false
+        amp0LoginButton.disabled = false
+        amp0LoginButton.addEventListener("click", handleAmp0Login)
+    }
+
     if (!network.isMainnet()) {
         document.getElementById("random-wallet-div").hidden = false
         randomWalletButton.disabled = false
@@ -320,6 +333,49 @@ async function handleWatchOnlyClick(_e) {
         await fullScanAndApply(wollet, getScanState())
     } catch (e) {
         descriptorMessage.innerHTML = warning(e)
+    }
+}
+
+async function handleAmp0Login(_e) {
+    let amp0Message = document.getElementById("amp0-message")
+    let amp0User = document.getElementById("amp0-user")
+    let amp0Password = document.getElementById("amp0-password")
+    let amp0LoginButton = document.getElementById("amp0-login-button")
+
+    try {
+        // Clear previous messages
+        amp0Message.innerHTML = ""
+
+        // Get input values
+        const username = amp0User.value.trim()
+        const password = amp0Password.value.trim()
+
+        // Basic validation
+        if (username === "") {
+            throw new Error("Username cannot be empty")
+        }
+        if (password === "") {
+            throw new Error("Password cannot be empty")
+        }
+
+        // Set button to busy state
+        setBusyDisabled(amp0LoginButton, true)
+
+        // TODO: hashing password takes a long time (~2s)
+        // cache hashed username+password in localStorage
+        const amp0 = await lwk.Amp0.new_testnet(username, password, "");
+
+        // Store amp0 instance in state
+        setAmp0(amp0);
+
+        // Show success message
+        amp0Message.innerHTML = success("Login successful!")
+
+    } catch (e) {
+        amp0Message.innerHTML = warning("Login failed: " + e.toString())
+    } finally {
+        // Always reset button state when operation is complete
+        setBusyDisabled(amp0LoginButton, false)
     }
 }
 
