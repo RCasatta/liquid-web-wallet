@@ -93,5 +93,57 @@ test.describe('Wallet Functionality', () => {
         // Wait for the address to be displayed and verify it matches the expected Amp0 address
         await expect(page.locator('.address-text code')).toBeVisible();
         await expect(page.locator('.address-text code')).toHaveText('vjTvpDMQx3EQ2bS3pmmy7RivU3QTjGyyJFJy1Y5basdKmwpW3R4YRdsxFNT7B3bPNmJkgKCRCS63AtjR');
+
+        // Navigate to the create transaction page
+        await page.getByRole('link', { name: 'Create' }).click();
+        await expect(page.getByRole('heading', { name: 'Create transaction' })).toBeVisible();
+
+        // Wait for the page to load completely
+        await expect(page.locator('create-transaction div[hidden]')).not.toBeVisible();
+
+        // Add recipient address
+        await page.locator('input[name="address"]').fill('vjTvpDMQx3EQ2bS3pmmy7RivU3QTjGyyJFJy1Y5basdKmwpW3R4YRdsxFNT7B3bPNmJkgKCRCS63AtjR');
+
+        // Add amount (select the first amount input, not the burn assets one)
+        await page.locator('#add-recipient-div input[name="amount"]').first().fill('0.00001');
+
+        // Select tLBTC as asset (select the first asset select, not the burn assets one)
+        await page.locator('#add-recipient-div select[name="asset"]').first().selectOption({ label: 'tLBTC' });
+
+        // Click '+' to add the recipient (select the first one, not the burn assets one)
+        await page.locator('#add-recipient-div input[type="submit"][value="+"]').first().click();
+
+        // Click create to create the transaction
+        await page.getByRole('button', { name: 'Create' }).click();
+
+        // Should navigate to the sign page
+        await expect(page.locator('h2:has-text("Sign")')).toBeVisible();
+
+        // Expand the software signer details section first
+        const softwareSignerDetails = page.locator('details:has-text("Sign with software signer")');
+        await softwareSignerDetails.locator('summary').click();
+
+        // Set mnemonic in the software signer section
+        const mnemonicTextarea = page.locator('details:has-text("Sign with software signer") textarea[placeholder="Mnemonic"]');
+        await mnemonicTextarea.fill('idea bind tissue wood february mention unable collect expand stuff snap stock');
+
+        // Click Save to save the mnemonic
+        await page.getByRole('button', { name: 'Save' }).click();
+
+        // Click Sign button (the first one, not the hidden one or the summary)
+        await page.locator('button.sign').first().click();
+
+        // Wait for success message "Transaction signed!"
+        await expect(page.locator('div.message input[aria-invalid="false"]')).toBeVisible();
+        await expect(page.locator('div.message input[aria-invalid="false"]')).toHaveValue('Transaction signed!');
+
+        // Click Cosign Amp0 button
+        const cosignAmp0Button = page.locator('button.cosign-amp0');
+        await expect(cosignAmp0Button).toBeVisible();
+        await cosignAmp0Button.click();
+
+        // Should show error message "Amp0 sign failed: error sending request"
+        await expect(page.locator('div.message input[aria-invalid="true"]')).toBeVisible();
+        await expect(page.locator('div.message input[aria-invalid="true"]')).toHaveValue('Amp0 sign failed: error sending request');
     });
 });
