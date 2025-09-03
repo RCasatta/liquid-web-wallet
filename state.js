@@ -42,7 +42,8 @@ const _state = {
     utxoOnly: false, // Whether UTXO only mode is enabled
 
     // Amp0 state
-    amp0: null // lwk.Amp0 instance
+    amp0: null, // lwk.Amp0 instance
+    blindingNonces: null // Array of blinding nonces for Amp0
 };
 
 // Initialize state from localStorage if available
@@ -305,6 +306,17 @@ export function setAmp0(amp0) {
     _state.amp0 = amp0;
     publish('amp0-changed', amp0);
     return _state.amp0;
+}
+
+// Blinding nonces state management
+export function getBlindingNonces() {
+    return _state.blindingNonces;
+}
+
+export function setBlindingNonces(blindingNonces) {
+    _state.blindingNonces = blindingNonces;
+    publish('blinding-nonces-changed', blindingNonces);
+    return _state.blindingNonces;
 }
 
 // Future state management functions will be added here 

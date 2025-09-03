@@ -12,6 +12,7 @@ import {
     getUtxoOnly, setUtxoOnly,
     getRegistryFetched, setRegistryFetched,
     getAmp0, setAmp0,
+    getBlindingNonces, setBlindingNonces,
     subscribe, publish
 } from './state.js'
 
@@ -1463,7 +1464,15 @@ class CreateTransaction extends HTMLElement {
                     builder = builder.addRecipient(recipientAddress, satoshis, recipientAsset)
                 }
             }
-            const pset = builder.finish(getWollet())
+            var pset;
+            if (getAmp0() == null) {
+                pset = builder.finish(getWollet())
+            } else {
+                const amp0pset = builder.finish_for_amp0(getWollet())
+                pset = amp0pset.pset()
+                const blindingNonces = amp0pset.blinding_nonces()
+                setBlindingNonces(blindingNonces)
+            }
             const psetWithContracts = getRegistry().addContracts(pset);
             setPset(psetWithContracts)
 
