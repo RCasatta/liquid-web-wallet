@@ -43,7 +43,7 @@ const _state = {
 
     // Amp0 state
     amp0: null, // lwk.Amp0 instance
-    blindingNonces: null // Array of blinding nonces for Amp0
+    amp0Pset: null // Amp0 PSET object for cosigning
 };
 
 // Initialize state from localStorage if available
@@ -308,15 +308,15 @@ export function setAmp0(amp0) {
     return _state.amp0;
 }
 
-// Blinding nonces state management
-export function getBlindingNonces() {
-    return _state.blindingNonces;
+// Amp0 PSET state management
+export function getAmp0Pset() {
+    return _state.amp0Pset;
 }
 
-export function setBlindingNonces(blindingNonces) {
-    _state.blindingNonces = blindingNonces;
-    publish('blinding-nonces-changed', blindingNonces);
-    return _state.blindingNonces;
+export function setAmp0Pset(amp0Pset) {
+    _state.amp0Pset = amp0Pset;
+    publish('amp0-pset-changed', amp0Pset);
+    return _state.amp0Pset;
 }
 
 // Future state management functions will be added here 

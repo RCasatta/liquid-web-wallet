@@ -12,7 +12,7 @@ import {
     getUtxoOnly, setUtxoOnly,
     getRegistryFetched, setRegistryFetched,
     getAmp0, setAmp0,
-    getBlindingNonces, setBlindingNonces,
+    getAmp0Pset, setAmp0Pset,
     subscribe, publish
 } from './state.js'
 
@@ -1470,8 +1470,7 @@ class CreateTransaction extends HTMLElement {
             } else {
                 const amp0pset = builder.finish_for_amp0(getWollet())
                 pset = amp0pset.pset()
-                const blindingNonces = amp0pset.blinding_nonces()
-                setBlindingNonces(blindingNonces)
+                setAmp0Pset(amp0pset)
             }
             const psetWithContracts = getRegistry().addContracts(pset);
             setPset(psetWithContracts)
@@ -1738,6 +1737,7 @@ class SignTransaction extends HTMLElement {
         this.analyzeButton = this.querySelector("button.analyze")
         this.signButton = this.querySelector("button.sign")
         this.cosignButton = this.querySelector("button.cosign")
+        this.cosignAmp0Button = this.querySelector("button.cosign-amp0")
         this.broadcastButton = this.querySelector("button.broadcast")
         this.downloadPsetButton = this.querySelector("a.download-pset-icon")
         this.uploadPsetFile = this.querySelector("#upload-pset-input")
@@ -1763,6 +1763,7 @@ class SignTransaction extends HTMLElement {
         })
         this.signButton.addEventListener("click", this.handleSignClick)
         this.cosignButton.addEventListener("click", this.handleCosignClick)
+        this.cosignAmp0Button.addEventListener("click", this.handleCosignAmp0Click)
         this.proposalButton.addEventListener("click", this.handleProposal)
         this.broadcastButton.addEventListener("click", this.handleBroadcastClick)
         this.downloadPsetButton.addEventListener("click", this.handleDownloadPset)
@@ -1929,6 +1930,13 @@ class SignTransaction extends HTMLElement {
             else if (getSwSigner() != null) {
                 const signer = getSwSigner()
                 signedPset = signer.sign(pset)
+
+                if (getAmp0() != null) {
+                    const amp0Pset = getAmp0Pset();
+                    const psetCopy = new lwk.Pset(signedPset.toString()) // not ideal...
+                    const userSignedAmp0Pset = new lwk.Amp0Pset(psetCopy, amp0Pset.blinding_nonces())
+                    setAmp0Pset(userSignedAmp0Pset)
+                }
             }
             // No signing method available
             else {
@@ -1967,6 +1975,32 @@ class SignTransaction extends HTMLElement {
             setBusyDisabled(this.cosignButton, false)
         }
 
+    }
+
+    handleCosignAmp0Click = async (_e) => {
+        setBusyDisabled(this.cosignAmp0Button, true)
+
+        try {
+            const amp0 = getAmp0()
+            const amp0Pset = getAmp0Pset()
+
+            if (!amp0) {
+                throw new Error("Amp0 instance not available")
+            }
+            if (!amp0Pset) {
+                throw new Error("Amp0 PSET not available")
+            }
+
+            let tx = await amp0.sign(amp0Pset)
+            this.messageDiv.innerHTML = success("Transaction signed with Amp0!")
+            // TODO broadcast tx
+            this.pset.value = tx.toString()
+
+        } catch (e) {
+            this.messageDiv.innerHTML = warning("Amp0 sign failed: " + e.toString())
+        } finally {
+            setBusyDisabled(this.cosignAmp0Button, false)
+        }
     }
 
 
@@ -2035,6 +2069,13 @@ class SignTransaction extends HTMLElement {
             this.proposalButton.hidden = false
         } else {
             this.proposalButton.hidden = true
+        }
+
+        // Show cosign Amp0 button only if Amp0 is available
+        if (getAmp0() != null) {
+            this.cosignAmp0Button.hidden = false
+        } else {
+            this.cosignAmp0Button.hidden = true
         }
 
         cleanChilds(this.signDivAnalyze)
