@@ -79,11 +79,19 @@ test.describe('Wallet Functionality', () => {
         // Wait for the sync to complete by waiting for the loading indicator to disappear
         await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible();
 
-        // Verify navigation links are available
-        await expect(page.getByRole('link', { name: 'Balance' })).toBeVisible();
-        await expect(page.getByRole('link', { name: 'Transactions' })).toBeVisible();
-        await expect(page.getByRole('link', { name: 'Create' })).toBeVisible();
-        await expect(page.getByRole('link', { name: 'Sign' })).toBeVisible();
-        await expect(page.getByRole('link', { name: 'Receive' })).toBeVisible();
+        // Navigate to the receive page
+        await page.getByRole('link', { name: 'Receive' }).click();
+
+        // Wait for the receive page to be shown
+        await expect(page.getByRole('heading', { name: 'Receive' })).toBeVisible();
+
+        // Click the "Show address" button
+        const showAddressButton = page.getByRole('button', { name: 'Show address' });
+        await expect(showAddressButton).toBeVisible();
+        await showAddressButton.click();
+
+        // Wait for the address to be displayed and verify it matches the expected Amp0 address
+        await expect(page.locator('.address-text code')).toBeVisible();
+        await expect(page.locator('.address-text code')).toHaveText('vjTvpDMQx3EQ2bS3pmmy7RivU3QTjGyyJFJy1Y5basdKmwpW3R4YRdsxFNT7B3bPNmJkgKCRCS63AtjR');
     });
 });

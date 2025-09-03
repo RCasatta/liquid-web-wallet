@@ -733,7 +733,9 @@ class AddressView extends HTMLElement {
             // Set button to busy state at the beginning
             setBusyDisabled(this.showButton, true)
 
-            if (getJade() != null) {
+            if (getAmp0() != null) {
+                await this.handleShowOnAmp0()
+            } else if (getJade() != null) {
                 await this.handleShowOnJade()
             } else if (getLedger() != null) {
                 await this.handleShowOnLedger()
@@ -765,6 +767,12 @@ class AddressView extends HTMLElement {
 
         this.messageDiv.innerHTML = ""
 
+    }
+
+    handleShowOnAmp0 = async (_e) => {
+        const address = getWollet().address(1)
+        this.displayAddress(address)
+        this.messageDiv.innerHTML = warning("Fixed Amp0 address with index 1")
     }
 
     handleShowOnJade = async (_e) => {
