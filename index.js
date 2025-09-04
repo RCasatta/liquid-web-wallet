@@ -1841,18 +1841,26 @@ class SignTransaction extends HTMLElement {
 
     handleBroadcastClick = async (_e) => {
         try {
-            let psetString = this.pset.value
-            let pset = new lwk.Pset(psetString)
-            let psetFinalized = getWollet().finalize(pset)
-            let tx = psetFinalized.extractTx().toString()
-            console.log("broadcasting:")
-            console.log(tx)
             setBusyDisabled(this.broadcastButton, true)
-            let client = esploraClient()
-            let txid = await client.broadcast(psetFinalized)
-            this.messageDiv.innerHTML = success(txid, "Tx broadcasted!")
 
-            this.broadcastContractIfAny()
+            if (getAmp0() == null) {
+                let psetString = this.pset.value
+                let pset = new lwk.Pset(psetString)
+                let psetFinalized = getWollet().finalize(pset)
+                let tx = psetFinalized.extractTx().toString()
+                console.log("broadcasting:")
+                console.log(tx)
+                let client = esploraClient()
+                let txid = await client.broadcast(psetFinalized)
+                this.messageDiv.innerHTML = success(txid, "Tx broadcasted!")
+
+                this.broadcastContractIfAny()
+            } else {
+                const tx = this.pset.value
+                let client = esploraClient()
+                let txid = await client.broadcast_tx(tx)
+                this.messageDiv.innerHTML = success(txid, "Tx broadcasted!")
+            }
 
         } catch (e) {
             this.messageDiv.innerHTML = warning("Cannot broadcast tx, is it signed?")
@@ -1983,7 +1991,6 @@ class SignTransaction extends HTMLElement {
 
             let tx = await amp0.sign(amp0Pset)
             this.messageDiv.innerHTML = success("Transaction signed with Amp0!")
-            // TODO broadcast tx
             this.pset.value = tx.toString()
 
         } catch (e) {
