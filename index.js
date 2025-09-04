@@ -419,11 +419,7 @@ class MyFooter extends HTMLElement {
         }))
     }
 
-    handleContactClick = (_event) => {
-        this.dispatchEvent(new CustomEvent('contact-clicked', {
-            bubbles: true,
-        }))
-    }
+
 
     handleAboutClick = (_event) => {
         this.dispatchEvent(new CustomEvent('about-clicked', {
@@ -440,7 +436,6 @@ class MyFooter extends HTMLElement {
         }
 
         footer += `<span> | </span><a href="https://github.com/RCasatta/liquid-web-wallet">Source</a>`
-        footer += `<span> | </span><a href="#" id="contact">Contact</a>`
         footer += `<span> | </span><a href="#" id="about">About</a>`
 
         footer += `<span> | </span><span>${network}</span>`
@@ -461,10 +456,7 @@ class MyFooter extends HTMLElement {
         if (id) {
             id.addEventListener("click", this.handleClick)
         }
-        let idContact = this.querySelector("#contact")
-        if (idContact) {
-            idContact.addEventListener("click", this.handleContactClick)
-        }
+
         let idAbout = this.querySelector("#about")
         if (idAbout) {
             idAbout.addEventListener("click", this.handleAboutClick)
@@ -517,9 +509,7 @@ class MyNav extends HTMLElement {
             this.renderPage("register-multisig-page")
         })
 
-        document.addEventListener('contact-clicked', () => {
-            this.renderPage("contact-page")
-        })
+
 
         document.addEventListener('about-clicked', () => {
             this.renderPage("about-page")
