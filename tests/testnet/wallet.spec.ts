@@ -63,8 +63,8 @@ test.describe('Wallet Functionality', () => {
         await expect(page.getByRole('heading', { name: 'Amp0' })).toBeVisible();
 
         // Fill in username and password
-        await page.locator('#amp0-user').fill('userleo34567');
-        await page.locator('#amp0-password').fill('userleo34567');
+        await page.locator('#amp0-user').fill('userleo345678');
+        await page.locator('#amp0-password').fill('userleo345678');
 
         // Click login button with increased timeout (15 seconds)
         const loginButton = page.locator('#amp0-login-button');
@@ -92,7 +92,7 @@ test.describe('Wallet Functionality', () => {
 
         // Wait for the address to be displayed and verify it matches the expected Amp0 address
         await expect(page.locator('.address-text code')).toBeVisible();
-        await expect(page.locator('.address-text code')).toHaveText('vjTvpDMQx3EQ2bS3pmmy7RivU3QTjGyyJFJy1Y5basdKmwpW3R4YRdsxFNT7B3bPNmJkgKCRCS63AtjR');
+        await expect(page.locator('.address-text code')).toHaveText('vjU8ft8T5MX2X6DorpqwELknV2H27dhsLUwDAWHbhTpQT4FHtedrEUauYgjFa4w8nbK9eybQWB4EqRZh');
 
         // Navigate to the create transaction page
         await page.getByRole('link', { name: 'Create' }).click();
@@ -102,7 +102,7 @@ test.describe('Wallet Functionality', () => {
         await expect(page.locator('create-transaction div[hidden]')).not.toBeVisible();
 
         // Add recipient address
-        await page.locator('input[name="address"]').fill('vjTvpDMQx3EQ2bS3pmmy7RivU3QTjGyyJFJy1Y5basdKmwpW3R4YRdsxFNT7B3bPNmJkgKCRCS63AtjR');
+        await page.locator('input[name="address"]').fill('vjU8ft8T5MX2X6DorpqwELknV2H27dhsLUwDAWHbhTpQT4FHtedrEUauYgjFa4w8nbK9eybQWB4EqRZh');
 
         // Add amount (select the first amount input, not the burn assets one)
         await page.locator('#add-recipient-div input[name="amount"]').first().fill('0.00001');
@@ -125,7 +125,7 @@ test.describe('Wallet Functionality', () => {
 
         // Set mnemonic in the software signer section
         const mnemonicTextarea = page.locator('details:has-text("Sign with software signer") textarea[placeholder="Mnemonic"]');
-        await mnemonicTextarea.fill('idea bind tissue wood february mention unable collect expand stuff snap stock');
+        await mnemonicTextarea.fill('student lady today genius gentle zero satoshi book just link gauge tooth');
 
         // Click Save to save the mnemonic
         await page.getByRole('button', { name: 'Save' }).click();
@@ -143,7 +143,7 @@ test.describe('Wallet Functionality', () => {
         await cosignAmp0Button.click();
 
         // Should show error message "Amp0 sign failed: error sending request"
-        await expect(page.locator('div.message input[aria-invalid="true"]')).toBeVisible();
-        await expect(page.locator('div.message input[aria-invalid="true"]')).toHaveValue('Amp0 sign failed: error sending request');
+        await expect(page.locator('div.message input[aria-invalid="false"]')).toBeVisible();
+        await expect(page.locator('div.message input[aria-invalid="false"]')).toHaveValue('Transaction signed with Amp0!');
     });
 });
