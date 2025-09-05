@@ -2265,8 +2265,10 @@ function stopScanLoop() {
 class WalletDescriptor extends HTMLElement {
     constructor() {
         super()
+
         this.textarea = this.querySelector("textarea")
         this.quickLink = this.querySelector("a")
+        this.sectionTitle = this.querySelector("h3")
 
         if (getAmp0() == null) {
             let descriptor = getWollet().descriptor().toString()
@@ -2274,10 +2276,10 @@ class WalletDescriptor extends HTMLElement {
             this.quickLink.href = "#" + encodeRFC3986URIComponent(descriptor)
         }
         else {
-            this.textarea.innerText = "Amp0 wallet";
+            this.sectionTitle.textContent = "Amp0 id";
+            this.textarea.innerText = getAmp0().amp_id();
             this.quickLink.hidden = true;
         }
-
     }
 }
 

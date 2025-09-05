@@ -54,7 +54,7 @@ test.describe('Wallet Functionality', () => {
         await expect(registerWalletButton).toBeHidden();
     });
 
-    test('should login with Amp0 wallet', async ({ page }) => {
+    test('should login and operate with Amp0 wallet', async ({ page }) => {
         // Open options section
         await page.getByRole('button', { name: 'Options' }).click();
 
