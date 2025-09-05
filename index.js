@@ -1856,7 +1856,7 @@ class SignTransaction extends HTMLElement {
 
                 this.broadcastContractIfAny()
             } else {
-                const tx = this.pset.value
+                const tx = new lwk.Transaction(this.pset.value)
                 let client = esploraClient()
                 let txid = await client.broadcast_tx(tx)
                 this.messageDiv.innerHTML = success(txid, "Tx broadcasted!")
