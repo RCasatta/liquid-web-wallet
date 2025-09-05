@@ -827,7 +827,12 @@ class WalletBalance extends HTMLElement {
 
     handleFaucetRequest = async () => {
         this.faucetRequest.hidden = true
-        const address = getWollet().address(null).address().toString()
+        var address
+        if (getAmp0() == null) {
+            address = getWollet().address(null).address().toString()
+        } else {
+            address = getAmp0().address(null).address().toString()
+        }
         const url = `https://liquidtestnet.com/api/faucet?address=${address}&action=lbtc`
         console.log(url)
         this.messageDiv.innerHTML = success("Sending request to the faucet...")
