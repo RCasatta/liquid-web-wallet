@@ -761,7 +761,7 @@ class AddressView extends HTMLElement {
     }
 
     handleShowOnAmp0 = async (_e) => {
-        const address = getWollet().address(1)
+        const address = await getAmp0().address(1)
         this.displayAddress(address)
         this.messageDiv.innerHTML = warning("Fixed Amp0 address with index 1")
     }
