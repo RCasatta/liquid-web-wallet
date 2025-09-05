@@ -79,6 +79,15 @@ test.describe('Wallet Functionality', () => {
         // Wait for the sync to complete by waiting for the loading indicator to disappear
         await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible();
 
+        // Navigate to the Wallet page, it must show the Amp0 id
+        await page.getByRole('link', { name: 'Wallet' }).click();
+        await expect(page.getByRole('heading', { name: 'Amp0 id' })).toBeVisible();
+
+        // Verify the GAID in the textarea matches the expected value
+        const gaidTextarea = page.locator('wallet-descriptor textarea');
+        await expect(gaidTextarea).toBeVisible();
+        await expect(gaidTextarea).toHaveValue('GATu95iW5LAgaQu8XpSREDMMDFE2e');
+
         // Navigate to the receive page
         await page.getByRole('link', { name: 'Receive' }).click();
 
