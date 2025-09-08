@@ -362,7 +362,7 @@ async function handleAmp0Login(_e) {
         // Set button to busy state
         setBusyDisabled(amp0LoginButton, true)
 
-        const amp0 = await lwk.Amp0.netTestnet(username, password, "");
+        const amp0 = await lwk.Amp0.newTestnet(username, password, "");
 
         // Store amp0 instance in state
         setAmp0(amp0);
