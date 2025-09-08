@@ -362,9 +362,7 @@ async function handleAmp0Login(_e) {
         // Set button to busy state
         setBusyDisabled(amp0LoginButton, true)
 
-        // TODO: hashing password takes a long time (~2s)
-        // cache hashed username+password in localStorage
-        const amp0 = await lwk.Amp0.new_testnet(username, password, "");
+        const amp0 = await lwk.Amp0.netTestnet(username, password, "");
 
         // Store amp0 instance in state
         setAmp0(amp0);
@@ -1463,7 +1461,7 @@ class CreateTransaction extends HTMLElement {
             if (getAmp0() == null) {
                 pset = builder.finish(getWollet())
             } else {
-                const amp0pset = builder.finish_for_amp0(getWollet())
+                const amp0pset = builder.finishForAmp0(getWollet())
                 pset = amp0pset.pset()
                 setAmp0Pset(amp0pset)
             }
@@ -1695,7 +1693,7 @@ class CreateTransaction extends HTMLElement {
 
             // Validate the proposal
             // TODO: make full validation
-            const validatedProposal = unvalidatedProposal.insecure_validate()
+            const validatedProposal = unvalidatedProposal.insecureValidate()
             console.log(validatedProposal)
 
             // Create a transaction builder to accept the proposal
@@ -1863,7 +1861,7 @@ class SignTransaction extends HTMLElement {
             } else {
                 const tx = new lwk.Transaction(this.pset.value)
                 let client = esploraClient()
-                let txid = await client.broadcast_tx(tx)
+                let txid = await client.broadcastTx(tx)
                 this.messageDiv.innerHTML = success(txid, "Tx broadcasted!")
             }
 
@@ -1937,7 +1935,7 @@ class SignTransaction extends HTMLElement {
                 if (getAmp0() != null) {
                     const amp0Pset = getAmp0Pset();
                     const psetCopy = new lwk.Pset(signedPset.toString()) // not ideal...
-                    const userSignedAmp0Pset = new lwk.Amp0Pset(psetCopy, amp0Pset.blinding_nonces())
+                    const userSignedAmp0Pset = new lwk.Amp0Pset(psetCopy, amp0Pset.blindingNonces())
                     setAmp0Pset(userSignedAmp0Pset)
                 }
             }
@@ -1965,7 +1963,7 @@ class SignTransaction extends HTMLElement {
         let pset = new lwk.Pset(psetString)
         setBusyDisabled(this.cosignButton, true)
 
-        let amp2 = lwk.Amp2.new_testnet()
+        let amp2 = lwk.Amp2.newTestnet()
 
         try {
             let signedPset = await amp2.cosign(pset)
@@ -2140,7 +2138,7 @@ class SignTransaction extends HTMLElement {
             const pset = new lwk.Pset(psetString)
 
             // Convert to UnvalidatedLiquidexProposal
-            const proposal = lwk.UnvalidatedLiquidexProposal.from_pset(pset)
+            const proposal = lwk.UnvalidatedLiquidexProposal.fromPset(pset)
 
             // Populate the proposal textarea and show it
             this.proposalText.value = proposal.toString()
@@ -2277,7 +2275,7 @@ class WalletDescriptor extends HTMLElement {
         }
         else {
             this.sectionTitle.textContent = "Amp0 id";
-            this.textarea.innerText = getAmp0().amp_id();
+            this.textarea.innerText = getAmp0().ampId();
             this.quickLink.hidden = true;
         }
     }
@@ -2326,9 +2324,9 @@ class WalletAmp2 extends HTMLElement {
     handleRegister = async (_) => {
         try {
             setBusyDisabled(this.button, true)
-            let amp2 = lwk.Amp2.new_testnet()
+            let amp2 = lwk.Amp2.newTestnet()
             let keyoriginXpub = await keyoriginXpubUnified(lwk.Bip.bip87());
-            let amp2_desc = amp2.descriptor_from_str(keyoriginXpub)
+            let amp2_desc = amp2.descriptorFromStr(keyoriginXpub)
             let uuid = await amp2.register(amp2_desc);
             let uuid_descriptor = uuid + "|" + amp2_desc.descriptor(); // TODO: remove `descriptor()` once Amp2Descriptor support toString()
             localStorage.setItem(AMP2_DATA_KEY_PREFIX + keyoriginXpub, uuid_descriptor)
@@ -2667,7 +2665,7 @@ function esploraClient() {
     const utxoOnly = getUtxoOnly()
     const client = new lwk.EsploraClient(network, url, true, 4, utxoOnly)
     if (network.isMainnet() || network.isTestnet()) {
-        client.set_waterfalls_server_recipient("age1xxzrgrfjm3yrwh3u6a7exgrldked0pdauvr3mx870wl6xzrwm5ps8s2h0p");
+        client.setWaterfallsServerRecipient("age1xxzrgrfjm3yrwh3u6a7exgrldked0pdauvr3mx870wl6xzrwm5ps8s2h0p");
     }
     return client
 }
