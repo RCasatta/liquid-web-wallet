@@ -2184,15 +2184,44 @@ class SignTransaction extends HTMLElement {
             // Get websocket client and send the proposal
             const ws = websocketClient()
 
-            // Format the message for the websocket (PROPOSAL|||length|data)
-            const message = `PUBLISH_PROPOSAL|||${proposalText.length}|${proposalText}`
+            // Format the message for the websocket using JSON-RPC 2.0
+            const message = JSON.stringify({
+                "jsonrpc": "2.0",
+                "method": "publish",
+                "id": 1,
+                "params": {
+                    "proposal": JSON.parse(proposalText)
+                }
+            })
 
-            // Create a promise to handle the websocket connection
+            // Create a promise to handle the websocket connection and response
             const publishPromise = new Promise((resolve, reject) => {
                 ws.onopen = () => {
                     ws.send(message)
                     console.log("Proposal published to websocket")
-                    resolve()
+                }
+
+                ws.onmessage = (event) => {
+                    console.log("Received websocket response:", event.data)
+                    try {
+                        const response = JSON.parse(event.data)
+                        if (response.jsonrpc === "2.0" && response.id === 1) {
+                            if (response.result) {
+                                console.log("Proposal published successfully:", response.result)
+                                this.messageDiv.innerHTML = success("Proposal published!")
+                                resolve()
+                            } else if (response.error) {
+                                this.messageDiv.innerHTML = warning(`Server error: ${response.error}`)
+                                reject(new Error(`Server error: ${response.error.message || response.error}`))
+                            } else {
+                                this.messageDiv.innerHTML = warning("Unexpected response format")
+                                reject(new Error("Unexpected response format"))
+                            }
+                        }
+                    } catch (parseError) {
+                        console.error("Failed to parse websocket response:", parseError)
+                        reject(new Error("Invalid response from server"))
+                    }
                 }
 
                 ws.onerror = (error) => {
@@ -2206,7 +2235,6 @@ class SignTransaction extends HTMLElement {
 
             await publishPromise
 
-            this.messageDiv.innerHTML = success("Proposal published!")
         } catch (error) {
             this.messageDiv.innerHTML = warning(error.toString())
         } finally {

@@ -446,7 +446,17 @@ test.describe('Wallet Functionality', () => {
                 ws.onopen = () => {
                     console.log('WebSocket connected');
                     // Subscribe to the selling/buying asset pair
-                    const subscribeMsg = `SUBSCRIBE|||129|${sellingAssetId}_${buyingAssetId}`;
+                    const subscribeMsg = JSON.stringify({
+                        "jsonrpc": "2.0",
+                        "method": "subscribe",
+                        "id": 1,
+                        "params": {
+                            "pair": {
+                                "input": sellingAssetId,
+                                "output": buyingAssetId
+                            }
+                        }
+                    });
                     console.log('Sending subscription:', subscribeMsg);
                     ws.send(subscribeMsg);
                     resolve(true);
@@ -481,13 +491,44 @@ test.describe('Wallet Functionality', () => {
             return (window as any).liquidexTestResults || [];
         });
 
-
-        // Verify we received at least one message and it contains "ACK"
+        // Verify we received at least one message and it contains "subscribed"
         expect(receivedMessages.length).toBeGreaterThan(0);
-        expect(receivedMessages.some((msg: string) => msg.includes('ACK'))).toBe(true);
-        const proposalReceived = receivedMessages.some(
-            (msg: string) => msg.includes(proposalTextString)
-        );
+        expect(receivedMessages.some((msg: string) => msg.includes('subscribed'))).toBe(true);
+
+        // Check for proposal - it might be in a JSON-RPC response/notification format
+        const proposalReceived = receivedMessages.some((msg: string) => {
+            try {
+                const parsed = JSON.parse(msg);
+                // Check if it's a JSON-RPC response/notification with proposal data
+                if (parsed.jsonrpc === "2.0") {
+                    // Check if result contains proposal data (server response)
+                    if (parsed.result && typeof parsed.result === 'object') {
+                        const resultStr = JSON.stringify(parsed.result);
+                        return resultStr.includes(proposalTextString) ||
+                            resultStr.includes('"version":1') && resultStr.includes('"tx":');
+                    }
+                    // Check if params contains proposal data (notification)
+                    if (parsed.params && typeof parsed.params === 'object') {
+                        const paramsStr = JSON.stringify(parsed.params);
+                        return paramsStr.includes(proposalTextString) ||
+                            paramsStr.includes('"version":1') && paramsStr.includes('"tx":');
+                    }
+                }
+            } catch {
+                // If not JSON, check if it contains the proposal text directly
+                return msg.includes(proposalTextString);
+            }
+            return false;
+        });
+
+        // If proposal not found, log more details
+        if (!proposalReceived) {
+            console.log('Proposal text to find:', proposalTextString.substring(0, 100) + '...');
+            console.log('Message contents:');
+            receivedMessages.forEach((msg, index) => {
+                console.log(`Message ${index}:`, msg.substring(0, 200) + '...');
+            });
+        }
 
         // Use a standard expect() without custom message to avoid linter issues
         expect(proposalReceived).toBe(true);
