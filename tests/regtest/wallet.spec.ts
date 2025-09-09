@@ -650,7 +650,7 @@ test.describe('Wallet Functionality', () => {
         // Check for payment notification on the receiver page
         // We may need to wait a bit for the WebSocket message to arrive
         await expect(receiverPage.locator('.payment-notification input[value="Payment received!"]')).toBeVisible({
-            timeout: 30000 // Allow a longer timeout for the notification to appear
+            timeout: 10000 // Allow a longer timeout for the notification to appear
         });
 
         // Clean up

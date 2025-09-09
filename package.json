@@ -16,6 +16,7 @@
     "sync-testnet": "rsync -avh dist/ root@praga:/var/www/liquidwebwallet.org/testnet/ && rsync -avh dist/ root@gandi:/var/www/liquidwebwallet.org/testnet/",
     "sync-regtest": "rsync -avh dist/ root@praga:/var/www/liquidwebwallet.org/regtest/ && rsync -avh dist/ root@gandi:/var/www/liquidwebwallet.org/regtest/",
     "test": "npm run regtest && playwright test --project regtest",
+    "test-notification": "npm run regtest && playwright test --project regtest --grep notification --headed",
     "test-liquidex": "npm run regtest && playwright test --project regtest --grep liquidex --headed",
     "test-multi": "npm run regtest && playwright test --project regtest --grep multisignature --headed",
     "test-issuance-reissuance-burn": "npm run regtest && playwright test --project regtest --grep reissuance --headed",
