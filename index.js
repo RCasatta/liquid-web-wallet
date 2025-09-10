@@ -688,16 +688,37 @@ class AddressView extends HTMLElement {
         ws.onmessage = (event) => {
             console.log("Received websocket message:", event.data)
 
-            // Check if message contains the unconfidential address we're monitoring
-            if (typeof event.data === 'string' &&
-                this.currentUnconfidential &&
-                event.data.includes(this.currentUnconfidential)) {
-                // TODO: Trigger a full scan to update the wallet
-                // TODO: Here only the unconfidential address is monitored, 
-                // so if someone pay on the wrong blinding key, you still see payment received, 
-                // but you can't use those funds.
-                console.log("Payment detected for monitored address!");
-                this.paymentNotification.innerHTML = success("Payment received!");
+            try {
+                const message = JSON.parse(event.data);
+
+                // Check if message is in the expected JSON-RPC 2.0 format
+                if (message.jsonrpc === "2.0" &&
+                    message.result &&
+                    message.result.address &&
+                    message.result.tx_hex &&
+                    message.result.txid &&
+                    message.result.where &&
+                    message.id === -1) {
+                    const tx = new lwk.Transaction(message.result.tx_hex)
+
+                    // Check if the address in the message matches our monitored address
+                    if (this.currentUnconfidential &&
+                        message.result.address === this.currentUnconfidential) {
+
+                        console.log("Payment detected for monitored address!", {
+                            txid: message.result.txid,
+                            where: message.result.where
+                        });
+
+                        getWollet().applyTransaction(tx)
+
+                        this.paymentNotification.innerHTML = success("Payment received!");
+                    }
+                } else {
+                    console.log("Received websocket message in unexpected format:", message);
+                }
+            } catch (error) {
+                console.error("Failed to parse websocket message as JSON:", error);
             }
         }
 
