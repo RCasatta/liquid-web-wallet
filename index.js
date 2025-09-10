@@ -716,6 +716,11 @@ class AddressView extends HTMLElement {
 
                         this.paymentNotification.innerHTML = success("Payment received!");
                     }
+                } else if (message.jsonrpc === "2.0" &&
+                    message.result === "pong" &&
+                    message.id === 1) {
+                    // This is a ping response, don't log as unexpected format
+                    console.log("Received ping response (pong)");
                 } else {
                     console.log("Received websocket message in unexpected format:", message);
                 }
