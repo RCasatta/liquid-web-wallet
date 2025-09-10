@@ -721,6 +721,11 @@ class AddressView extends HTMLElement {
                     message.id === 1) {
                     // This is a ping response, don't log as unexpected format
                     console.log("Received ping response (pong)");
+                } else if (message.jsonrpc === "2.0" &&
+                    message.result === "subscribed" &&
+                    message.id === 1) {
+                    // This is a subscription confirmation, don't log as unexpected format
+                    console.log("Received subscription confirmation");
                 } else {
                     console.log("Received websocket message in unexpected format:", message);
                 }
