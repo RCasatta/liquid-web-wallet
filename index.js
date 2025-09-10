@@ -234,8 +234,8 @@ async function init() {
     // Subscribe to dev mode changes to update ledger visibility
     subscribe('dev-mode-changed', updateLedgerVisibility)
 
-    // Show Amp0 section only in testnet
-    if (network.isTestnet()) {
+    // Show Amp0 section only in testnet and mainnet
+    if (network.isTestnet() || network.isMainnet()) {
         amp0Div.hidden = false
         amp0LoginButton.disabled = false
         amp0LoginButton.addEventListener("click", handleAmp0Login)
@@ -362,7 +362,12 @@ async function handleAmp0Login(_e) {
         // Set button to busy state
         setBusyDisabled(amp0LoginButton, true)
 
-        const amp0 = await lwk.Amp0.newTestnet(username, password, "");
+        var amp0
+        if (network.isMainnet()) {
+            amp0 = await lwk.Amp0.newMainnet(username, password, "");
+        } else {
+            amp0 = await lwk.Amp0.newTestnet(username, password, "");
+        }
 
         // Store amp0 instance in state
         setAmp0(amp0);
