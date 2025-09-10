@@ -737,7 +737,7 @@ class AddressView extends HTMLElement {
             this.pingInterval = setInterval(() => {
                 const ping = JSON.stringify({
                     "jsonrpc": "2.0",
-                    "method": "subscribe",
+                    "method": "publish",
                     "id": 1,
                     "params": {
                         "ping": null
