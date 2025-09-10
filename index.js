@@ -686,10 +686,12 @@ class AddressView extends HTMLElement {
 
         // Setup websocket message listener - check for payments
         ws.onmessage = (event) => {
-            console.log("Received websocket message:", event.data)
+            console.log("Received websocket message:")
 
             try {
                 const message = JSON.parse(event.data);
+                console.log("Received websocket JSON message:", message)
+
 
                 // Check if message is in the expected JSON-RPC 2.0 format
                 if (message.jsonrpc === "2.0" &&
