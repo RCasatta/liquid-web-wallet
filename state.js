@@ -43,7 +43,10 @@ const _state = {
 
     // Amp0 state
     amp0: null, // lwk.Amp0 instance
-    amp0Pset: null // Amp0 PSET object for cosigning
+    amp0Pset: null, // Amp0 PSET object for cosigning
+
+    // LocalStorage state
+    localStorageFullAlertShown: false // Whether the localStorage full alert has been shown
 };
 
 // Initialize state from localStorage if available
@@ -317,6 +320,16 @@ export function setAmp0Pset(amp0Pset) {
     _state.amp0Pset = amp0Pset;
     publish('amp0-pset-changed', amp0Pset);
     return _state.amp0Pset;
+}
+
+// LocalStorage state management
+export function getLocalStorageFull() {
+    return _state.localStorageFullAlertShown;
+}
+
+export function setLocalStorageFull(shown) {
+    _state.localStorageFullAlertShown = shown === true;
+    return _state.localStorageFullAlertShown;
 }
 
 // Future state management functions will be added here 

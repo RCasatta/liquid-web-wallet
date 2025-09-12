@@ -13,6 +13,7 @@ import {
     getRegistryFetched, setRegistryFetched,
     getAmp0, setAmp0,
     getAmp0Pset, setAmp0Pset,
+    getLocalStorageFull, setLocalStorageFull,
     subscribe, publish
 } from './state.js'
 
@@ -22,7 +23,7 @@ jsQRScript.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 document.head.appendChild(jsQRScript);
 
 // Network setup (remains global as it's a configuration not state)
-const network = lwk.Network.regtestDefault()
+const network = lwk.Network.testnet()
 
 // Reference to the main application container
 const app = document.getElementById('app')
@@ -2791,15 +2792,21 @@ async function fullScanAndApply(wolletLocal, scanState) {
                     // more complex logic is avoided for now
                     console.log("avoid persisting only tip update")
                 } else {
-                    console.log("Saving persisted update " + walletStatus)
-                    update.prune(wolletLocal)
-                    const base64 = update.serializeEncryptedBase64(wolletLocal.descriptor())
+                    // Skip localStorage saving if we already know it was full
+                    if (!getLocalStorageFull()) {
+                        console.log("Saving persisted update " + walletStatus)
+                        update.prune(wolletLocal)
+                        const base64 = update.serializeEncryptedBase64(wolletLocal.descriptor())
 
-                    try {
-                        localStorage.setItem(walletStatus, base64)
-                    } catch (e) {
-                        console.log("Saving persisted update " + walletStatus + " failed, too big")
-                        alert("Attempt to store too much data in the local storage, skipping")
+                        try {
+                            localStorage.setItem(walletStatus, base64)
+                        } catch (e) {
+                            console.log("Saving persisted update " + walletStatus + " failed, too big")
+                            alert("Attempt to store too much data in the local storage, skipping")
+                            setLocalStorageFull(true)
+                        }
+                    } else {
+                        console.log("Skipping localStorage save - already alerted user about storage being full")
                     }
                 }
 
