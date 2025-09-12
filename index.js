@@ -718,9 +718,11 @@ class AddressView extends HTMLElement {
                             where: message.result.where
                         });
 
-                        getWollet().applyTransaction(tx)
+                        let balance = getWollet().applyTransaction(tx)
+                        console.log("Balance after transaction:", JSON.stringify(balance))
 
                         this.paymentNotification.innerHTML = success("Payment received!");
+                        this.paymentNotification.appendChild(mapToTable(mapBalance(balance.entries())));
                     }
                 } else if (message.jsonrpc === "2.0" &&
                     message.result === "pong" &&
