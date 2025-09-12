@@ -896,7 +896,8 @@ class WalletBalance extends HTMLElement {
         if (!wollet || wollet.neverScanned()) {
             return
         }
-        const balance = wollet.balance()
+        const balance = wollet.balance().entries()
+        console.log("balance", JSON.stringify(wollet.balance()))
 
         const lbtc = balance.get(network.policyAsset().toString())
         if (lbtc == 0 && !network.isMainnet()) {
@@ -1388,7 +1389,7 @@ class CreateTransaction extends HTMLElement {
         if (!wollet || wollet.neverScanned()) {
             return
         }
-        let balance = wollet.balance()
+        let balance = wollet.balance().entries()
 
         cleanChilds(this.selectAssetInRecipient)
         let option = document.createElement("option")
@@ -2137,7 +2138,7 @@ class SignTransaction extends HTMLElement {
             `
         this.signDivAnalyze.appendChild(hgroup)
 
-        var psetBalance = details.balance().balances()
+        var psetBalance = details.balance().balances().entries()
         psetBalance.set("fee", details.balance().fee())
         this.signDivAnalyze.appendChild(mapToTable(mapBalance(psetBalance), true))
 
