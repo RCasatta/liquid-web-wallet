@@ -685,7 +685,7 @@ class AddressView extends HTMLElement {
         }
     }
 
-    displayAddress(address) {
+    displayAddress(address: lwk.AddressResult) {
         // Clear any existing ping interval
         this.clearPingInterval();
 
@@ -2915,7 +2915,7 @@ function keyoriginXpubUnified(bip) {
     }
 }
 
-async function fullScanAndApply(wolletLocal, scanState) {
+async function fullScanAndApply(wolletLocal: lwk.Wollet, scanState: { running: boolean }) {
     var updated = false
 
     if (!scanState.running) {
@@ -2933,7 +2933,7 @@ async function fullScanAndApply(wolletLocal, scanState) {
                 console.log("update")
                 publish('scan-update', update)
                 updated = true
-                const walletStatus = wolletLocal.status()
+                const walletStatus = wolletLocal.status().toString()
                 wolletLocal.applyUpdate(update)
                 if (update.onlyTip()) {
                     // this is a shortcut, the restored from persisted state UI won't see "updated at <most recent scan>" but "updated at <most recent scan with tx>".
@@ -3099,7 +3099,7 @@ function encodeRFC3986URIComponent(str) {
     );
 }
 
-async function broadcastContract(contract) {
+async function broadcastContract(contract: lwk.RegistryPost) {
     try {
         const registry = getRegistry();
         const result = await registry.post(contract);
