@@ -48,10 +48,7 @@ async function init(): Promise<void> {
     let devMode: HTMLInputElement | null = document.getElementById("dev-mode") as HTMLInputElement | null
     let utxoOnly: HTMLInputElement | null = document.getElementById("utxo-only") as HTMLInputElement | null
     let amp0Div: HTMLElement | null = document.getElementById("amp0-div") as HTMLElement | null
-    let amp0User: HTMLInputElement | null = document.getElementById("amp0-user") as HTMLInputElement | null
-    let amp0Password: HTMLInputElement | null = document.getElementById("amp0-password") as HTMLInputElement | null
     let amp0LoginButton: HTMLButtonElement | null = document.getElementById("amp0-login-button") as HTMLButtonElement | null
-    let amp0Message: HTMLElement | null = document.getElementById("amp0-message") as HTMLElement | null
 
     // Diagnostic logging for dev mode state
     if (getDevMode()) {

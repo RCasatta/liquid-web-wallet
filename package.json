@@ -6,6 +6,8 @@
     "testnet": "sed -i 's/const network: lwk\\.Network = lwk\\.Network\\..*()/const network: lwk.Network = lwk.Network.testnet()/g' index.ts",
     "regtest": "sed -i 's/const network: lwk\\.Network = lwk\\.Network\\..*()/const network: lwk.Network = lwk.Network.regtestDefault()/g' index.ts",
     "check-release-build": "tsc --target es2020 --module commonjs ./scripts/check-wasm-build.ts && node ./scripts/check-wasm-build.ts",
+    "lint": "eslint *.ts **/*.ts",
+    "lint:fix": "eslint *.ts **/*.ts --fix",
     "add-git-hash": "echo \"\n<!-- Git commit: $(git rev-parse HEAD) -->\" >> index.html",
     "remove-git-hash": "grep -v 'Git commit:' index.html > index.html.tmp && mv index.html.tmp index.html",
     "deploy-mainnet": "npm run check-release-build && npm run mainnet && npm run build && npm run sync-mainnet",
@@ -26,8 +28,13 @@
     "lwk_wasm": "0.11.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.36.0",
     "@playwright/test": "^1.42.1",
+    "@typescript-eslint/eslint-plugin": "^8.44.0",
+    "@typescript-eslint/parser": "^8.44.0",
     "copy-webpack-plugin": "^11.0.0",
+    "eslint": "^9.36.0",
+    "globals": "^16.4.0",
     "hello-wasm-pack": "^0.1.0",
     "ts-loader": "^9.5.4",
     "webpack": "^5.88.1",
