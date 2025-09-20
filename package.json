@@ -2,9 +2,9 @@
   "scripts": {
     "start": "webpack-dev-server",
     "build": "rm -rf ./dist && webpack --config webpack.config.js --mode=production",
-    "mainnet": "sed -i 's/const network = lwk\\.Network\\.[^(]\\+()\\?/const network = lwk.Network.mainnet()/g' index.ts",
-    "testnet": "sed -i 's/const network = lwk\\.Network\\.[^(]\\+()\\?/const network = lwk.Network.testnet()/g' index.ts",
-    "regtest": "sed -i 's/const network = lwk\\.Network\\.[^(]\\+()\\?/const network = lwk.Network.regtestDefault()/g' index.ts",
+    "mainnet": "sed -i 's/const network: lwk\\.Network = lwk\\.Network\\..*()/const network: lwk.Network = lwk.Network.mainnet()/g' index.ts",
+    "testnet": "sed -i 's/const network: lwk\\.Network = lwk\\.Network\\..*()/const network: lwk.Network = lwk.Network.testnet()/g' index.ts",
+    "regtest": "sed -i 's/const network: lwk\\.Network = lwk\\.Network\\..*()/const network: lwk.Network = lwk.Network.regtestDefault()/g' index.ts",
     "check-release-build": "tsc --target es2020 --module commonjs ./scripts/check-wasm-build.ts && node ./scripts/check-wasm-build.ts",
     "add-git-hash": "echo \"\n<!-- Git commit: $(git rev-parse HEAD) -->\" >> index.html",
     "remove-git-hash": "grep -v 'Git commit:' index.html > index.html.tmp && mv index.html.tmp index.html",
