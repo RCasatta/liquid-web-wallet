@@ -2078,7 +2078,7 @@ class SignTransaction extends HTMLElement {
         }
     }
 
-    handleSignClick = async (_e) => {
+    handleSignClick = async (_e: Event) => {
         try {
             // Get the PSET string and parse it
             let psetString = this.pset.value
@@ -2135,7 +2135,7 @@ class SignTransaction extends HTMLElement {
     }
 
 
-    handleCosignClick = async (_e) => {
+    handleCosignClick = async (_e: Event) => {
         let psetString = this.pset.value
         let pset = new lwk.Pset(psetString)
         setBusyDisabled(this.cosignButton, true)
@@ -2155,7 +2155,7 @@ class SignTransaction extends HTMLElement {
 
     }
 
-    handleCosignAmp0Click = async (_e) => {
+    handleCosignAmp0Click = async (_e: Event) => {
         setBusyDisabled(this.cosignAmp0Button, true)
 
         try {
@@ -2181,7 +2181,7 @@ class SignTransaction extends HTMLElement {
     }
 
 
-    handleCombineClick = async (_e) => {
+    handleCombineClick = async (_e: Event) => {
         const pset1Str = this.pset.value
         const pset2Str = this.combineTextarea.value
         try {
@@ -2201,7 +2201,7 @@ class SignTransaction extends HTMLElement {
         }
     }
 
-    handleSaveMnemonicClick = async (_e) => {
+    handleSaveMnemonicClick = async (_e: Event) => {
         try {
             setBusyDisabled(this.saveMnemonicButton, true)
 
@@ -2302,7 +2302,7 @@ class SignTransaction extends HTMLElement {
         // TODO issuances
     }
 
-    handleProposal = async (_e) => {
+    handleProposal = async (_e: Event) => {
         try {
             const psetString = this.pset.value
             if (!psetString.trim()) {
@@ -2333,7 +2333,7 @@ class SignTransaction extends HTMLElement {
     }
 
     // Add handler for the publish proposal button
-    handlePublishProposal = async (_e) => {
+    handlePublishProposal = async (_e: Event) => {
         try {
             // Get the proposal from the textarea
             const proposalText = this.proposalText.value.trim()
@@ -2405,7 +2405,7 @@ class SignTransaction extends HTMLElement {
         }
     }
 
-    handleDownloadPset = (e) => {
+    handleDownloadPset = (e: Event) => {
         e.preventDefault()
         const psetText = this.pset.value
         if (!psetText) {
@@ -2577,7 +2577,7 @@ class WalletXpubs extends HTMLElement {
     }
 }
 
-async function jadeStandardDerivations(jade) {
+async function jadeStandardDerivations(jade: lwk.Jade) {
     // these are cached also on the Jade, but caching here allow to get rid of the async in keyoriginXpubUnified
     const derivations = {}
     const bips = [lwk.Bip.bip49(), lwk.Bip.bip84(), lwk.Bip.bip87()];
@@ -2830,12 +2830,12 @@ function mapToTable(map, add_icon = false) {
     return div
 }
 
-function loadPersisted(wolletLocal) {
+function loadPersisted(wolletLocal: lwk.Wollet) {
     const descriptor = wolletLocal.descriptor()
     var loaded = false
     var precStatus
     while (true) {
-        const walletStatus = wolletLocal.status()
+        const walletStatus = wolletLocal.status().toString()
         const retrievedUpdate = localStorage.getItem(walletStatus)
         if (retrievedUpdate) {
             if (precStatus === walletStatus) {
@@ -2879,7 +2879,7 @@ function updatedAt(wolletLocal, node) {
     }
 }
 
-function websocketClient() {
+function websocketClient(): WebSocket {
     const mainnetUrl = "https://nexus.liquidwebwallet.org/"
     const testnetUrl = "https://nexus.liquidwebwallet.org/testnet"
     const regtestUrl = "http://localhost:3330/"
@@ -2888,7 +2888,7 @@ function websocketClient() {
     return ws;
 }
 
-function esploraClient() {
+function esploraClient(): lwk.EsploraClient {
     const mainnetUrl = "https://waterfalls.liquidwebwallet.org/liquid/api"
     const testnetUrl = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api"
     const regtestUrl = "http://localhost:3000/"
