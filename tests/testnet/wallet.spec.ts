@@ -77,7 +77,7 @@ test.describe('Wallet Functionality', () => {
         await expect(page.getByRole('heading', { name: 'Balance' })).toBeVisible({ timeout: 15000 });
 
         // Wait for the sync to complete by waiting for the loading indicator to disappear
-        await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible();
+        await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible({ timeout: 20000 });
 
         // Navigate to the Wallet page, it must show the Amp0 id
         await page.getByRole('link', { name: 'Wallet' }).click();

@@ -1,28 +1,30 @@
 // state.js - Application state management
 
+import * as lwk from "lwk_wasm"
+
 /**
  * Private state object containing all application state
  */
 const _state: {
     page: string | null;
-    wollet: any;
+    wollet: lwk.Wollet | null;
     wolletSelected: string | null;
-    jade: any;
-    ledger: any;
+    jade: lwk.Jade | null;
+    ledger: lwk.LedgerWeb | null;
     standardDerivations: { [key: string]: string } | null;
-    xpub: string | null;
+    xpub: lwk.Xpub | null;
     multiWallets: string[];
-    swSigner: any;
+    swSigner: lwk.Signer | null;
     scan: { running: boolean };
     scanLoop: NodeJS.Timeout | null;
-    pset: any;
-    contract: any;
-    registry: any;
+    pset: lwk.Pset | null;
+    contract: lwk.RegistryPost | null;
+    registry: lwk.Registry | null;
     registryFetched: boolean;
     devMode: boolean;
     utxoOnly: boolean;
-    amp0: any;
-    amp0Pset: any;
+    amp0: lwk.Amp0 | null;
+    amp0Pset: any; // Amp0 PSET type - keeping as any for now since exact type is unclear
     localStorageFullAlertShown: boolean;
 } = {
     // Page state
@@ -136,11 +138,11 @@ export function setCurrentPage(pageId: string): string {
 }
 
 // Wallet state management
-export function getWollet() {
+export function getWollet(): lwk.Wollet | null {
     return _state.wollet;
 }
 
-export function setWollet(wollet) {
+export function setWollet(wollet: lwk.Wollet | null): lwk.Wollet | null {
     _state.wollet = wollet;
     publish('wollet-changed', wollet);
     return _state.wollet;
@@ -150,38 +152,38 @@ export function getWolletSelected() {
     return _state.wolletSelected;
 }
 
-export function setWolletSelected(walletType) {
+export function setWolletSelected(walletType: string | null): string | null {
     _state.wolletSelected = walletType;
     publish('wallet-selected', walletType);
     return _state.wolletSelected;
 }
 
 // Scan state management
-export function getScanState() {
+export function getScanState(): { running: boolean } {
     return _state.scan;
 }
 
-export function setScanRunning(isRunning) {
+export function setScanRunning(isRunning: boolean): { running: boolean } {
     _state.scan.running = isRunning;
     publish('scan-state-changed', _state.scan);
     return _state.scan;
 }
 
-export function getScanLoop() {
+export function getScanLoop(): NodeJS.Timeout | null {
     return _state.scanLoop;
 }
 
-export function setScanLoop(intervalId) {
+export function setScanLoop(intervalId: NodeJS.Timeout | null): NodeJS.Timeout | null {
     _state.scanLoop = intervalId;
     return _state.scanLoop;
 }
 
 // Jade state management
-export function getJade() {
+export function getJade(): lwk.Jade | null {
     return _state.jade;
 }
 
-export function setJade(jade, xpub, multiWallets, standardDerivations) {
+export function setJade(jade: lwk.Jade | null, xpub: lwk.Xpub | null, multiWallets: string[], standardDerivations: { [key: string]: string } | null): lwk.Jade | null {
     if (jade === undefined || xpub === undefined || multiWallets === undefined || standardDerivations === undefined) {
         throw new Error("setJade requires all parameters: jade, xpub, multiWallets, standardDerivations");
     }
@@ -196,91 +198,91 @@ export function setJade(jade, xpub, multiWallets, standardDerivations) {
 }
 
 // Ledger state management
-export function getLedger() {
+export function getLedger(): lwk.LedgerWeb | null {
     return _state.ledger;
 }
 
-export function setLedger(ledger) {
+export function setLedger(ledger: lwk.LedgerWeb | null): lwk.LedgerWeb | null {
     _state.ledger = ledger;
     publish('ledger-changed', ledger);
     return _state.ledger;
 }
 
-export function getStandardDerivations() {
+export function getStandardDerivations(): { [key: string]: string } | null {
     return _state.standardDerivations;
 }
 
-export function setStandardDerivations(derivations) {
+export function setStandardDerivations(derivations: { [key: string]: string } | null): { [key: string]: string } | null {
     _state.standardDerivations = derivations;
     return _state.standardDerivations;
 }
 
-export function getXpub() {
+export function getXpub(): lwk.Xpub | null {
     return _state.xpub;
 }
 
-export function setXpub(xpub) {
+export function setXpub(xpub: lwk.Xpub | null): lwk.Xpub | null {
     _state.xpub = xpub;
     return _state.xpub;
 }
 
 // Multisig state management
-export function getMultiWallets() {
+export function getMultiWallets(): string[] {
     return _state.multiWallets;
 }
 
-export function setMultiWallets(wallets) {
+export function setMultiWallets(wallets: string[]): string[] {
     _state.multiWallets = wallets;
     return _state.multiWallets;
 }
 
 // Software signer management
-export function getSwSigner() {
+export function getSwSigner(): lwk.Signer | null {
     return _state.swSigner;
 }
 
-export function setSwSigner(signer) {
+export function setSwSigner(signer: lwk.Signer | null): lwk.Signer | null {
     _state.swSigner = signer;
     return _state.swSigner;
 }
 
 // Transaction state management
-export function getPset() {
+export function getPset(): lwk.Pset | null {
     return _state.pset;
 }
 
-export function setPset(pset) {
+export function setPset(pset: lwk.Pset | null): lwk.Pset | null {
     _state.pset = pset;
     publish('pset-changed', pset);
     return _state.pset;
 }
 
-export function getContract() {
+export function getContract(): lwk.RegistryPost | null {
     return _state.contract;
 }
 
-export function setContract(contract) {
+export function setContract(contract: lwk.RegistryPost | null): lwk.RegistryPost | null {
     _state.contract = contract;
     return _state.contract;
 }
 
 // Registry state management
-export function getRegistry() {
+export function getRegistry(): lwk.Registry | null {
     return _state.registry;
 }
 
-export function setRegistry(registry) {
+export function setRegistry(registry: lwk.Registry | null): lwk.Registry | null {
     _state.registry = registry;
     publish('registry-changed', registry);
     return _state.registry;
 }
 
 // Dev mode state management
-export function getDevMode() {
+export function getDevMode(): boolean {
     return _state.devMode;
 }
 
-export function setDevMode(isDevMode) {
+export function setDevMode(isDevMode: boolean): boolean {
     // Update state, checking boolean explicitly to ensure consistency
     _state.devMode = isDevMode === true;
 
@@ -294,11 +296,11 @@ export function setDevMode(isDevMode) {
 }
 
 // UTXO only mode state management
-export function getUtxoOnly() {
+export function getUtxoOnly(): boolean {
     return _state.utxoOnly;
 }
 
-export function setUtxoOnly(isUtxoOnly) {
+export function setUtxoOnly(isUtxoOnly: boolean): boolean {
     // Update state, checking boolean explicitly to ensure consistency
     _state.utxoOnly = isUtxoOnly === true;
 
@@ -312,43 +314,43 @@ export function setUtxoOnly(isUtxoOnly) {
 }
 
 // Registry fetched state management
-export function getRegistryFetched() {
+export function getRegistryFetched(): boolean {
     return _state.registryFetched;
 }
 
-export function setRegistryFetched(isFetched) {
+export function setRegistryFetched(isFetched: boolean): boolean {
     _state.registryFetched = isFetched === true;
     return _state.registryFetched;
 }
 
 // Amp0 state management
-export function getAmp0() {
+export function getAmp0(): lwk.Amp0 | null {
     return _state.amp0;
 }
 
-export function setAmp0(amp0) {
+export function setAmp0(amp0: lwk.Amp0 | null): lwk.Amp0 | null {
     _state.amp0 = amp0;
     publish('amp0-changed', amp0);
     return _state.amp0;
 }
 
 // Amp0 PSET state management
-export function getAmp0Pset() {
+export function getAmp0Pset(): any {
     return _state.amp0Pset;
 }
 
-export function setAmp0Pset(amp0Pset) {
+export function setAmp0Pset(amp0Pset: any): any {
     _state.amp0Pset = amp0Pset;
     publish('amp0-pset-changed', amp0Pset);
     return _state.amp0Pset;
 }
 
 // LocalStorage state management
-export function getLocalStorageFull() {
+export function getLocalStorageFull(): boolean {
     return _state.localStorageFullAlertShown;
 }
 
-export function setLocalStorageFull(shown) {
+export function setLocalStorageFull(shown: boolean): boolean {
     _state.localStorageFullAlertShown = shown === true;
     return _state.localStorageFullAlertShown;
 }

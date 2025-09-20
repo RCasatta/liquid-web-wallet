@@ -868,7 +868,7 @@ class AddressView extends HTMLElement {
             jadeAddress = await getJade().getReceiveAddressSingle(variant, fullPath)
         } else {
             // 0 means external chain
-            jadeAddress = await getJade().getReceiveAddressMulti(getWolletSelected(), [0, index])
+            jadeAddress = await getJade().getReceiveAddressMulti(getWolletSelected(), new Uint32Array([0, index]))
         }
 
         console.assert(jadeAddress == address.address().toString(), "local and jade address are different!")
@@ -917,7 +917,7 @@ class WalletBalance extends HTMLElement {
         if (getAmp0() == null) {
             address = getWollet().address(null).address().toString()
         } else {
-            address = getAmp0().address(null).address().toString()
+            address = (await getAmp0().address(null)).address().toString()
         }
         const url = `https://liquidtestnet.com/api/faucet?address=${address}&action=lbtc`
         console.log(url)
@@ -1954,7 +1954,7 @@ class SignTransaction extends HTMLElement {
         }
 
         if (getSwSigner() != null) {
-            this.mnemonic.value = getSwSigner().mnemonic()
+            this.mnemonic.value = getSwSigner().mnemonic().toString()
         }
 
         this.renderAnalyze()
