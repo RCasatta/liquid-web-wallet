@@ -24,7 +24,7 @@ const _state: {
     devMode: boolean;
     utxoOnly: boolean;
     amp0: lwk.Amp0 | null;
-    amp0Pset: any; // Amp0 PSET type - keeping as any for now since exact type is unclear
+    amp0Pset: lwk.Amp0Pset | null;
     localStorageFullAlertShown: boolean;
 } = {
     // Page state
@@ -335,11 +335,11 @@ export function setAmp0(amp0: lwk.Amp0 | null): lwk.Amp0 | null {
 }
 
 // Amp0 PSET state management
-export function getAmp0Pset(): any {
+export function getAmp0Pset(): lwk.Amp0Pset | null {
     return _state.amp0Pset;
 }
 
-export function setAmp0Pset(amp0Pset: any): any {
+export function setAmp0Pset(amp0Pset: lwk.Amp0Pset | null): lwk.Amp0Pset | null {
     _state.amp0Pset = amp0Pset;
     publish('amp0-pset-changed', amp0Pset);
     return _state.amp0Pset;
