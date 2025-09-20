@@ -27,6 +27,7 @@
             # Additional utilities
             rsync # for deploy scripts
             jq    # for JSON manipulation
+            typescript
           ];
 
           shellHook = ''

@@ -15,7 +15,12 @@ import {
     getAmp0Pset, setAmp0Pset,
     getLocalStorageFull, setLocalStorageFull,
     subscribe, publish
-} from './state.js'
+} from './state'
+
+// Type declaration for jsQR global function
+declare global {
+    function jsQR(imageData: Uint8ClampedArray, width: number, height: number, options?: any): any;
+}
 
 // Import the jsQR library for QR code scanning
 const jsQRScript = document.createElement('script');
@@ -23,30 +28,30 @@ jsQRScript.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 document.head.appendChild(jsQRScript);
 
 // Network setup (remains global as it's a configuration not state)
-const network = lwk.Network.testnet()
+const network: any = lwk.Network.testnet()
 
 // Reference to the main application container
-const app = document.getElementById('app')
+const app: HTMLElement | null = document.getElementById('app')
 
-const RANDOM_MNEMONIC_KEY = "random_mnemonic"
-const AMP2_DATA_KEY_PREFIX = "amp2_data_v2_"
+const RANDOM_MNEMONIC_KEY: string = "random_mnemonic"
+const AMP2_DATA_KEY_PREFIX: string = "amp2_data_v2_"
 
 /// Re-enables initially disabled buttons, and add listener to buttons on the first page
 /// First page doesn't use components because we want to be loaded before the wasm is loaded, which takes time
-async function init() {
+async function init(): Promise<void> {
 
-    let connectJade = document.getElementById("connect-jade-button")
-    let descriptorTextarea = document.getElementById("descriptor-textarea")
-    let descriptorMessage = document.getElementById("descriptor-message")
-    let exampleDescriptor = document.getElementById("example-descriptor-link")
-    let loadingBar = document.getElementById("loading-wasm");
-    let devMode = document.getElementById("dev-mode")
-    let utxoOnly = document.getElementById("utxo-only")
-    let amp0Div = document.getElementById("amp0-div")
-    let amp0User = document.getElementById("amp0-user")
-    let amp0Password = document.getElementById("amp0-password")
-    let amp0LoginButton = document.getElementById("amp0-login-button")
-    let amp0Message = document.getElementById("amp0-message")
+    let connectJade: HTMLButtonElement | null = document.getElementById("connect-jade-button") as HTMLButtonElement | null
+    let descriptorTextarea: HTMLTextAreaElement | null = document.getElementById("descriptor-textarea") as HTMLTextAreaElement | null
+    let descriptorMessage: HTMLElement | null = document.getElementById("descriptor-message") as HTMLElement | null
+    let exampleDescriptor: HTMLAnchorElement | null = document.getElementById("example-descriptor-link") as HTMLAnchorElement | null
+    let loadingBar: HTMLElement | null = document.getElementById("loading-wasm") as HTMLElement | null;
+    let devMode: HTMLInputElement | null = document.getElementById("dev-mode") as HTMLInputElement | null
+    let utxoOnly: HTMLInputElement | null = document.getElementById("utxo-only") as HTMLInputElement | null
+    let amp0Div: HTMLElement | null = document.getElementById("amp0-div") as HTMLElement | null
+    let amp0User: HTMLInputElement | null = document.getElementById("amp0-user") as HTMLInputElement | null
+    let amp0Password: HTMLInputElement | null = document.getElementById("amp0-password") as HTMLInputElement | null
+    let amp0LoginButton: HTMLButtonElement | null = document.getElementById("amp0-login-button") as HTMLButtonElement | null
+    let amp0Message: HTMLElement | null = document.getElementById("amp0-message") as HTMLElement | null
 
     // Diagnostic logging for dev mode state
     if (getDevMode()) {
@@ -61,58 +66,59 @@ async function init() {
     const registry = lwk.Registry.defaultHardcodedForNetwork(network)
     setRegistry(registry)
 
-    devMode.checked = getDevMode()
-    utxoOnly.checked = getUtxoOnly()
+    if (devMode) devMode.checked = getDevMode()
+    if (utxoOnly) utxoOnly.checked = getUtxoOnly()
 
     // Define handleDevMode function to update state when checkbox changes
-    const handleDevMode = function (e) {
-        const isDevMode = e.target.checked
+    const handleDevMode = function (e: Event) {
+        const target = e.target as HTMLInputElement;
+        const isDevMode = target.checked;
         console.log("Dev mode checkbox changed to:", isDevMode);
-        setDevMode(isDevMode)
+        setDevMode(isDevMode);
     }
 
     // Define handleUtxoOnly function to update state when checkbox changes
-    const handleUtxoOnly = function (e) {
-        const isUtxoOnly = e.target.checked
+    const handleUtxoOnly = function (e: Event) {
+        const target = e.target as HTMLInputElement;
+        const isUtxoOnly = target.checked;
         console.log("UTXO only checkbox changed to:", isUtxoOnly);
-        setUtxoOnly(isUtxoOnly)
+        setUtxoOnly(isUtxoOnly);
     }
 
-    devMode.onchange = handleDevMode
-    utxoOnly.onchange = handleUtxoOnly
+    if (devMode) devMode.onchange = handleDevMode
+    if (utxoOnly) utxoOnly.onchange = handleUtxoOnly
 
-    connectJade.addEventListener("click", async (_e) => {
-        let connectJadeMessage = document.getElementById("connect-jade-message")
-        try {
-            setBusyDisabled(connectJade, true)
+    if (connectJade) {
+        connectJade.addEventListener("click", async (_e: Event) => {
+            let connectJadeMessage: HTMLElement | null = document.getElementById("connect-jade-message") as HTMLElement | null;
+            try {
+                if (connectJade) setBusyDisabled(connectJade, true);
+                let filter = !getDevMode()
+                console.log("filter out do it yourself " + filter)
 
-            let filter = !getDevMode()
-            console.log("filter out do it yourself " + filter)
+                const jade = await new lwk.Jade(network, filter)
+                loadingBar.setAttribute("style", "visibility: visible;")
+                connectJadeMessage.innerHTML = warning("Insert the PIN on the Jade if locked")
 
-            const jade = await new lwk.Jade(network, filter)
-            loadingBar.setAttribute("style", "visibility: visible;")
-            connectJadeMessage.innerHTML = warning("Insert the PIN on the Jade if locked")
+                // Initialize jade and collect all related data
+                const xpub = await jade.getMasterXpub() // asking something that requires unlock
+                const multiWallets = await jade.getRegisteredMultisigs()
+                const jadeDerivations = await jadeStandardDerivations(jade)
 
-            // Initialize jade and collect all related data
-            const xpub = await jade.getMasterXpub() // asking something that requires unlock
-            const multiWallets = await jade.getRegisteredMultisigs()
-            const jadeDerivations = await jadeStandardDerivations(jade)
+                // Set all jade-related state at once
+                setJade(jade, xpub, multiWallets, jadeDerivations)
 
-            // Set all jade-related state at once
-            setJade(jade, xpub, multiWallets, jadeDerivations)
-
-            loadingBar.setAttribute("style", "visibility: hidden;") // by using visibility we avoid layout shifts
-        } catch (e) {
-            // TODO network is the most common error but we can have other error,
-            // should indeed take the error message from e instead of a static value
-            connectJadeMessage.innerHTML = warning(e)
-            setBusyDisabled(connectJade, false)
-        }
-    })
+                loadingBar.setAttribute("style", "visibility: hidden;") // by using visibility we avoid layout shifts
+            } catch (e) {
+                if (connectJadeMessage) connectJadeMessage.innerHTML = warning(e);
+                if (connectJade) setBusyDisabled(connectJade, false);
+            }
+        });
+    }
 
     if (network.isRegtest()) {
         // Add WebSocket Jade connection functionality
-        let connectJadeWebSocket = document.getElementById("connect-jade-websocket-button")
+        let connectJadeWebSocket = document.getElementById("connect-jade-websocket-button") as HTMLButtonElement
         connectJadeWebSocket.hidden = false
         connectJadeWebSocket.disabled = false
 
@@ -164,19 +170,19 @@ async function init() {
         }
     })
 
-    let watchOnlyButton = document.getElementById("watch-only-button")
+    let watchOnlyButton = document.getElementById("watch-only-button") as HTMLButtonElement
     watchOnlyButton.addEventListener("click", handleWatchOnlyClick)
 
     connectJade.disabled = false
-    watchOnlyButton.disabled = false
-    exampleDescriptor.disabled = false
+    watchOnlyButton.disabled = false as any
+    (exampleDescriptor as any).disabled = false
 
     loadingBar.setAttribute("style", "visibility: hidden;") // by using visibility we avoid layout shifts
 
-    let randomWalletButton = document.getElementById("random-wallet-button");
+    let randomWalletButton = document.getElementById("random-wallet-button") as HTMLButtonElement;
 
     let ledgerDescriptorDiv = document.getElementById("ledger-descriptor-div")
-    let ledgerDescriptorButton = document.getElementById("ledger-connect-button")
+    let ledgerDescriptorButton = document.getElementById("ledger-connect-button") as HTMLButtonElement
     ledgerDescriptorButton.addEventListener("click", async (_e) => {
         let connectLedgerMessage = document.getElementById("connect-ledger-message")
 
@@ -313,10 +319,10 @@ async function init() {
     }
 }
 
-async function handleWatchOnlyClick(_e) {
+async function handleWatchOnlyClick(_e?: Event): Promise<void> {
     let descriptorMessage = document.getElementById("descriptor-message")
     try {
-        let descriptorTextarea = document.getElementById("descriptor-textarea")
+        let descriptorTextarea = document.getElementById("descriptor-textarea") as HTMLTextAreaElement
         const descriptorText = descriptorTextarea.value.trim()
         if (descriptorText == "") {
             throw new Error("Empty confidential descriptor")
@@ -338,10 +344,10 @@ async function handleWatchOnlyClick(_e) {
     }
 }
 
-async function handleAmp0Login(_e) {
+async function handleAmp0Login(_e: Event) {
     let amp0Message = document.getElementById("amp0-message")
-    let amp0User = document.getElementById("amp0-user")
-    let amp0Password = document.getElementById("amp0-password")
+    let amp0User = document.getElementById("amp0-user") as HTMLInputElement
+    let amp0Password = document.getElementById("amp0-password") as HTMLInputElement
     let amp0LoginButton = document.getElementById("amp0-login-button")
 
     try {
@@ -395,6 +401,9 @@ async function handleAmp0Login(_e) {
 await init()
 
 class MyFooter extends HTMLElement {
+    footer!: HTMLElement;
+    subscriptions!: (() => void)[];
+
     constructor() {
         super()
         this.footer = this.querySelector('footer')
@@ -444,7 +453,7 @@ class MyFooter extends HTMLElement {
 
         footer += `<span> | </span><span>${network}</span>`
         if (getJade() != null) {
-            const jadeIdentifier = getXpub().fingerprint()
+            const jadeIdentifier = (getXpub() as any).fingerprint()
             footer += `<span> | </span><span><code>${jadeIdentifier}</code></span>`
         }
         if (getWolletSelected() != null) {
@@ -469,6 +478,8 @@ class MyFooter extends HTMLElement {
 }
 
 class MyNav extends HTMLElement {
+    subscriptions!: (() => void)[];
+
     constructor() {
         super()
 
@@ -552,13 +563,13 @@ class MyNav extends HTMLElement {
 
     renderPage(id) {
         setCurrentPage(id)
-        const template = document.getElementById(id + "-template").content.cloneNode(true)
+        const template = (document.getElementById(id + "-template") as HTMLTemplateElement).content.cloneNode(true)
 
         cleanChilds(app)
         app.appendChild(template)
     }
 
-    render = async (_e) => {
+    render = async (_e?: Event) => {
         if (getWolletSelected() != null) {
             this.innerHTML = `
                     <a href="#" id="balance-page">Balance</a> |
@@ -576,6 +587,10 @@ class MyNav extends HTMLElement {
 
 
 class WalletSelector extends HTMLElement {
+    walletSelector!: HTMLSelectElement;
+    walletProgress!: HTMLProgressElement;
+    registerMultisigLink!: HTMLAnchorElement;
+
     constructor() {
         super()
         this.walletSelector = this.querySelector("select")
@@ -627,6 +642,18 @@ class WalletSelector extends HTMLElement {
 
 
 class AddressView extends HTMLElement {
+    showButton!: HTMLButtonElement;
+    messageDiv!: HTMLElement;
+    addressDisplay!: HTMLElement;
+    addressText!: HTMLElement;
+    addressCode!: HTMLElement;
+    addressQR!: HTMLElement;
+    addressLink!: HTMLAnchorElement;
+    addressImage!: HTMLImageElement;
+    paymentNotification!: HTMLElement;
+    pingInterval!: ReturnType<typeof setInterval> | null;
+    currentUnconfidential!: string | null;
+
     constructor() {
         super()
 
@@ -794,7 +821,7 @@ class AddressView extends HTMLElement {
         }
     }
 
-    handleShowOnLedger = async (_e) => {
+    handleShowOnLedger = async (_e?: Event) => {
         const address = getWollet().address(null)
         const index = address.index()
         console.log(address.address().toString())
@@ -813,13 +840,13 @@ class AddressView extends HTMLElement {
 
     }
 
-    handleShowOnAmp0 = async (_e) => {
+    handleShowOnAmp0 = async (_e?: Event) => {
         const address = await getAmp0().address(1)
         this.displayAddress(address)
         this.messageDiv.innerHTML = warning("Fixed Amp0 address with index 1")
     }
 
-    handleShowOnJade = async (_e) => {
+    handleShowOnJade = async (_e?: Event) => {
         // We don't need to set busy state here since it's now handled in handleShow
         const address = getWollet().address(null)
         const index = address.index()
@@ -850,6 +877,12 @@ class AddressView extends HTMLElement {
 }
 
 class WalletBalance extends HTMLElement {
+    subtitle!: HTMLElement;
+    div!: HTMLElement;
+    faucetRequest!: HTMLButtonElement;
+    subscriptions!: (() => void)[];
+    messageDiv!: HTMLElement;
+
     constructor() {
         super()
         this.subtitle = this.querySelector("p")
@@ -916,6 +949,11 @@ class WalletBalance extends HTMLElement {
 
 
 class WalletTransactions extends HTMLElement {
+    txsTitle!: HTMLElement;
+    subtitle!: HTMLElement;
+    div!: HTMLElement;
+    subscriptions!: (() => void)[];
+
     constructor() {
         super()
         this.txsTitle = this.querySelector("h2")
@@ -998,26 +1036,82 @@ class WalletTransactions extends HTMLElement {
 
 
 class CreateTransaction extends HTMLElement {
+    createButton!: HTMLButtonElement;
+    busy!: HTMLElement;
+    selectAssetInRecipient!: HTMLSelectElement;
+    div!: HTMLElement;
+    addressInput!: HTMLInputElement;
+    satoshisInput!: HTMLInputElement;
+    addRecipient!: HTMLInputElement;
+    message!: HTMLElement;
+    messageCreate!: HTMLElement;
+    template!: HTMLTemplateElement;
+    listRecipients!: HTMLElement;
+    assetWanted!: HTMLInputElement;
+    amountWanted!: HTMLInputElement;
+    messageLiquidex!: HTMLElement;
+    proposalTextarea!: HTMLTextAreaElement;
+    qrScannerModal!: HTMLDialogElement;
+    videoStream!: MediaStream | null;
+    qrVideo!: HTMLVideoElement;
+    scanInterval!: ReturnType<typeof setInterval> | null;
+    currentScanTarget!: string | null;
+    qrScanButton!: HTMLButtonElement;
+    qrScanButtonAsset!: HTMLButtonElement;
+    qrScanButtonToken!: HTMLButtonElement;
+    qrCloseButton!: HTMLButtonElement;
+    messageIssuance!: HTMLElement;
+    messageReissuance!: HTMLElement;
+    reissuanceAssetId!: HTMLInputElement;
+    reissuanceSatoshi!: HTMLInputElement;
+    reissuanceAddress!: HTMLInputElement;
+    ticker!: HTMLInputElement;
+    assetAddress!: HTMLInputElement;
+    tokenAddress!: HTMLInputElement;
+    tokenAmount!: HTMLInputElement;
+    domain!: HTMLInputElement;
+    pubkey!: HTMLInputElement;
+    name!: HTMLInputElement;
+    precision!: HTMLInputElement;
+    assetAmount!: HTMLInputElement;
+    selectAssetInBurn!: HTMLSelectElement;
+    amountBurn!: HTMLInputElement;
+    messageBurn!: HTMLElement;
+    utxoSelect!: HTMLSelectElement;
+    makerForm!: HTMLFormElement;
+    takerForm!: HTMLFormElement;
+    createProposalButton!: HTMLButtonElement;
+    lbtcButton!: HTMLButtonElement;
+    acceptProposalButton!: HTMLButtonElement;
+    addBurn!: HTMLInputElement;
+    qrScanButtonReissuance!: HTMLButtonElement;
+    issueForm!: HTMLFormElement;
+    reissueForm!: HTMLFormElement;
+
     constructor() {
-        super()
-        this.createButton = this.querySelector("button.create")
-        this.createButton.addEventListener("click", this.handleCreate)
+        super();
+        const selects = this.querySelectorAll("select") as NodeListOf<HTMLSelectElement>;
+        this.selectAssetInRecipient = selects[0];
+        this.div = this.querySelector("div") as HTMLElement;
+        this.createButton = this.querySelector("button.create") as HTMLButtonElement;
+        if (this.createButton) this.createButton.addEventListener("click", this.handleCreate.bind(this));
         this.busy = this.querySelector("article")
-        const selects = this.querySelectorAll("select")
-        this.selectAssetInRecipient = selects[0]
-        this.div = this.querySelector("div")
-        const inputs = this.querySelectorAll("input")
-        this.addressInput = inputs[0]
-        this.satoshisInput = inputs[1]
-        this.addRecipient = inputs[2]
-        this.addRecipient.addEventListener("click", this.handleAdd)
+        const inputs = this.querySelectorAll("input") as NodeListOf<HTMLInputElement>;
+        this.addressInput = inputs[0];
+        this.satoshisInput = inputs[1];
+        this.addRecipient = inputs[2];
+        if (this.addRecipient) this.addRecipient.addEventListener("click", this.handleAdd.bind(this));
+        this.message = this.querySelector("div.message") as HTMLElement;
+        this.messageCreate = this.querySelector("div.messageCreate") as HTMLElement;
+        this.template = this.querySelector("template") as HTMLTemplateElement;
+        this.listRecipients = this.querySelector("div.recipients") as HTMLElement;
 
         // Setup QR Code scanner
         this.qrScanButton = this.querySelector("button.qr-scan-button")
-        this.qrScanButton.addEventListener("click", this.handleQrScan)
-        this.qrScannerModal = document.getElementById("qr-scanner-modal")
-        this.qrVideo = document.getElementById("qr-video")
-        this.qrCloseButton = document.getElementById("qr-scanner-close")
+        this.qrScanButton.addEventListener("click", () => this.handleQrScan())
+        this.qrScannerModal = document.getElementById("qr-scanner-modal") as HTMLDialogElement
+        this.qrVideo = document.getElementById("qr-video") as HTMLVideoElement
+        this.qrCloseButton = document.getElementById("qr-scanner-close") as HTMLButtonElement
         this.qrCloseButton.addEventListener("click", this.closeQrScanner)
 
         // Additional QR scan buttons
@@ -1354,7 +1448,7 @@ class CreateTransaction extends HTMLElement {
             var builder = new lwk.TxBuilder(network)
 
             const assetAddr = this.assetAddress.value != '' ? new lwk.Address(this.assetAddress.value) : null
-            const tokenAddr = this.tokenAmount.value > 0 && this.tokenAddress.value != '' ? new lwk.Address(this.tokenAddress.value) : null
+            const tokenAddr = parseFloat(this.tokenAmount.value) > 0 && this.tokenAddress.value != '' ? new lwk.Address(this.tokenAddress.value) : null
             const contract = new lwk.Contract(
                 this.domain.value,
                 this.pubkey.value,
@@ -1502,14 +1596,14 @@ class CreateTransaction extends HTMLElement {
             var builder = new lwk.TxBuilder(network)
 
             for (const recipient of recipients) {
-                const recipientAsset = new lwk.AssetId(recipient.querySelector("input.assetid").value)
-                const satoshis = parsePrecision(recipientAsset.toString(), recipient.querySelector("input.amount").value)
+                const recipientAsset = new lwk.AssetId((recipient.querySelector("input.assetid") as HTMLInputElement).value)
+                const satoshis = parsePrecision(recipientAsset.toString(), (recipient.querySelector("input.amount") as HTMLInputElement).value)
 
-                if (recipient.querySelector("input.address").value == "BURN") {
+                if ((recipient.querySelector("input.address") as HTMLInputElement).value == "BURN") {
                     builder = builder.addBurn(satoshis, recipientAsset)
                 } else {
                     // address already validated during add phase
-                    const recipientAddress = new lwk.Address(recipient.querySelector("input.address").value)
+                    const recipientAddress = new lwk.Address((recipient.querySelector("input.address") as HTMLInputElement).value)
                     builder = builder.addRecipient(recipientAddress, satoshis, recipientAsset)
                 }
             }
@@ -1544,7 +1638,7 @@ class CreateTransaction extends HTMLElement {
             console.log(`element ${element.name} ${element.value}`)
             if (element.value === "" || (element.name == "asset" && element.value === "Select Asset")) {
                 if (setAria) {
-                    element.setAttribute("aria-invalid", true)
+                    element.setAttribute("aria-invalid", "true")
                 }
                 inputsEmpty.push(element.name)
             }
@@ -1563,19 +1657,19 @@ class CreateTransaction extends HTMLElement {
             return
         }
 
-        this.selectAssetInBurn.setAttribute("aria-invalid", false)
+        this.selectAssetInBurn.setAttribute("aria-invalid", "false")
         var assetInBurn
         try {
             assetInBurn = new lwk.AssetId(this.selectAssetInBurn.value)
         } catch (e) {
-            this.selectAssetInBurn.setAttribute("aria-invalid", true)
+            this.selectAssetInBurn.setAttribute("aria-invalid", "true")
             inputsValid += "Invalid asset. " + e.toString()
         }
 
-        this.amountBurn.setAttribute("aria-invalid", false)
+        this.amountBurn.setAttribute("aria-invalid", "false")
         const satoshis = parsePrecision(assetInBurn.toString(), this.amountBurn.value)
         if (!satoshis || satoshis <= 0) {
-            this.amountBurn.setAttribute("aria-invalid", true)
+            this.amountBurn.setAttribute("aria-invalid", "true")
             inputsValid += "Invalid value. "
         }
 
@@ -1587,10 +1681,10 @@ class CreateTransaction extends HTMLElement {
         this.listRecipients.hidden = false
 
         // Add recipient row
-        const content = this.template.content.cloneNode(true)
+        const content = this.template.content.cloneNode(true) as DocumentFragment
 
-        const el = content.querySelector("fieldset")
-        const inputs = content.querySelectorAll("input")
+        const el = content.querySelector("fieldset") as HTMLElement
+        const inputs = content.querySelectorAll("input") as NodeListOf<HTMLInputElement>
         inputs[0].value = "BURN"
         inputs[1].value = this.amountBurn.value
         inputs[2].value = mapAssetTicker(this.selectAssetInBurn.value) // value seen
@@ -1623,28 +1717,28 @@ class CreateTransaction extends HTMLElement {
         }
 
         /// Other validations such as valid address
-        this.addressInput.setAttribute("aria-invalid", false)
+        this.addressInput.setAttribute("aria-invalid", "false")
         var recipientAddress
         try {
             recipientAddress = lwk.Address.parse(this.addressInput.value, network)
         } catch (e) {
-            this.addressInput.setAttribute("aria-invalid", true)
+            this.addressInput.setAttribute("aria-invalid", "true")
             inputsValid += e.toString() + ". "
         }
 
-        this.selectAssetInRecipient.setAttribute("aria-invalid", false)
+        this.selectAssetInRecipient.setAttribute("aria-invalid", "false")
         var recipientAsset
         try {
             recipientAsset = new lwk.AssetId(this.selectAssetInRecipient.value)
         } catch (_e) {
-            this.selectAssetInRecipient.setAttribute("aria-invalid", true)
+            this.selectAssetInRecipient.setAttribute("aria-invalid", "true")
             inputsValid += "Invalid asset. "
         }
 
-        this.satoshisInput.setAttribute("aria-invalid", false)
+        this.satoshisInput.setAttribute("aria-invalid", "false")
         const satoshis = parsePrecision(recipientAsset.toString(), this.satoshisInput.value)
         if (!satoshis || satoshis <= 0) {
-            this.satoshisInput.setAttribute("aria-invalid", true)
+            this.satoshisInput.setAttribute("aria-invalid", "true")
             inputsValid += "Invalid value. "
         }
 
@@ -1655,10 +1749,10 @@ class CreateTransaction extends HTMLElement {
         // end other validations
 
         // Add recipient row
-        const content = this.template.content.cloneNode(true)
+        const content = this.template.content.cloneNode(true) as DocumentFragment
 
-        const el = content.querySelector("fieldset")
-        const inputs = content.querySelectorAll("input")
+        const el = content.querySelector("fieldset") as HTMLElement
+        const inputs = content.querySelectorAll("input") as NodeListOf<HTMLInputElement>
         inputs[0].value = this.addressInput.value
         inputs[1].value = this.satoshisInput.value
         inputs[2].value = mapAssetTicker(this.selectAssetInRecipient.value) // value seen
@@ -1774,6 +1868,33 @@ class CreateTransaction extends HTMLElement {
 
 
 class SignTransaction extends HTMLElement {
+    pset!: HTMLTextAreaElement;
+    contract!: HTMLTextAreaElement;
+    mnemonic!: HTMLTextAreaElement;
+    combineTextarea!: HTMLTextAreaElement;
+    contractSection!: HTMLElement;
+    analyzeButton!: HTMLButtonElement;
+    signButton!: HTMLButtonElement;
+    cosignButton!: HTMLButtonElement;
+    cosignAmp0Button!: HTMLButtonElement;
+    broadcastButton!: HTMLButtonElement;
+    downloadPsetButton!: HTMLAnchorElement;
+    uploadPsetFile!: HTMLInputElement;
+    proposalButton!: HTMLButtonElement;
+    publishButton!: HTMLButtonElement;
+    combineButton!: HTMLButtonElement;
+    saveMnemonicButton!: HTMLButtonElement;
+    messageDiv!: HTMLElement;
+    contractDiv!: HTMLElement;
+    signDivAnalyze!: HTMLElement;
+    recipientsDiv!: HTMLElement;
+    proposalContainer!: HTMLElement;
+    proposalText!: HTMLTextAreaElement;
+    signDetails!: HTMLDetailsElement;
+    signWithJadeButton!: HTMLButtonElement;
+    signWithLedgerButton!: HTMLButtonElement;
+    softwareSignButton!: HTMLButtonElement;
+
     constructor() {
         super()
 
@@ -1846,7 +1967,7 @@ class SignTransaction extends HTMLElement {
             let pset = new lwk.Pset(psetString)
             let jade = await new lwk.Jade(network, true)
             let signedPset = await jade.sign(pset)
-            this.pset.value = signedPset
+            this.pset.value = signedPset.toString()
             this.renderAnalyze()
             this.messageDiv.innerHTML = success("Transaction signed!")
         } catch (e) {
@@ -1865,7 +1986,7 @@ class SignTransaction extends HTMLElement {
             let device = await lwk.searchLedgerDevice()
             let ledger = new lwk.LedgerWeb(device, network)
             let signedPset = await ledger.sign(pset)
-            this.pset.value = signedPset.toString()
+            this.pset.value = signedPset.toString().toString()
             this.renderAnalyze()
             this.messageDiv.innerHTML = success("Transaction signed!")
         } catch (e) {
@@ -1887,7 +2008,7 @@ class SignTransaction extends HTMLElement {
             let signer = new lwk.Signer(mnemonic, network)
             let signedPset = signer.sign(pset)
 
-            this.pset.value = signedPset
+            this.pset.value = signedPset.toString()
             this.renderAnalyze()
             this.messageDiv.innerHTML = success("Transaction signed!")
 
@@ -2001,7 +2122,7 @@ class SignTransaction extends HTMLElement {
             }
 
             // Update the UI with the signed PSET
-            this.pset.value = signedPset
+            this.pset.value = signedPset.toString()
             this.renderAnalyze()
             this.messageDiv.innerHTML = success("Transaction signed!")
 
@@ -2024,7 +2145,7 @@ class SignTransaction extends HTMLElement {
         try {
             let signedPset = await amp2.cosign(pset)
             this.messageDiv.innerHTML = success("Transaction cosigned!")
-            this.pset.value = signedPset
+            this.pset.value = signedPset.toString()
             this.renderAnalyze()
         } catch (e) {
             this.messageDiv.innerHTML = warning(e.toString())
@@ -2070,7 +2191,7 @@ class SignTransaction extends HTMLElement {
             const pset1 = new lwk.Pset(pset1Str)
             const pset2 = new lwk.Pset(pset2Str)
             pset1.combine(pset2)
-            this.pset.value = pset1
+            this.pset.value = pset1.toString()
             this.combineTextarea.value = ""
             this.renderAnalyze()
 
@@ -2237,7 +2358,7 @@ class SignTransaction extends HTMLElement {
             })
 
             // Create a promise to handle the websocket connection and response
-            const publishPromise = new Promise((resolve, reject) => {
+            const publishPromise = new Promise<void>((resolve, reject) => {
                 ws.onopen = () => {
                     ws.send(message)
                     console.log("Proposal published to websocket")
@@ -2310,7 +2431,7 @@ class SignTransaction extends HTMLElement {
         const reader = new FileReader()
         reader.onload = (event) => {
             const content = event.target.result
-            this.pset.value = content
+            this.pset.value = typeof content === 'string' ? content : new TextDecoder().decode(content)
             this.renderAnalyze()
             this.messageDiv.innerHTML = success("PSET loaded successfully.")
         }
@@ -2345,6 +2466,10 @@ function stopScanLoop() {
 }
 
 class WalletDescriptor extends HTMLElement {
+    textarea!: HTMLTextAreaElement;
+    quickLink!: HTMLAnchorElement;
+    sectionTitle!: HTMLHeadingElement;
+
     constructor() {
         super()
 
@@ -2367,6 +2492,11 @@ class WalletDescriptor extends HTMLElement {
 
 
 class WalletAmp2 extends HTMLElement {
+    uuid!: HTMLTextAreaElement;
+    descriptor!: HTMLTextAreaElement;
+    quickLink!: HTMLAnchorElement;
+    button!: HTMLButtonElement;
+
     constructor() {
         super()
 
@@ -2424,6 +2554,10 @@ class WalletAmp2 extends HTMLElement {
 
 
 class WalletXpubs extends HTMLElement {
+    textareas!: NodeListOf<HTMLTextAreaElement>;
+    labels!: NodeListOf<HTMLLabelElement>;
+    bips!: lwk.Bip[];
+
     constructor() {
         super()
 
@@ -2456,6 +2590,19 @@ async function jadeStandardDerivations(jade) {
 
 
 class RegisterWallet extends HTMLElement {
+    threshold!: HTMLInputElement;
+    keyoriginXpub!: HTMLInputElement;
+    addParticipant!: HTMLInputElement;
+    jadeName!: HTMLInputElement;
+    create!: HTMLButtonElement;
+    addJade!: HTMLButtonElement;
+    register!: HTMLButtonElement;
+    listDiv!: HTMLElement;
+    templatePart!: HTMLTemplateElement;
+    descriptor!: HTMLTextAreaElement;
+    messageDivCreate!: HTMLElement;
+    messageDivRegister!: HTMLElement;
+
     constructor() {
         super()
         const inputs = this.querySelectorAll("input")
@@ -2471,8 +2618,8 @@ class RegisterWallet extends HTMLElement {
         this.templatePart = this.querySelector("template")
         this.descriptor = this.querySelector("textarea")
         const messagDivs = this.querySelectorAll("div.message")
-        this.messageDivCreate = messagDivs[0]
-        this.messageDivRegister = messagDivs[1]
+        this.messageDivCreate = messagDivs[0] as HTMLElement
+        this.messageDivRegister = messagDivs[1] as HTMLElement
 
         this.addParticipant.addEventListener("click", this.handleAdd)
         this.addJade.addEventListener("click", this.handleAddJade)
@@ -2486,7 +2633,7 @@ class RegisterWallet extends HTMLElement {
         if (jadeName && jadeName.length > 0 && jadeName.length < 16) {
             this.jadeName.removeAttribute("aria-invalid")
         } else {
-            this.jadeName.setAttribute("aria-invalid", true)
+            this.jadeName.setAttribute("aria-invalid", "true")
             inputsValid = false
         }
         var descriptor
@@ -2495,7 +2642,7 @@ class RegisterWallet extends HTMLElement {
             this.descriptor.removeAttribute("aria-invalid")
         } catch (e) {
             console.log(e)
-            this.descriptor.setAttribute("aria-invalid", true)
+            this.descriptor.setAttribute("aria-invalid", "true")
             inputsValid = false
         }
         if (!inputsValid) {
@@ -2522,21 +2669,21 @@ class RegisterWallet extends HTMLElement {
         this.messageDivCreate.innerHTML = ""
         var inputsValid = true
         const thresholdVal = this.threshold.value
-        if (thresholdVal && thresholdVal > 0) {
+        if (thresholdVal && parseInt(thresholdVal) > 0) {
             this.threshold.removeAttribute("aria-invalid")
         } else {
-            this.threshold.setAttribute("aria-invalid", true)
+            this.threshold.setAttribute("aria-invalid", "true")
             inputsValid = false
         }
 
-        const participants = Array.from(this.querySelectorAll("input.participant")).map((s) => s.value)
+        const participants = Array.from(this.querySelectorAll("input.participant") as NodeListOf<HTMLInputElement>).map((s) => s.value)
         if (participants.length > 0) {
             this.keyoriginXpub.removeAttribute("aria-invalid")
         } else {
-            this.keyoriginXpub.setAttribute("aria-invalid", true)
+            this.keyoriginXpub.setAttribute("aria-invalid", "true")
             inputsValid = false
         }
-        if (inputsValid && thresholdVal > participants.length) {
+        if (inputsValid && parseInt(thresholdVal) > participants.length) {
             this.messageDivCreate.innerHTML = warning("Threshold cannot be higher than participant")
             inputsValid = false
         }
@@ -2544,7 +2691,7 @@ class RegisterWallet extends HTMLElement {
             return
         }
 
-        const desc = lwk.WolletDescriptor.newMultiWshSlip77(thresholdVal, participants)
+        const desc = lwk.WolletDescriptor.newMultiWshSlip77(parseInt(thresholdVal), participants)
 
         this.descriptor.value = desc.toString()
     }
@@ -2554,21 +2701,21 @@ class RegisterWallet extends HTMLElement {
         if (lwk.Xpub.isValidWithKeyOrigin(keyoriginXpub)) {
             this.addValidParticipant(keyoriginXpub)
         } else {
-            this.keyoriginXpub.setAttribute("aria-invalid", true)
+            this.keyoriginXpub.setAttribute("aria-invalid", "true")
         }
     }
 
     handleAddJade = async (_) => {
-        this.addJade.setAttribute("aria-busy", true)
+        this.addJade.setAttribute("aria-busy", "true")
         const jadePart = keyoriginXpubUnified(lwk.Bip.bip87())
         this.addValidParticipant(jadePart)
         this.addJade.removeAttribute("aria-busy")
     }
 
     addValidParticipant = (keyoriginXpub) => {
-        const content = this.templatePart.content.cloneNode(true)
-        const el = content.querySelector("fieldset")
-        const inputs = content.querySelectorAll("input")
+        const content = this.templatePart.content.cloneNode(true) as DocumentFragment
+        const el = content.querySelector("fieldset") as HTMLElement
+        const inputs = content.querySelectorAll("input") as NodeListOf<HTMLInputElement>
         inputs[0].value = keyoriginXpub
         inputs[1].addEventListener("click", (_e) => {
             this.listDiv.removeChild(el)
@@ -2700,7 +2847,7 @@ function loadPersisted(wolletLocal) {
             wolletLocal.applyUpdate(update)
             loaded = true
             precStatus = walletStatus
-            publish('persist-loaded')
+            publish('persist-loaded', null)
         } else {
             return loaded
         }

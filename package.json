@@ -2,10 +2,10 @@
   "scripts": {
     "start": "webpack-dev-server",
     "build": "rm -rf ./dist && webpack --config webpack.config.js --mode=production",
-    "mainnet": "sed -i 's/const network = lwk\\.Network\\.[^(]\\+()\\?/const network = lwk.Network.mainnet()/g' index.js",
-    "testnet": "sed -i 's/const network = lwk\\.Network\\.[^(]\\+()\\?/const network = lwk.Network.testnet()/g' index.js",
-    "regtest": "sed -i 's/const network = lwk\\.Network\\.[^(]\\+()\\?/const network = lwk.Network.regtestDefault()/g' index.js",
-    "check-release-build": "node ./scripts/check-wasm-build.js",
+    "mainnet": "sed -i 's/const network = lwk\\.Network\\.[^(]\\+()\\?/const network = lwk.Network.mainnet()/g' index.ts",
+    "testnet": "sed -i 's/const network = lwk\\.Network\\.[^(]\\+()\\?/const network = lwk.Network.testnet()/g' index.ts",
+    "regtest": "sed -i 's/const network = lwk\\.Network\\.[^(]\\+()\\?/const network = lwk.Network.regtestDefault()/g' index.ts",
+    "check-release-build": "tsc --target es2020 --module commonjs ./scripts/check-wasm-build.ts && node ./scripts/check-wasm-build.ts",
     "add-git-hash": "echo \"\n<!-- Git commit: $(git rev-parse HEAD) -->\" >> index.html",
     "remove-git-hash": "grep -v 'Git commit:' index.html > index.html.tmp && mv index.html.tmp index.html",
     "deploy-mainnet": "npm run check-release-build && npm run mainnet && npm run build && npm run sync-mainnet",
@@ -29,6 +29,7 @@
     "@playwright/test": "^1.42.1",
     "copy-webpack-plugin": "^11.0.0",
     "hello-wasm-pack": "^0.1.0",
+    "ts-loader": "^9.5.4",
     "webpack": "^5.88.1",
     "webpack-cli": "^5.1.4",
     "webpack-dev-server": "^4.15.1"

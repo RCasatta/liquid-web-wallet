@@ -3,7 +3,28 @@
 /**
  * Private state object containing all application state
  */
-const _state = {
+const _state: {
+    page: string | null;
+    wollet: any;
+    wolletSelected: string | null;
+    jade: any;
+    ledger: any;
+    standardDerivations: { [key: string]: string } | null;
+    xpub: string | null;
+    multiWallets: string[];
+    swSigner: any;
+    scan: { running: boolean };
+    scanLoop: NodeJS.Timeout | null;
+    pset: any;
+    contract: any;
+    registry: any;
+    registryFetched: boolean;
+    devMode: boolean;
+    utxoOnly: boolean;
+    amp0: any;
+    amp0Pset: any;
+    localStorageFullAlertShown: boolean;
+} = {
     // Page state
     page: null, // id of the last rendered page
 
@@ -77,7 +98,7 @@ const _subscribers = new Map();
  * @param {Function} callback - Function to call when event is triggered
  * @returns {Function} - Unsubscribe function
  */
-export function subscribe(eventName, callback) {
+export function subscribe(eventName: string, callback: (data: any) => void): () => void {
     if (!_subscribers.has(eventName)) {
         _subscribers.set(eventName, new Set());
     }
@@ -97,7 +118,7 @@ export function subscribe(eventName, callback) {
  * @param {string} eventName - Name of the event to publish
  * @param {any} data - Data to pass to subscribers
  */
-export function publish(eventName, data) {
+export function publish(eventName: string, data: any): void {
     const subscribers = _subscribers.get(eventName);
     if (subscribers) {
         subscribers.forEach(callback => callback(data));
@@ -105,11 +126,11 @@ export function publish(eventName, data) {
 }
 
 // Page state management
-export function getCurrentPage() {
+export function getCurrentPage(): string | null {
     return _state.page;
 }
 
-export function setCurrentPage(pageId) {
+export function setCurrentPage(pageId: string): string {
     _state.page = pageId;
     return _state.page;
 }
