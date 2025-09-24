@@ -28,7 +28,7 @@ jsQRScript.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 document.head.appendChild(jsQRScript);
 
 // Network setup (remains global as it's a configuration not state)
-const network: lwk.Network = lwk.Network.regtestDefault()
+const network: lwk.Network = lwk.Network.testnet()
 
 // Reference to the main application container
 const app: HTMLElement | null = document.getElementById('app')
@@ -1525,7 +1525,7 @@ class CreateTransaction extends HTMLElement {
             // Add each UTXO from the wallet
             const utxos = wollet.utxos()
             if (utxos && utxos.length > 0) {
-                utxos.forEach((utxo, index) => {
+                utxos.forEach((utxo, _index) => {
                     try {
                         // Get unblinded information to access asset and value
                         const unblinded = utxo.unblinded()
@@ -1715,9 +1715,8 @@ class CreateTransaction extends HTMLElement {
 
         /// Other validations such as valid address
         this.addressInput.setAttribute("aria-invalid", "false")
-        var recipientAddress
         try {
-            recipientAddress = lwk.Address.parse(this.addressInput.value, network)
+            lwk.Address.parse(this.addressInput.value, network)
         } catch (e) {
             this.addressInput.setAttribute("aria-invalid", "true")
             inputsValid += e.toString() + ". "
@@ -2542,7 +2541,7 @@ class WalletAmp2 extends HTMLElement {
             let uuid_descriptor = uuid + "|" + amp2_desc.descriptor(); // TODO: remove `descriptor()` once Amp2Descriptor support toString()
             localStorage.setItem(AMP2_DATA_KEY_PREFIX + keyoriginXpub, uuid_descriptor)
             this.render()
-        } catch (e) {
+        } catch (_e) {
             setBusyDisabled(this.button, false)
 
         }
@@ -2756,7 +2755,7 @@ function useCodeIfNecessary(value) {
             // Asset hex is 64 characters - wrap in div with word-break for line wrapping
             // while keeping it selectable as one unit
             return `<div style="word-break: break-word"><code>${value}</code></div>`
-        } catch (_) {
+        } catch (_e) {
             return value
         }
     }
@@ -2946,7 +2945,7 @@ async function fullScanAndApply(wolletLocal: lwk.Wollet, scanState: { running: b
 
                         try {
                             localStorage.setItem(walletStatus, base64)
-                        } catch (e) {
+                        } catch (_e) {
                             console.log("Saving persisted update " + walletStatus + " failed, too big")
                             alert("Attempt to store too much data in the local storage, skipping")
                             setLocalStorageFull(true)
@@ -3084,7 +3083,7 @@ function _mapAssetHex(assetHex) {
                 return [assetHex, 0]
             }
         }
-    } catch (error) {
+    } catch (_error) {
         return [assetHex, 0]
     }
 }

@@ -16,7 +16,7 @@ const _state: {
     multiWallets: string[];
     swSigner: lwk.Signer | null;
     scan: { running: boolean };
-    scanLoop: NodeJS.Timeout | null;
+    scanLoop: any;
     pset: lwk.Pset | null;
     contract: lwk.RegistryPost | null;
     registry: lwk.Registry | null;
@@ -169,11 +169,11 @@ export function setScanRunning(isRunning: boolean): { running: boolean } {
     return _state.scan;
 }
 
-export function getScanLoop(): NodeJS.Timeout | null {
+export function getScanLoop(): any {
     return _state.scanLoop;
 }
 
-export function setScanLoop(intervalId: NodeJS.Timeout | null): NodeJS.Timeout | null {
+export function setScanLoop(intervalId: any): any {
     _state.scanLoop = intervalId;
     return _state.scanLoop;
 }
