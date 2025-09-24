@@ -5,7 +5,7 @@
     "mainnet": "sed -i 's/const network: lwk\\.Network = lwk\\.Network\\..*()/const network: lwk.Network = lwk.Network.mainnet()/g' index.ts",
     "testnet": "sed -i 's/const network: lwk\\.Network = lwk\\.Network\\..*()/const network: lwk.Network = lwk.Network.testnet()/g' index.ts",
     "regtest": "sed -i 's/const network: lwk\\.Network = lwk\\.Network\\..*()/const network: lwk.Network = lwk.Network.regtestDefault()/g' index.ts",
-    "check-release-build": "tsc --target es2020 --module commonjs ./scripts/check-wasm-build.ts && node ./scripts/check-wasm-build.ts",
+    "check-release-build": "node ./scripts/check-wasm-build.ts",
     "lint": "eslint *.ts **/*.ts",
     "lint:fix": "eslint *.ts **/*.ts --fix",
     "add-git-hash": "echo \"\n<!-- Git commit: $(git rev-parse HEAD) -->\" >> index.html",
