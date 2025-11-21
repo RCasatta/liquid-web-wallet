@@ -25,6 +25,7 @@ const _state: {
     utxoOnly: boolean;
     amp0: lwk.Amp0 | null;
     amp0Pset: lwk.Amp0Pset | null;
+    boltzSession: lwk.BoltzSession | null;
     localStorageFullAlertShown: boolean;
 } = {
     // Page state
@@ -67,6 +68,9 @@ const _state: {
     // Amp0 state
     amp0: null, // lwk.Amp0 instance
     amp0Pset: null, // Amp0 PSET object for cosigning
+
+    // Boltz session state
+    boltzSession: null, // lwk.BoltzSession instance
 
     // LocalStorage state
     localStorageFullAlertShown: false // Whether the localStorage full alert has been shown
@@ -343,6 +347,17 @@ export function setAmp0Pset(amp0Pset: lwk.Amp0Pset | null): lwk.Amp0Pset | null 
     _state.amp0Pset = amp0Pset;
     publish('amp0-pset-changed', amp0Pset);
     return _state.amp0Pset;
+}
+
+// Boltz session state management
+export function getBoltzSession(): lwk.BoltzSession | null {
+    return _state.boltzSession;
+}
+
+export function setBoltzSession(boltzSession: lwk.BoltzSession | null): lwk.BoltzSession | null {
+    _state.boltzSession = boltzSession;
+    publish('boltz-session-changed', boltzSession);
+    return _state.boltzSession;
 }
 
 // LocalStorage state management
