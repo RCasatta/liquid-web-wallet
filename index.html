@@ -590,34 +590,37 @@
 
 
     <template id="lightning-page-template">
-        <section>
-            <h2>Lightning</h2>
+        <lightning-page>
+            <section>
+                <h2>Lightning</h2>
 
-            <h3>Receive</h3>
-            <form id="lightning-receive-form">
-                <label for="lightning_amount">Amount (satoshi)</label>
-                <input type="number" id="lightning_amount" name="amount" required="required" min="1" placeholder="1000">
+                <h3>Receive</h3>
+                <form id="lightning-receive-form">
+                    <label for="lightning_amount">Amount (satoshi)</label>
+                    <input type="number" id="lightning_amount" name="amount" required="required" min="1"
+                        placeholder="1000">
 
-                <label for="lightning_description">Description (optional)</label>
-                <input type="text" id="lightning_description" name="description" placeholder="Payment for...">
+                    <label for="lightning_description">Description (optional)</label>
+                    <input type="text" id="lightning_description" name="description" placeholder="Payment for...">
 
-                <button type="submit">Invoice</button>
-            </form>
+                    <button type="submit">Invoice</button>
+                </form>
 
-            <br><br>
-            <div class="messageReceive"></div>
+                <br><br>
+                <div class="messageReceive"></div>
 
-            <h3>Send</h3>
-            <form id="lightning-send-form">
-                <label for="lightning_invoice">Invoice</label>
-                <input type="text" id="lightning_invoice" name="invoice" required="required" placeholder="lnbc1...">
+                <h3>Send</h3>
+                <form id="lightning-send-form">
+                    <label for="lightning_invoice">Invoice</label>
+                    <input type="text" id="lightning_invoice" name="invoice" required="required" placeholder="lnbc1...">
 
-                <button type="submit">Pay</button>
-            </form>
+                    <button type="submit">Pay</button>
+                </form>
 
-            <br><br>
-            <div class="messageSend"></div>
-        </section>
+                <br><br>
+                <div class="messageSend"></div>
+            </section>
+        </lightning-page>
     </template>
 
     <template id="about-page-template">

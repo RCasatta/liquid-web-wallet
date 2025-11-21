@@ -2723,6 +2723,45 @@ class RegisterWallet extends HTMLElement {
     }
 }
 
+class LightningPage extends HTMLElement {
+    receiveForm!: HTMLFormElement;
+    sendForm!: HTMLFormElement;
+    amountInput!: HTMLInputElement;
+    descriptionInput!: HTMLInputElement;
+    invoiceInput!: HTMLInputElement;
+    messageReceive!: HTMLElement;
+    messageSend!: HTMLElement;
+
+    constructor() {
+        super();
+
+        // Get the receive form and its elements
+        this.receiveForm = this.querySelector("#lightning-receive-form") as HTMLFormElement;
+        this.amountInput = this.querySelector("#lightning_amount") as HTMLInputElement;
+        this.descriptionInput = this.querySelector("#lightning_description") as HTMLInputElement;
+        this.messageReceive = this.querySelector(".messageReceive") as HTMLElement;
+
+        // Get the send form and its elements
+        this.sendForm = this.querySelector("#lightning-send-form") as HTMLFormElement;
+        this.invoiceInput = this.querySelector("#lightning_invoice") as HTMLInputElement;
+        this.messageSend = this.querySelector(".messageSend") as HTMLElement;
+
+        // Wire up form submit handlers
+        this.receiveForm.addEventListener("submit", this.handleReceiveInvoice.bind(this));
+        this.sendForm.addEventListener("submit", this.handleSendPayment.bind(this));
+    }
+
+    handleReceiveInvoice = async (e: Event) => {
+        e.preventDefault();
+        this.messageReceive.innerHTML = warning("Lightning invoice generation not yet implemented");
+    }
+
+    handleSendPayment = async (e: Event) => {
+        e.preventDefault();
+        this.messageSend.innerHTML = warning("Lightning payment not yet implemented");
+    }
+}
+
 customElements.define("my-nav", MyNav)
 customElements.define("my-footer", MyFooter)
 
@@ -2736,6 +2775,7 @@ customElements.define("wallet-balance", WalletBalance)
 customElements.define("wallet-transactions", WalletTransactions)
 customElements.define("create-transaction", CreateTransaction)
 customElements.define("sign-transaction", SignTransaction)
+customElements.define("lightning-page", LightningPage)
 customElements.define("register-wallet", RegisterWallet)
 
 
