@@ -201,7 +201,7 @@ async function init(): Promise<void> {
             console.log("wollet", wollet)
             setLedger(ledger)
             setWollet(wollet)
-            setBoltzSession(await createBoltzSession())
+            setBoltzSession(await createBoltzSession(wollet))
             setWolletSelected("Ledger")
             setScanRunning(false)
             loadPersisted(wollet)
@@ -333,7 +333,7 @@ async function handleWatchOnlyClick(_e?: Event): Promise<void> {
 
         const wollet = new lwk.Wollet(network, descriptor)
         setWollet(wollet)
-        setBoltzSession(await createBoltzSession())
+        setBoltzSession(await createBoltzSession(wollet))
         setWolletSelected("Descriptor")
         setScanRunning(false)
         loadPersisted(wollet)
@@ -384,7 +384,7 @@ async function handleAmp0Login(_e: Event) {
         const wollet = amp0.wollet()
 
         setWollet(wollet)
-        setBoltzSession(await createBoltzSession())
+        setBoltzSession(await createBoltzSession(wollet))
         setWolletSelected("Amp0")
         setScanRunning(false)
         loadPersisted(wollet)
@@ -635,7 +635,7 @@ class WalletSelector extends HTMLElement {
         console.log(descriptor.toString())
         const wollet = new lwk.Wollet(network, descriptor)
         setWollet(wollet)
-        setBoltzSession(await createBoltzSession())
+        setBoltzSession(await createBoltzSession(wollet))
         setScanRunning(false)
         loadPersisted(wollet)
 
@@ -2736,6 +2736,12 @@ class LightningPage extends HTMLElement {
     invoiceInput!: HTMLInputElement;
     messageReceive!: HTMLElement;
     messageSend!: HTMLElement;
+    invoiceText!: HTMLElement;
+    invoiceQR!: HTMLElement;
+    invoiceCode!: HTMLElement;
+    invoiceLink!: HTMLAnchorElement;
+    invoiceImage!: HTMLImageElement;
+    invoiceButton!: HTMLButtonElement;
 
     constructor() {
         super();
@@ -2745,6 +2751,14 @@ class LightningPage extends HTMLElement {
         this.amountInput = this.querySelector("#lightning_amount") as HTMLInputElement;
         this.descriptionInput = this.querySelector("#lightning_description") as HTMLInputElement;
         this.messageReceive = this.querySelector(".messageReceive") as HTMLElement;
+        this.invoiceButton = this.receiveForm.querySelector("button[type='submit']") as HTMLButtonElement;
+
+        // Get the invoice display elements
+        this.invoiceText = this.querySelector(".invoice-text") as HTMLElement;
+        this.invoiceQR = this.querySelector(".invoice-qr") as HTMLElement;
+        this.invoiceCode = this.querySelector(".invoice-text code") as HTMLElement;
+        this.invoiceLink = this.querySelector(".invoice-qr a") as HTMLAnchorElement;
+        this.invoiceImage = this.querySelector(".invoice-qr img") as HTMLImageElement;
 
         // Get the send form and its elements
         this.sendForm = this.querySelector("#lightning-send-form") as HTMLFormElement;
@@ -2759,15 +2773,39 @@ class LightningPage extends HTMLElement {
     handleReceiveInvoice = async (e: Event) => {
         e.preventDefault();
         try {
+            // Set button to loading state
+            setBusyDisabled(this.invoiceButton, true);
+
             const amount = BigInt(this.amountInput.value);
             const description = this.descriptionInput.value;
             const claimAddress = getWollet().address(null).address();
             console.log("asking invoice");
             const invoice = await getBoltzSession().invoice(amount, description, claimAddress);
-            this.messageReceive.innerHTML = success(invoice.toString());
+
+            // Create a LightningPayment object from the invoice
+            const bolt11 = invoice.bolt11Invoice();
+            const payment = new lwk.LightningPayment(bolt11);
+
+            // Display the invoice text
+            this.invoiceCode.textContent = bolt11;
+            this.invoiceText.hidden = false;
+
+            // Display the QR code
+            this.invoiceLink.href = `lightning:${bolt11}`;
+            this.invoiceImage.src = payment.toUriQr();
+            this.invoiceQR.hidden = false;
+
+            // Clear any previous message
+            this.messageReceive.innerHTML = "";
         } catch (e) {
             console.error("Error generating lightning invoice:", e);
             this.messageReceive.innerHTML = warning("Error generating lightning invoice: " + e);
+            // Hide invoice display on error
+            this.invoiceText.hidden = true;
+            this.invoiceQR.hidden = true;
+        } finally {
+            // Always reset button state when operation is complete
+            setBusyDisabled(this.invoiceButton, false);
         }
     }
 
@@ -2888,10 +2926,29 @@ function mapToTable(map, add_icon = false) {
     return div
 }
 
-async function createBoltzSession(): Promise<lwk.BoltzSession> {
-    const client = esploraClient()
-    const boltzSessionBuilder = new lwk.BoltzSessionBuilder(network, client)
-    return await boltzSessionBuilder.build()
+async function createBoltzSession(wolletLocal: lwk.Wollet): Promise<lwk.BoltzSession> {
+    const dwid = wolletLocal.dwid();
+    const mnemonicKey = `mnemonic-${dwid}`;
+
+    // Check if mnemonic exists in localStorage
+    let mnemonic: lwk.Mnemonic;
+    const storedMnemonic = localStorage.getItem(mnemonicKey);
+
+    if (storedMnemonic) {
+        // Load existing mnemonic
+        mnemonic = new lwk.Mnemonic(storedMnemonic);
+        console.log("found mnemonic in localStorage at key " + mnemonicKey);
+    } else {
+        // Create new random mnemonic and save it
+        console.log("no mnemonic found in localStorage at key " + mnemonicKey + ", creating new random mnemonic");
+        mnemonic = lwk.Mnemonic.fromRandom(12);
+        localStorage.setItem(mnemonicKey, mnemonic.toString());
+    }
+
+    const client = esploraClient();
+    var boltzSessionBuilder = new lwk.BoltzSessionBuilder(network, client);
+    boltzSessionBuilder = boltzSessionBuilder.mnemonic(mnemonic);
+    return await boltzSessionBuilder.build();
 }
 
 function loadPersisted(wolletLocal: lwk.Wollet) {
