@@ -2802,6 +2802,24 @@ class LightningPage extends HTMLElement {
 
             // Clear any previous message
             this.messageReceive.innerHTML = "";
+
+            // Spawn background task to complete the payment
+            setTimeout(async () => {
+                try {
+                    console.log("Starting complete_pay in background...");
+                    const completed = await invoice.complete_pay();
+                    console.log("complete_pay finished with result:", completed);
+
+                    if (completed) {
+                        this.messageReceive.innerHTML = success("Lightning payment received successfully!");
+                    } else {
+                        this.messageReceive.innerHTML = warning("Lightning payment completion failed or timed out");
+                    }
+                } catch (error) {
+                    console.error("Error in complete_pay:", error);
+                    this.messageReceive.innerHTML = warning("Error completing payment: " + error);
+                }
+            }, 0);
         } catch (e) {
             console.error("Error generating lightning invoice:", e);
             this.messageReceive.innerHTML = warning("Error generating lightning invoice: " + e);
