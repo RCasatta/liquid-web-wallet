@@ -2759,9 +2759,12 @@ class LightningPage extends HTMLElement {
     handleReceiveInvoice = async (e: Event) => {
         e.preventDefault();
         try {
-            const amount = this.amountInput.value;
+            const amount = BigInt(this.amountInput.value);
             const description = this.descriptionInput.value;
-            this.messageReceive.innerHTML = success("Lightning invoice generated successfully");
+            const claimAddress = getWollet().address(null).address();
+            console.log("asking invoice");
+            const invoice = await getBoltzSession().invoice(amount, description, claimAddress);
+            this.messageReceive.innerHTML = success(invoice.toString());
         } catch (e) {
             console.error("Error generating lightning invoice:", e);
             this.messageReceive.innerHTML = warning("Error generating lightning invoice: " + e);
@@ -2886,7 +2889,8 @@ function mapToTable(map, add_icon = false) {
 }
 
 async function createBoltzSession(): Promise<lwk.BoltzSession> {
-    const boltzSessionBuilder = new lwk.BoltzSessionBuilder(network)
+    const client = esploraClient()
+    const boltzSessionBuilder = new lwk.BoltzSessionBuilder(network, client)
     return await boltzSessionBuilder.build()
 }
 
