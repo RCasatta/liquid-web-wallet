@@ -2742,6 +2742,7 @@ class LightningPage extends HTMLElement {
     invoiceLink!: HTMLAnchorElement;
     invoiceImage!: HTMLImageElement;
     invoiceButton!: HTMLButtonElement;
+    downloadRescueButton!: HTMLButtonElement;
 
     constructor() {
         super();
@@ -2765,9 +2766,13 @@ class LightningPage extends HTMLElement {
         this.invoiceInput = this.querySelector("#lightning_invoice") as HTMLInputElement;
         this.messageSend = this.querySelector(".messageSend") as HTMLElement;
 
+        // Get the download rescue file button
+        this.downloadRescueButton = this.querySelector("#download-rescue-file") as HTMLButtonElement;
+
         // Wire up form submit handlers
         this.receiveForm.addEventListener("submit", this.handleReceiveInvoice.bind(this));
         this.sendForm.addEventListener("submit", this.handleSendPayment.bind(this));
+        this.downloadRescueButton.addEventListener("click", this.handleDownloadRescue.bind(this));
     }
 
     handleReceiveInvoice = async (e: Event) => {
@@ -2817,6 +2822,25 @@ class LightningPage extends HTMLElement {
         } catch (e) {
             console.error("Error creating lightning payment:", e);
             this.messageSend.innerHTML = warning("Error creating lightning payment: " + e);
+        }
+    }
+
+    handleDownloadRescue = (e: Event) => {
+        e.preventDefault();
+        try {
+            const rescueFile = getBoltzSession().rescue_file();
+            const blob = new Blob([rescueFile], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "boltz-rescue-file.txt";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (e) {
+            console.error("Error downloading rescue file:", e);
+            this.messageSend.innerHTML = warning("Error downloading rescue file: " + e);
         }
     }
 }
