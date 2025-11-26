@@ -370,4 +370,78 @@ export function setLocalStorageFull(shown: boolean): boolean {
     return _state.localStorageFullAlertShown;
 }
 
-// Future state management functions will be added here 
+// Swap storage management
+const SWAPS_STORAGE_KEY_PREFIX = 'swaps-';
+
+/**
+ * Interface for objects that can be saved as swaps (PreparePayResponse or InvoiceResponse)
+ */
+interface Swappable {
+    swapId(): string;
+    serialize(): string;
+}
+
+/**
+ * Get the localStorage key for swaps based on the current wollet's dwid
+ */
+function getSwapsStorageKey(): string {
+    const wollet = _state.wollet;
+    if (!wollet) {
+        throw new Error("No wollet available for swap storage");
+    }
+    return SWAPS_STORAGE_KEY_PREFIX + wollet.dwid();
+}
+
+/**
+ * Save a swap to localStorage
+ * @param swap - A swap object with swapId() and serialize() methods
+ */
+export function saveSwap(swap: Swappable): void {
+    const storageKey = getSwapsStorageKey();
+    const swaps = getAllSwaps();
+    swaps[swap.swapId()] = swap.serialize();
+    localStorage.setItem(storageKey, JSON.stringify(swaps));
+}
+
+/**
+ * Remove a swap from localStorage
+ * @param swapKey - Unique identifier for the swap to remove
+ * @returns true if the swap was found and removed, false otherwise
+ */
+export function removeSwap(swapKey: string): boolean {
+    const storageKey = getSwapsStorageKey();
+    const swaps = getAllSwaps();
+    if (swapKey in swaps) {
+        delete swaps[swapKey];
+        localStorage.setItem(storageKey, JSON.stringify(swaps));
+        return true;
+    }
+    return false;
+}
+
+/**
+ * Get all stored swaps for the current wollet
+ * @returns Object mapping swapKey to serialized swap data
+ */
+export function getAllSwaps(): { [key: string]: string } {
+    const storageKey = getSwapsStorageKey();
+    const stored = localStorage.getItem(storageKey);
+    if (stored) {
+        try {
+            return JSON.parse(stored);
+        } catch {
+            return {};
+        }
+    }
+    return {};
+}
+
+/**
+ * Get a specific swap by key
+ * @param swapKey - Unique identifier for the swap
+ * @returns Serialized swap data or null if not found
+ */
+export function getSwap(swapKey: string): string | null {
+    const swaps = getAllSwaps();
+    return swaps[swapKey] ?? null;
+}
