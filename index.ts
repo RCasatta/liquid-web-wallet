@@ -2806,22 +2806,7 @@ class LightningPage extends HTMLElement {
             this.messageReceive.innerHTML = "";
 
             // Spawn background task to complete the payment
-            setTimeout(async () => {
-                try {
-                    console.log("Starting complete_pay in background...");
-                    const completed = await invoice.completePay();
-                    console.log("complete_pay finished with result:", completed);
-
-                    if (completed) {
-                        this.messageReceive.innerHTML = success("Lightning payment received successfully!");
-                    } else {
-                        this.messageReceive.innerHTML = warning("Lightning payment completion failed or timed out");
-                    }
-                } catch (error) {
-                    console.error("Error in complete_pay:", error);
-                    this.messageReceive.innerHTML = warning("Error completing payment: " + error);
-                }
-            }, 0);
+            spawnCompletePay(invoice, this.messageReceive);
         } catch (e) {
             console.error("Error generating lightning invoice:", e);
             this.messageReceive.innerHTML = warning("Error generating lightning invoice: " + e);
@@ -2853,22 +2838,7 @@ class LightningPage extends HTMLElement {
 
 
             // Spawn background task to complete the payment
-            setTimeout(async () => {
-                try {
-                    console.log("Starting complete_pay in background...");
-                    const completed = await swap.completePay();
-                    console.log("complete_pay finished with result:", completed);
-
-                    if (completed) {
-                        this.messageReceive.innerHTML = success("Lightning payment received successfully!");
-                    } else {
-                        this.messageReceive.innerHTML = warning("Lightning payment completion failed or timed out");
-                    }
-                } catch (error) {
-                    console.error("Error in complete_pay:", error);
-                    this.messageReceive.innerHTML = warning("Error completing payment: " + error);
-                }
-            }, 0);
+            spawnCompletePay(swap, this.messageSend);
 
             this.messageSend.innerHTML = success("Lightning payment parsed successfully");
 
@@ -3062,6 +3032,37 @@ function warning(message, helper = "") {
 
 function success(message, helper = "") {
     return createMessage(message, false, helper)
+}
+
+/**
+ * Interface for swap objects that can complete payment (PreparePayResponse or InvoiceResponse)
+ */
+interface Completable {
+    completePay(): Promise<boolean>;
+}
+
+/**
+ * Spawn a background task to complete a swap payment
+ * @param swap - A swap object with completePay() method
+ * @param messageElement - HTML element to display status messages
+ */
+function spawnCompletePay(swap: Completable, messageElement: HTMLElement): void {
+    setTimeout(async () => {
+        try {
+            console.log("Starting completePay in background...");
+            const completed = await swap.completePay();
+            console.log("completePay finished with result:", completed);
+
+            if (completed) {
+                messageElement.innerHTML = success("Lightning payment completed successfully!");
+            } else {
+                messageElement.innerHTML = warning("Lightning payment completion failed or timed out");
+            }
+        } catch (error) {
+            console.error("Error in completePay:", error);
+            messageElement.innerHTML = warning("Error completing payment: " + error);
+        }
+    }, 0);
 }
 
 function createMessage(message, invalid, helper) {
