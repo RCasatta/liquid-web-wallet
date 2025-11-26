@@ -2742,6 +2742,7 @@ class LightningPage extends HTMLElement {
     invoiceLink!: HTMLAnchorElement;
     invoiceImage!: HTMLImageElement;
     invoiceButton!: HTMLButtonElement;
+    sendButton!: HTMLButtonElement;
     downloadRescueButton!: HTMLButtonElement;
 
     constructor() {
@@ -2765,6 +2766,7 @@ class LightningPage extends HTMLElement {
         this.sendForm = this.querySelector("#lightning-send-form") as HTMLFormElement;
         this.invoiceInput = this.querySelector("#lightning_invoice") as HTMLInputElement;
         this.messageSend = this.querySelector(".messageSend") as HTMLElement;
+        this.sendButton = this.sendForm.querySelector("button[type='submit']") as HTMLButtonElement;
 
         // Get the download rescue file button
         this.downloadRescueButton = this.querySelector("#download-rescue-file") as HTMLButtonElement;
@@ -2807,7 +2809,7 @@ class LightningPage extends HTMLElement {
             setTimeout(async () => {
                 try {
                     console.log("Starting complete_pay in background...");
-                    const completed = await invoice.complete_pay();
+                    const completed = await invoice.completePay();
                     console.log("complete_pay finished with result:", completed);
 
                     if (completed) {
@@ -2835,23 +2837,60 @@ class LightningPage extends HTMLElement {
     handleSendPayment = async (e: Event) => {
         e.preventDefault();
         try {
+            // Set button to loading state
+            setBusyDisabled(this.sendButton, true);
+
             const payment = new lwk.LightningPayment(this.invoiceInput.value);
+            const refundAddress = getWollet().address(null).address();
+            const swap = await getBoltzSession().preparePay(payment, refundAddress);
+
+            let address = swap.uriAddress();
+            let amount = swap.uriAmount();
+
+            var builder = new lwk.TxBuilder(network)
+            builder = builder.addLbtcRecipient(address, amount)
+            var pset = builder.finish(getWollet())
+
+
+            // Spawn background task to complete the payment
+            setTimeout(async () => {
+                try {
+                    console.log("Starting complete_pay in background...");
+                    const completed = await swap.completePay();
+                    console.log("complete_pay finished with result:", completed);
+
+                    if (completed) {
+                        this.messageReceive.innerHTML = success("Lightning payment received successfully!");
+                    } else {
+                        this.messageReceive.innerHTML = warning("Lightning payment completion failed or timed out");
+                    }
+                } catch (error) {
+                    console.error("Error in complete_pay:", error);
+                    this.messageReceive.innerHTML = warning("Error completing payment: " + error);
+                }
+            }, 0);
+
             this.messageSend.innerHTML = success("Lightning payment parsed successfully");
+
+            setPset(pset)
         } catch (e) {
             console.error("Error creating lightning payment:", e);
             this.messageSend.innerHTML = warning("Error creating lightning payment: " + e);
+        } finally {
+            // Always reset button state when operation is complete
+            setBusyDisabled(this.sendButton, false);
         }
     }
 
     handleDownloadRescue = (e: Event) => {
         e.preventDefault();
         try {
-            const rescueFile = getBoltzSession().rescue_file();
+            const rescueFile = getBoltzSession().rescueFile();
             const blob = new Blob([rescueFile], { type: "text/plain" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
-            a.download = "boltz-rescue-file.txt";
+            a.download = "boltz-rescue-file.json";
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
