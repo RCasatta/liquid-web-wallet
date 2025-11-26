@@ -400,6 +400,7 @@ export function saveSwap(swap: Swappable): void {
     const storageKey = getSwapsStorageKey();
     const swaps = getAllSwaps();
     swaps[swap.swapId()] = swap.serialize();
+    console.log("saving swap to localStorage", storageKey, swap.swapId());
     localStorage.setItem(storageKey, JSON.stringify(swaps));
 }
 

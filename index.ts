@@ -15,7 +15,9 @@ import {
     getAmp0Pset, setAmp0Pset,
     getBoltzSession, setBoltzSession,
     getLocalStorageFull, setLocalStorageFull,
-    subscribe, publish
+    subscribe, publish,
+    saveSwap,
+    getAllSwaps
 } from './state'
 
 // Type declaration for jsQR global function
@@ -930,13 +932,11 @@ class WalletBalance extends HTMLElement {
     }
 
     render = () => {
-        console.log("render balance")
         const wollet = getWollet();
         if (!wollet || wollet.neverScanned()) {
             return
         }
         const balance = wollet.balance().entries()
-        console.log("balance", JSON.stringify(wollet.balance()))
 
         const lbtc = balance.get(network.policyAsset().toString())
         if (lbtc == 0 && !network.isMainnet()) {
@@ -2789,6 +2789,8 @@ class LightningPage extends HTMLElement {
             console.log("asking invoice");
             const invoice = await getBoltzSession().invoice(amount, description, claimAddress);
 
+            saveSwap(invoice);
+
             // Create a LightningPayment object from the invoice
             const bolt11 = invoice.bolt11Invoice();
             const payment = new lwk.LightningPayment(bolt11);
@@ -2828,6 +2830,8 @@ class LightningPage extends HTMLElement {
             const payment = new lwk.LightningPayment(this.invoiceInput.value);
             const refundAddress = getWollet().address(null).address();
             const swap = await getBoltzSession().preparePay(payment, refundAddress);
+
+            saveSwap(swap);
 
             let address = swap.uriAddress();
             let amount = swap.uriAmount();
@@ -2999,7 +3003,21 @@ async function createBoltzSession(wolletLocal: lwk.Wollet): Promise<lwk.BoltzSes
     const client = esploraClient();
     var boltzSessionBuilder = new lwk.BoltzSessionBuilder(network, client);
     boltzSessionBuilder = boltzSessionBuilder.mnemonic(mnemonic);
-    return await boltzSessionBuilder.build();
+    const session = await boltzSessionBuilder.build();
+
+    for (const swapData of Object.values(getAllSwaps())) {
+        const swap = JSON.parse(swapData);
+        console.log("restoring swap ", swap.swap_type);
+        if (swap.swap_type === "reverse") {
+            const restored = await session.restoreInvoice(swapData);
+            spawnCompletePay(restored);
+        } else if (swap.swap_type === "submarine") {
+            const restored = await session.restorePreparePay(swapData);
+            spawnCompletePay(restored);
+        }
+    }
+
+    return session;
 }
 
 function loadPersisted(wolletLocal: lwk.Wollet) {
@@ -3132,7 +3150,6 @@ async function fullScanAndApply(wolletLocal: lwk.Wollet, scanState: { running: b
             const update = await client.fullScan(wolletLocal)
 
             if (update instanceof lwk.Update) {
-                console.log("update")
                 publish('scan-update', update)
                 updated = true
                 const walletStatus = wolletLocal.status().toString()
