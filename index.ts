@@ -17,7 +17,8 @@ import {
     getLocalStorageFull, setLocalStorageFull,
     subscribe, publish,
     saveSwap,
-    getAllSwaps
+    getAllSwaps,
+    removeSwap
 } from './state'
 
 // Type declaration for jsQR global function
@@ -3057,6 +3058,7 @@ function success(message, helper = "") {
  */
 interface Completable {
     completePay(): Promise<boolean>;
+    swapId(): string;
 }
 
 /**
@@ -3067,6 +3069,7 @@ function spawnCompletePay(swap: Completable): void {
     setTimeout(async () => {
         try {
             console.log("Starting completePay in background...");
+            const swapId = swap.swapId();
             const completed = await swap.completePay();
             console.log("completePay finished with result:", completed);
 
@@ -3075,6 +3078,7 @@ function spawnCompletePay(swap: Completable): void {
             } else {
                 alert("Lightning payment completion failed or timed out");
             }
+            removeSwap(swapId);
         } catch (error) {
             console.error("Error in completePay:", error);
             alert("Error completing payment: " + error);
