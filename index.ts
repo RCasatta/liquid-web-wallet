@@ -32,7 +32,7 @@ jsQRScript.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 document.head.appendChild(jsQRScript);
 
 // Network setup (remains global as it's a configuration not state)
-const network: lwk.Network = lwk.Network.mainnet()
+const network: lwk.Network = lwk.Network.testnet()
 
 // Reference to the main application container
 const app: HTMLElement | null = document.getElementById('app')
@@ -3024,7 +3024,13 @@ async function createBoltzSession(wolletLocal: lwk.Wollet): Promise<lwk.BoltzSes
     var boltzSessionBuilder = new lwk.BoltzSessionBuilder(network, client);
     boltzSessionBuilder = boltzSessionBuilder.mnemonic(mnemonic);
     boltzSessionBuilder = boltzSessionBuilder.referralId("liquidwebwallet.org");
-    const session = await boltzSessionBuilder.build();
+    let session: lwk.BoltzSession;
+    try {
+        session = await boltzSessionBuilder.build();
+    } catch (e) {
+        console.error("Error building Boltz session:", e);
+        return null;
+    }
 
     for (const swapData of Object.values(getAllSwaps())) {
         const swap = JSON.parse(swapData);
