@@ -8,7 +8,7 @@ export default defineConfig({
     workers: process.env.CI ? 1 : 1, // otherwise UTXOs can be selected concurrently
     reporter: 'html',
     use: {
-        baseURL: 'http://localhost:8080',
+        baseURL: 'http://localhost:8383',
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',
     },
@@ -40,7 +40,7 @@ export default defineConfig({
 
     webServer: {
         command: 'npm run start',
-        url: 'http://localhost:8080',
+        url: 'http://localhost:8383',
         reuseExistingServer: !process.env.CI,
     },
 }); 
