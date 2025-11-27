@@ -32,7 +32,7 @@ jsQRScript.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 document.head.appendChild(jsQRScript);
 
 // Network setup (remains global as it's a configuration not state)
-const network: lwk.Network = lwk.Network.testnet()
+const network: lwk.Network = lwk.Network.regtestDefault()
 
 // Reference to the main application container
 const app: HTMLElement | null = document.getElementById('app')
@@ -575,13 +575,16 @@ class MyNav extends HTMLElement {
 
     render = async (_e?: Event) => {
         if (getWolletSelected() != null) {
+            const lightningLink = getBoltzSession() != null
+                ? `<a href="#" id="lightning-page">Lightning</a> |`
+                : '';
             this.innerHTML = `
                     <a href="#" id="balance-page">Balance</a> |
                     <a href="#" id="transactions-page">Transactions</a> |
                     <a href="#" id="create-page">Create</a> |
                     <a href="#" id="sign-page">Sign</a> |
                     <a href="#" id="receive-page">Receive</a> |
-                    <a href="#" id="lightning-page">Lightning</a> |
+                    ${lightningLink}
                     <a href="#" id="disconnect">Disconnect</a>
 
                     <br><br>
