@@ -2830,24 +2830,43 @@ class LightningPage extends HTMLElement {
 
             const payment = new lwk.LightningPayment(this.invoiceInput.value);
             const refundAddress = getWollet().address(null).address();
-            const swap = await getBoltzSession().preparePay(payment, refundAddress);
 
-            saveSwap(swap);
+            let pset: lwk.Pset;
 
-            let address = swap.uriAddress();
-            let amount = swap.uriAmount();
+            try {
+                const swap = await getBoltzSession().preparePay(payment, refundAddress);
 
-            var builder = new lwk.TxBuilder(network)
-            builder = builder.addLbtcRecipient(address, amount)
-            var pset = builder.finish(getWollet())
+                saveSwap(swap);
 
+                const address = swap.uriAddress();
+                const amount = swap.uriAmount();
 
-            // Spawn background task to complete the payment
-            spawnCompletePay(swap);
+                let builder = new lwk.TxBuilder(network);
+                builder = builder.addLbtcRecipient(address, amount);
+                pset = builder.finish(getWollet());
 
-            this.messageSend.innerHTML = success("Lightning payment parsed successfully");
+                // Spawn background task to complete the payment
+                spawnCompletePay(swap);
 
-            setPset(pset)
+                this.messageSend.innerHTML = success("Lightning payment via Boltz swap");
+            } catch (prepareError: any) {
+                // Check for magic routing hint - direct Liquid payment possible
+                if (prepareError?.code === "Boltz::MagicRoutingHint" && prepareError?.details) {
+                    const hint = prepareError.details as lwk.MagicRoutingHint;
+                    const address = lwk.Address.parse(hint.address(), network);
+                    const amount = hint.amount();
+
+                    let builder = new lwk.TxBuilder(network);
+                    builder = builder.addLbtcRecipient(address, amount);
+                    pset = builder.finish(getWollet());
+
+                    this.messageSend.innerHTML = success("Direct Liquid payment (no swap needed)");
+                } else {
+                    throw prepareError;
+                }
+            }
+
+            setPset(pset);
         } catch (e) {
             console.error("Error creating lightning payment:", e);
             this.messageSend.innerHTML = warning("Error creating lightning payment: " + e);
