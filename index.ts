@@ -3004,6 +3004,7 @@ async function createBoltzSession(wolletLocal: lwk.Wollet): Promise<lwk.BoltzSes
     const client = esploraClient();
     var boltzSessionBuilder = new lwk.BoltzSessionBuilder(network, client);
     boltzSessionBuilder = boltzSessionBuilder.mnemonic(mnemonic);
+    boltzSessionBuilder = boltzSessionBuilder.referralId("liquidwebwallet.org");
     const session = await boltzSessionBuilder.build();
 
     for (const swapData of Object.values(getAllSwaps())) {
