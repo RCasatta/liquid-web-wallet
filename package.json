@@ -22,7 +22,8 @@
     "test-liquidex": "npm run regtest && playwright test --project regtest --grep liquidex --headed",
     "test-multi": "npm run regtest && playwright test --project regtest --grep multisignature --headed",
     "test-issuance-reissuance-burn": "npm run regtest && playwright test --project regtest --grep reissuance --headed",
-    "test-testnet": "npm run testnet && playwright test --project testnet"
+    "test-testnet": "npm run testnet && playwright test --project testnet",
+    "test-boltz": "npm run regtest && playwright test --project boltz-regtest"
   },
   "dependencies": {
     "lwk_wasm": "0.11.1"

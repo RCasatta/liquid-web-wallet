@@ -36,6 +36,18 @@ export default defineConfig({
                 },
             },
         },
+        {
+            name: 'boltz-regtest',
+            testDir: './tests/boltz-regtest',
+            use: {
+                ...devices['Desktop Chrome'],
+                baseURL: 'http://localhost:8383',
+                // Use system chromium on NixOS
+                launchOptions: {
+                    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+                },
+            },
+        },
     ],
 
     webServer: {

@@ -3142,13 +3142,18 @@ function websocketClient(): WebSocket {
 }
 
 function esploraClient(): lwk.EsploraClient {
+    const urlParams = new URLSearchParams(window.location.search);
+    const overrideUrl = urlParams.get('esploraUrl');
+    const waterfallsParam = urlParams.get('waterfalls');
+
     const mainnetUrl = "https://waterfalls.liquidwebwallet.org/liquid/api"
     const testnetUrl = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api"
     const regtestUrl = "http://localhost:3000/"
-    const url = network.isMainnet() ? mainnetUrl : network.isTestnet() ? testnetUrl : regtestUrl
+    const url = overrideUrl ?? (network.isMainnet() ? mainnetUrl : network.isTestnet() ? testnetUrl : regtestUrl)
+    const waterfalls = waterfallsParam !== null ? waterfallsParam === 'true' : true
     const utxoOnly = getUtxoOnly()
-    const client = new lwk.EsploraClient(network, url, true, 4, utxoOnly)
-    if (network.isMainnet() || network.isTestnet()) {
+    const client = new lwk.EsploraClient(network, url, waterfalls, 4, utxoOnly)
+    if (waterfalls && (network.isMainnet() || network.isTestnet())) {
         client.setWaterfallsServerRecipient("age1xxzrgrfjm3yrwh3u6a7exgrldked0pdauvr3mx870wl6xzrwm5ps8s2h0p");
     }
     return client
