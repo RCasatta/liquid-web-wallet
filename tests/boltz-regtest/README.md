@@ -3,6 +3,7 @@ requires launching a boltz regtest environment
 ```
 cd lwk/lwk_test/lwk_boltz
 just regtest-env-start
+just export-env-vars # creates .env used by getLndMacaroon()
 ```
 
 then, from this project root
