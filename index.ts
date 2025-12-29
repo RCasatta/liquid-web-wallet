@@ -32,7 +32,7 @@ jsQRScript.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 document.head.appendChild(jsQRScript);
 
 // Network setup (remains global as it's a configuration not state)
-const network: lwk.Network = lwk.Network.regtestDefault()
+const network: lwk.Network = lwk.Network.mainnet()
 
 // Reference to the main application container
 const app: HTMLElement | null = document.getElementById('app')
@@ -575,9 +575,9 @@ class MyNav extends HTMLElement {
 
     render = async (_e?: Event) => {
         if (getWolletSelected() != null) {
-            const lightningLink = getBoltzSession() != null
-                ? `<a href="#" id="lightning-page">Lightning</a> |`
-                : '';
+            const lightningLink = network.isTestnet()
+                ? ''
+                : `<a href="#" id="lightning-page">Lightning</a> |`;
             this.innerHTML = `
                     <a href="#" id="balance-page">Balance</a> |
                     <a href="#" id="transactions-page">Transactions</a> |
@@ -2475,6 +2475,7 @@ class WalletDescriptor extends HTMLElement {
     textarea!: HTMLTextAreaElement;
     quickLink!: HTMLAnchorElement;
     sectionTitle!: HTMLHeadingElement;
+    dwidInput!: HTMLInputElement;
 
     constructor() {
         super()
@@ -2482,17 +2483,49 @@ class WalletDescriptor extends HTMLElement {
         this.textarea = this.querySelector("textarea")
         this.quickLink = this.querySelector("a")
         this.sectionTitle = this.querySelector("h3")
+        this.dwidInput = this.querySelector("input.dwid")
 
         if (getAmp0() == null) {
             let descriptor = getWollet().descriptor().toString()
             this.textarea.innerText = descriptor
             this.quickLink.href = "#" + encodeRFC3986URIComponent(descriptor)
+            this.dwidInput.value = getWollet().dwid()
         }
         else {
             this.sectionTitle.textContent = "Amp0 id";
             this.textarea.innerText = getAmp0().ampId();
             this.quickLink.hidden = true;
+            this.dwidInput.parentElement.hidden = true;
         }
+    }
+}
+
+
+class WalletPos extends HTMLElement {
+    currencySelect!: HTMLSelectElement;
+    posLink!: HTMLAnchorElement;
+
+    constructor() {
+        super()
+
+        if (!network.isMainnet() || getAmp0() != null) {
+            this.remove()
+            return
+        }
+
+        this.currencySelect = this.querySelector("select.currency-select")
+        this.posLink = this.querySelector("a")
+
+        this.currencySelect.addEventListener("change", () => this.updateLink())
+        this.updateLink()
+    }
+
+    updateLink() {
+        const descriptor = getWollet().descriptor()
+        const currencyCode = new lwk.CurrencyCode(this.currencySelect.value)
+        const posConfig = new lwk.PosConfig(descriptor, currencyCode)
+        const configString = posConfig.encode()
+        this.posLink.href = `https://btcpos.cash#${configString}`
     }
 }
 
@@ -2905,6 +2938,7 @@ customElements.define("my-footer", MyFooter)
 customElements.define("wallet-selector", WalletSelector)
 customElements.define("address-view", AddressView)
 customElements.define("wallet-descriptor", WalletDescriptor)
+customElements.define("wallet-pos", WalletPos)
 customElements.define("wallet-xpubs", WalletXpubs)
 customElements.define("wallet-amp2", WalletAmp2)
 

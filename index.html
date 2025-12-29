@@ -494,7 +494,39 @@
             <textarea readonly></textarea>
             <a href="#" target="_blank" rel="noopener noreferrer">Quick watch-only link</a>
             </p>
+            <p>
+                <hgroup>
+                    <h3>DWID</h3>
+                    <p>Deterministic wallet identifier</p>
+                </hgroup>
+                <input type="text" class="dwid" readonly />
+            </p>
         </wallet-descriptor>
+
+        <wallet-pos>
+            <p>
+                <hgroup>
+                    <h3>Point of Sale</h3>
+                    <p>Link to btcpos.cash with this wallet</p>
+                </hgroup>
+                <label>
+                    Currency
+                    <select class="currency-select">
+                        <option value="USD" selected>🇺🇸 USD - US Dollar</option>
+                        <option value="EUR">🇪🇺 EUR - Euro</option>
+                        <option value="CHF">🇨🇭 CHF - Swiss Franc</option>
+                        <option value="GBP">🇬🇧 GBP - British Pound</option>
+                        <option value="INR">🇮🇳 INR - Indian Rupee</option>
+                        <option value="CAD">🇨🇦 CAD - Canadian Dollar</option>
+                        <option value="ARS">🇦🇷 ARS - Argentine Peso</option>
+                        <option value="AUD">🇦🇺 AUD - Australian Dollar</option>
+                        <option value="BRL">🇧🇷 BRL - Brazilian Real</option>
+                        <option value="CNY">🇨🇳 CNY - Chinese Yuan</option>
+                    </select>
+                </label>
+                <a href="#" target="_blank" rel="noopener noreferrer">Open Point of Sale</a>
+            </p>
+        </wallet-pos>
 
         <wallet-amp2>
             <p>
