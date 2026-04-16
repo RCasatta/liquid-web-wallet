@@ -256,7 +256,7 @@ test.describe('Wallet Functionality', () => {
         await expect(page.locator('wallet-transactions article[aria-busy="true"]')).not.toBeVisible();
 
         // Verify transactions page elements
-        await expect(page.getByRole('heading', { name: 'Transactions' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: /^(Transactions|1 Transaction|\d+ Transactions)$/ })).toBeVisible();
 
         // Verify there is at least one transaction in the table
         const transactionCount = await page.locator('wallet-transactions table tr').count();
