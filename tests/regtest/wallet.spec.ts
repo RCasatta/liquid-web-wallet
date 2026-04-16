@@ -24,9 +24,7 @@ test.describe('Wallet Functionality', () => {
         // TODO without waiting for the balance to be ready, other pages may break
     }
 
-    async function createTransaction(page) {
-        await loadWallet(page);
-
+    async function createTransactionPset(page) {
         // Navigate to create page
         await page.getByRole('link', { name: 'Create' }).click();
 
@@ -53,6 +51,11 @@ test.describe('Wallet Functionality', () => {
 
         // Verify the PSET was created successfully and we're on the sign page
         await expect(page.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible();
+    }
+
+    async function createTransaction(page) {
+        await loadWallet(page);
+        await createTransactionPset(page);
     }
 
     async function createIssuancePset(page) {
@@ -205,6 +208,26 @@ test.describe('Wallet Functionality', () => {
         expect(assetAmount?.trim()).toBe(expectedAmount);
     }
 
+    async function openTransactionsPage(page) {
+        await page.getByRole('link', { name: 'Transactions' }).click();
+        await expect(page.locator('wallet-transactions article[aria-busy="true"]')).not.toBeVisible();
+    }
+
+    async function getTransactionCountFromHeading(page) {
+        const headingText = (await page.locator('wallet-transactions h2').textContent())?.trim() ?? '';
+        if (headingText === 'Transactions') {
+            return 0;
+        }
+        if (headingText === '1 Transaction') {
+            return 1;
+        }
+        const match = headingText.match(/^(\d+) Transactions$/);
+        if (match) {
+            return parseInt(match[1], 10);
+        }
+        throw new Error(`Unexpected transactions heading: ${headingText}`);
+    }
+
     test('should show wallet navigation options', async ({ page }) => {
         await loadWallet(page);
 
@@ -250,10 +273,7 @@ test.describe('Wallet Functionality', () => {
         await loadWallet(page);
 
         // Navigate to transactions page
-        await page.getByRole('link', { name: 'Transactions' }).click();
-
-        // Wait for the sync to complete by waiting for the loading indicator to disappear
-        await expect(page.locator('wallet-transactions article[aria-busy="true"]')).not.toBeVisible();
+        await openTransactionsPage(page);
 
         // Verify transactions page elements
         await expect(page.getByRole('heading', { name: /^(Transactions|1 Transaction|\d+ Transactions)$/ })).toBeVisible();
@@ -261,6 +281,49 @@ test.describe('Wallet Functionality', () => {
         // Verify there is at least one transaction in the table
         const transactionCount = await page.locator('wallet-transactions table tr').count();
         expect(transactionCount).toBeGreaterThan(0);
+    });
+
+    test('should paginate transactions', async ({ page }) => {
+        await loadWallet(page);
+        await openTransactionsPage(page);
+
+        const initialTransactionCount = await getTransactionCountFromHeading(page);
+        const transactionsNeeded = Math.max(0, 11 - initialTransactionCount);
+
+        for (let i = 0; i < transactionsNeeded; i++) {
+            await createTransactionPset(page);
+            const txid = await signAndBroadcastPset(page);
+            const txFound = await waitForTransactionToAppear(page, txid);
+            expect(txFound).toBe(true);
+        }
+
+        await openTransactionsPage(page);
+
+        const totalTransactions = await getTransactionCountFromHeading(page);
+        expect(totalTransactions).toBeGreaterThan(10);
+
+        const paginationNav = page.locator('wallet-transactions nav[aria-label="Transactions pagination"]');
+        const previousButton = paginationNav.getByRole('button', { name: 'Previous' });
+        const nextButton = paginationNav.getByRole('button', { name: 'Next' });
+
+        await expect(paginationNav).toContainText(`Showing 1-10 of ${totalTransactions}`);
+        expect(await page.locator('wallet-transactions table tr').count()).toBe(10);
+        await expect(previousButton).toBeDisabled();
+        await expect(nextButton).toBeEnabled();
+
+        await nextButton.click();
+
+        const remainingTransactions = totalTransactions - 10;
+        const expectedSecondPageRows = Math.min(10, remainingTransactions);
+        await expect(paginationNav).toContainText(new RegExp(`Showing 11-${10 + expectedSecondPageRows} of ${totalTransactions}`));
+        expect(await page.locator('wallet-transactions table tr').count()).toBe(expectedSecondPageRows);
+        await expect(previousButton).toBeEnabled();
+
+        if (totalTransactions > 20) {
+            await expect(nextButton).toBeEnabled();
+        } else {
+            await expect(nextButton).toBeDisabled();
+        }
     });
 
     test('should sign a created pset', async ({ page }) => {
