@@ -97,7 +97,7 @@ async function init(): Promise<void> {
                 let filter = !getDevMode()
                 console.log("filter out do it yourself " + filter)
 
-                const jade = await new lwk.Jade(network, filter)
+                const jade = await lwk.Jade.fromSerial(network, filter)
                 loadingBar.setAttribute("style", "visibility: visible;")
                 connectJadeMessage.innerHTML = warning("Insert the PIN on the Jade if locked")
 
@@ -129,7 +129,7 @@ async function init(): Promise<void> {
                 setBusyDisabled(connectJadeWebSocket, true)
 
                 // Connect to Jade via WebSocket on port 3331
-                const jadeWs = await new lwk.JadeWebSocket(network, "ws://localhost:3331")
+                const jadeWs = await lwk.JadeWebSocket.fromWebSocket(network, "ws://localhost:3331")
                 loadingBar.setAttribute("style", "visibility: visible;")
                 connectJadeWebSocketMessage.innerHTML = warning("Connecting to Jade via WebSocket...")
 
@@ -1971,7 +1971,7 @@ class SignTransaction extends HTMLElement {
         try {
             let psetString = this.pset.value
             let pset = new lwk.Pset(psetString)
-            let jade = await new lwk.Jade(network, true)
+            let jade = await lwk.Jade.fromSerial(network, true)
             let signedPset = await jade.sign(pset)
             this.pset.value = signedPset.toString()
             this.renderAnalyze()
