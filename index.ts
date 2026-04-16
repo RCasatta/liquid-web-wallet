@@ -956,16 +956,19 @@ class WalletBalance extends HTMLElement {
 
 
 class WalletTransactions extends HTMLElement {
+    static readonly PAGE_SIZE = 10;
     txsTitle!: HTMLElement;
     subtitle!: HTMLElement;
     div!: HTMLElement;
     subscriptions!: (() => void)[];
+    currentPage: number;
 
     constructor() {
         super()
         this.txsTitle = this.querySelector("h2")
         this.subtitle = this.querySelector("p")
         this.div = this.querySelector("div")
+        this.currentPage = 0;
 
         // Store subscriptions so we can unsubscribe later if needed
         this.subscriptions = [];
@@ -989,9 +992,22 @@ class WalletTransactions extends HTMLElement {
         if (!wollet || wollet.neverScanned()) {
             return
         }
-        let transactions = wollet.transactions()
-        if (transactions.length > 1) {
-            this.txsTitle.innerText = transactions.length + " Transactions"
+        // TODO we need the total transactions number support in LWK
+        // without calling the whole transactions()
+        const allTransactions = wollet.transactions()
+        const totalTransactions = allTransactions.length
+        const totalPages = Math.max(1, Math.ceil(totalTransactions / WalletTransactions.PAGE_SIZE))
+        this.currentPage = Math.min(this.currentPage, totalPages - 1)
+
+        const offset = this.currentPage * WalletTransactions.PAGE_SIZE
+        const transactions = wollet.transactionsPaginated(offset, WalletTransactions.PAGE_SIZE)
+
+        if (totalTransactions === 1) {
+            this.txsTitle.innerText = "1 Transaction"
+        } else if (totalTransactions > 1) {
+            this.txsTitle.innerText = totalTransactions + " Transactions"
+        } else {
+            this.txsTitle.innerText = "Transactions"
         }
         let div = document.createElement("div")
         div.setAttribute("class", "overflow-auto")
@@ -1034,6 +1050,37 @@ class WalletTransactions extends HTMLElement {
             newRow.appendChild(txType)
             newRow.appendChild(heightCell)
         })
+
+        if (totalTransactions > 0) {
+            const pagination = document.createElement("nav")
+            pagination.setAttribute("aria-label", "Transactions pagination")
+
+            const previousButton = document.createElement("button")
+            previousButton.innerText = "Previous"
+            previousButton.disabled = this.currentPage === 0
+            previousButton.onclick = () => {
+                this.currentPage -= 1
+                this.render()
+            }
+
+            const nextButton = document.createElement("button")
+            nextButton.innerText = "Next"
+            nextButton.disabled = this.currentPage >= totalPages - 1
+            nextButton.onclick = () => {
+                this.currentPage += 1
+                this.render()
+            }
+
+            const rangeStart = offset + 1
+            const rangeEnd = offset + transactions.length
+            const pageSummary = document.createElement("ul")
+            pageSummary.innerHTML = `<li>Showing ${rangeStart}-${rangeEnd} of ${totalTransactions}</li>`
+
+            pagination.appendChild(pageSummary)
+            pagination.appendChild(previousButton)
+            pagination.appendChild(nextButton)
+            div.appendChild(pagination)
+        }
 
         updatedAt(wollet, this.subtitle)
         cleanChilds(this.div)
