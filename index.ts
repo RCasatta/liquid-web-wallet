@@ -102,9 +102,12 @@ function getLocalStorageStore(descriptor: lwk.WolletDescriptor): JsLocalStorageS
 }
 
 function buildStoredWollet(descriptor: lwk.WolletDescriptor): lwk.Wollet {
+    const store = getLocalStorageStore(descriptor)
     return new lwk.WolletBuilder(network, descriptor)
         .utxoOnly(getUtxoOnly())
-        .withExperimentalStore(getLocalStorageStore(descriptor))
+        .withExperimentalStore(store)
+        .withTxsStore(store, false)
+        .withMergeThreshold(1)
         .build()
 }
 
