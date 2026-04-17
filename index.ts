@@ -68,8 +68,11 @@ function base64ToBytes(base64: string): Uint8Array {
     return bytes
 }
 
-function createLocalStorageStore(namespace: string): JsLocalStorageStore {
-    const prefix = `${WOLLET_STORE_PREFIX}${btoa(namespace)}:`
+function getStoragePrefix(namespace: string): string {
+    return `${WOLLET_STORE_PREFIX}${btoa(namespace)}:`
+}
+
+function createLocalStorageStore(prefix: string): JsLocalStorageStore {
     return {
         get(key: string): Uint8Array | null {
             const stored = localStorage.getItem(prefix + key)
@@ -92,8 +95,10 @@ function createLocalStorageStore(namespace: string): JsLocalStorageStore {
 }
 
 function getLocalStorageStore(descriptor: lwk.WolletDescriptor): JsLocalStorageStore {
-    const namespace = `${network.toString()}:${getUtxoOnly()}:${descriptor.toString()}`
-    return createLocalStorageStore(namespace)
+    const dwid = new lwk.Wollet(network, descriptor).dwid()
+    const namespace = `${network.toString()}:${getUtxoOnly()}:${dwid}`
+    const prefix = getStoragePrefix(namespace)
+    return createLocalStorageStore(prefix)
 }
 
 function buildStoredWollet(descriptor: lwk.WolletDescriptor): lwk.Wollet {
