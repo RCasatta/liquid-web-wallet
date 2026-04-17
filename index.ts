@@ -40,6 +40,7 @@ const RANDOM_MNEMONIC_KEY: string = "random_mnemonic"
 const AMP2_DATA_KEY_PREFIX: string = "amp2_data_v2_"
 const WOLLET_STORE_PREFIX: string = "wollet-store-v1:"
 const LOCAL_STORAGE_NULL_VALUE: string = "__null__"
+const LEGACY_UPDATE_CLEANUP_KEY: string = "legacy-update-cleanup-v1"
 
 type JsLocalStorageStore = {
     get(key: string): Uint8Array | null;
@@ -108,9 +109,27 @@ function publishPersistLoadedIfNeeded(wolletLocal: lwk.Wollet): void {
     }
 }
 
+function cleanupLegacyUpdateEntries(): void {
+    if (localStorage.getItem(LEGACY_UPDATE_CLEANUP_KEY) === "done") {
+        return
+    }
+
+    let removed = 0
+    for (const key of Object.keys(localStorage)) {
+        if (/^\d+$/.test(key)) {
+            localStorage.removeItem(key)
+            removed += 1
+        }
+    }
+
+    localStorage.setItem(LEGACY_UPDATE_CLEANUP_KEY, "done")
+    console.log(`Legacy update cleanup removed ${removed} entries`)
+}
+
 /// Re-enables initially disabled buttons, and add listener to buttons on the first page
 /// First page doesn't use components because we want to be loaded before the wasm is loaded, which takes time
 async function init(): Promise<void> {
+    cleanupLegacyUpdateEntries()
 
     let connectJade: HTMLButtonElement | null = document.getElementById("connect-jade-button") as HTMLButtonElement | null
     let descriptorTextarea: HTMLTextAreaElement | null = document.getElementById("descriptor-textarea") as HTMLTextAreaElement | null
