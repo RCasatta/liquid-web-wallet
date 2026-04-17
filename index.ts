@@ -41,6 +41,7 @@ const AMP2_DATA_KEY_PREFIX: string = "amp2_data_v2_"
 const WOLLET_STORE_PREFIX: string = "wollet-store-v1:"
 const LOCAL_STORAGE_NULL_VALUE: string = "__null__"
 const LEGACY_UPDATE_CLEANUP_KEY: string = "legacy-update-cleanup-v1"
+const WOLLET_TX_KEY_PREFIX: string = "wollet:tx:"
 
 type JsLocalStorageStore = {
     get(key: string): Uint8Array | null;
@@ -94,6 +95,57 @@ function createLocalStorageStore(prefix: string): JsLocalStorageStore {
     }
 }
 
+function createRemoteTxsStore(baseUrl: string): JsLocalStorageStore {
+    const normalizedBaseUrl = baseUrl.replace(/\/+$/, "")
+    const txCache = new Map<string, Uint8Array | null>()
+    return {
+        get(key: string): Uint8Array | null {
+            if (!key.startsWith(WOLLET_TX_KEY_PREFIX)) {
+                return null
+            }
+
+            const cached = txCache.get(key)
+            if (cached !== undefined) {
+                return cached
+            }
+
+            const txid = key.slice(WOLLET_TX_KEY_PREFIX.length)
+            const request = new XMLHttpRequest()
+            try {
+                request.open("GET", `${normalizedBaseUrl}/tx/${txid}/raw`, false)
+                request.overrideMimeType("text/plain; charset=x-user-defined")
+                request.send()
+            } catch (error) {
+                console.log(`Error fetching transaction ${txid}:`, error)
+                txCache.set(key, null)
+                return null
+            }
+
+            if (request.status < 200 || request.status >= 300 || request.responseText == null) {
+                console.log(`Transaction ${txid} fetch failed with status ${request.status}`)
+                txCache.set(key, null)
+                return null
+            }
+
+            const bytes = new Uint8Array(request.responseText.length)
+            for (let i = 0; i < request.responseText.length; i++) {
+                bytes[i] = request.responseText.charCodeAt(i) & 0xff
+            }
+            txCache.set(key, bytes)
+            return bytes
+        },
+        put(key: string, value: Uint8Array | null): void {
+
+        },
+        remove(key: string): void {
+            txCache.delete(key)
+        },
+        isPersisted(): boolean {
+            return true
+        }
+    }
+}
+
 function getLocalStorageStore(descriptor: lwk.WolletDescriptor): JsLocalStorageStore {
     const dwid = new lwk.Wollet(network, descriptor).dwid()
     const namespace = `${network.toString()}:${getUtxoOnly()}:${dwid}`
@@ -101,12 +153,14 @@ function getLocalStorageStore(descriptor: lwk.WolletDescriptor): JsLocalStorageS
     return createLocalStorageStore(prefix)
 }
 
+
 function buildStoredWollet(descriptor: lwk.WolletDescriptor): lwk.Wollet {
     const store = getLocalStorageStore(descriptor)
+    const txsStore = createRemoteTxsStore(getEsploraConfig().url)
     return new lwk.WolletBuilder(network, descriptor)
         .utxoOnly(getUtxoOnly())
         .withExperimentalStore(store)
-        .withTxsStore(store, false)
+        .withTxsStore(txsStore, false)
         .withMergeThreshold(1)
         .build()
 }
@@ -3293,7 +3347,7 @@ function websocketClient(): WebSocket {
     return ws;
 }
 
-function esploraClient(): lwk.EsploraClient {
+function getEsploraConfig(): { url: string; waterfalls: boolean } {
     const urlParams = new URLSearchParams(window.location.search);
     const overrideUrl = urlParams.get('esploraUrl');
     const waterfallsParam = urlParams.get('waterfalls');
@@ -3303,6 +3357,11 @@ function esploraClient(): lwk.EsploraClient {
     const regtestUrl = "http://localhost:3000/"
     const url = overrideUrl ?? (network.isMainnet() ? mainnetUrl : network.isTestnet() ? testnetUrl : regtestUrl)
     const waterfalls = waterfallsParam !== null ? waterfallsParam === 'true' : true
+    return { url, waterfalls }
+}
+
+function esploraClient(): lwk.EsploraClient {
+    const { url, waterfalls } = getEsploraConfig()
     const utxoOnly = getUtxoOnly()
     const client = new lwk.EsploraClient(network, url, waterfalls, 4, utxoOnly)
     if (waterfalls && (network.isMainnet() || network.isTestnet())) {
