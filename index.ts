@@ -38,50 +38,67 @@ const app: HTMLElement | null = document.getElementById('app')
 
 const RANDOM_MNEMONIC_KEY: string = "random_mnemonic"
 const AMP2_DATA_KEY_PREFIX: string = "amp2_data_v2_"
-const wolletStores = new Map<string, JsMemoryStore>()
+const WOLLET_STORE_PREFIX: string = "wollet-store-v1:"
+const LOCAL_STORAGE_NULL_VALUE: string = "__null__"
 
-type JsMemoryStore = {
+type JsLocalStorageStore = {
     get(key: string): Uint8Array | null;
     put(key: string, value: Uint8Array | null): void;
     remove(key: string): void;
     isPersisted(): boolean;
-    _data: Map<string, Uint8Array | null>;
 }
 
-function createMemoryStore(): JsMemoryStore {
-    const store = new Map<string, Uint8Array | null>()
+function bytesToBase64(bytes: Uint8Array): string {
+    let binary = ""
+    const chunkSize = 0x8000
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(i, i + chunkSize)
+        binary += String.fromCharCode(...chunk)
+    }
+    return btoa(binary)
+}
+
+function base64ToBytes(base64: string): Uint8Array {
+    const binary = atob(base64)
+    const bytes = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i)
+    }
+    return bytes
+}
+
+function createLocalStorageStore(namespace: string): JsLocalStorageStore {
+    const prefix = `${WOLLET_STORE_PREFIX}${btoa(namespace)}:`
     return {
         get(key: string): Uint8Array | null {
-            return store.get(key) || null
+            const stored = localStorage.getItem(prefix + key)
+            if (stored == null || stored === LOCAL_STORAGE_NULL_VALUE) {
+                return null
+            }
+            return base64ToBytes(stored)
         },
         put(key: string, value: Uint8Array | null): void {
-            const valueCopy = value ? new Uint8Array(value) : null
-            store.set(key, valueCopy)
+            const encoded = value == null ? LOCAL_STORAGE_NULL_VALUE : bytesToBase64(new Uint8Array(value))
+            localStorage.setItem(prefix + key, encoded)
         },
         remove(key: string): void {
-            store.delete(key)
+            localStorage.removeItem(prefix + key)
         },
         isPersisted(): boolean {
-            return false
-        },
-        _data: store
+            return true
+        }
     }
 }
 
-function getMemoryStore(descriptor: lwk.WolletDescriptor): JsMemoryStore {
-    const key = `${network.toString()}:${getUtxoOnly()}:${descriptor.toString()}`
-    let store = wolletStores.get(key)
-    if (store == null) {
-        store = createMemoryStore()
-        wolletStores.set(key, store)
-    }
-    return store
+function getLocalStorageStore(descriptor: lwk.WolletDescriptor): JsLocalStorageStore {
+    const namespace = `${network.toString()}:${getUtxoOnly()}:${descriptor.toString()}`
+    return createLocalStorageStore(namespace)
 }
 
 function buildStoredWollet(descriptor: lwk.WolletDescriptor): lwk.Wollet {
     return new lwk.WolletBuilder(network, descriptor)
         .utxoOnly(getUtxoOnly())
-        .withExperimentalStore(getMemoryStore(descriptor))
+        .withExperimentalStore(getLocalStorageStore(descriptor))
         .build()
 }
 
