@@ -26,7 +26,6 @@ const _state: {
     amp0: lwk.Amp0 | null;
     amp0Pset: lwk.Amp0Pset | null;
     boltzSession: lwk.BoltzSession | null;
-    localStorageFullAlertShown: boolean;
 } = {
     // Page state
     page: null, // id of the last rendered page
@@ -70,10 +69,7 @@ const _state: {
     amp0Pset: null, // Amp0 PSET object for cosigning
 
     // Boltz session state
-    boltzSession: null, // lwk.BoltzSession instance
-
-    // LocalStorage state
-    localStorageFullAlertShown: false // Whether the localStorage full alert has been shown
+    boltzSession: null // lwk.BoltzSession instance
 };
 
 // Initialize state from localStorage if available
@@ -216,27 +212,12 @@ export function getStandardDerivations(): { [key: string]: string } | null {
     return _state.standardDerivations;
 }
 
-export function setStandardDerivations(derivations: { [key: string]: string } | null): { [key: string]: string } | null {
-    _state.standardDerivations = derivations;
-    return _state.standardDerivations;
-}
-
 export function getXpub(): lwk.Xpub | null {
-    return _state.xpub;
-}
-
-export function setXpub(xpub: lwk.Xpub | null): lwk.Xpub | null {
-    _state.xpub = xpub;
     return _state.xpub;
 }
 
 // Multisig state management
 export function getMultiWallets(): string[] {
-    return _state.multiWallets;
-}
-
-export function setMultiWallets(wallets: string[]): string[] {
-    _state.multiWallets = wallets;
     return _state.multiWallets;
 }
 
@@ -360,16 +341,6 @@ export function setBoltzSession(boltzSession: lwk.BoltzSession | null): lwk.Bolt
     return _state.boltzSession;
 }
 
-// LocalStorage state management
-export function getLocalStorageFull(): boolean {
-    return _state.localStorageFullAlertShown;
-}
-
-export function setLocalStorageFull(shown: boolean): boolean {
-    _state.localStorageFullAlertShown = shown === true;
-    return _state.localStorageFullAlertShown;
-}
-
 // Swap storage management
 const SWAPS_STORAGE_KEY_PREFIX = 'swaps-';
 
@@ -435,14 +406,4 @@ export function getAllSwaps(): { [key: string]: string } {
         }
     }
     return {};
-}
-
-/**
- * Get a specific swap by key
- * @param swapKey - Unique identifier for the swap
- * @returns Serialized swap data or null if not found
- */
-export function getSwap(swapKey: string): string | null {
-    const swaps = getAllSwaps();
-    return swaps[swapKey] ?? null;
 }

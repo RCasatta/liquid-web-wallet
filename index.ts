@@ -14,7 +14,6 @@ import {
     getAmp0, setAmp0,
     getAmp0Pset, setAmp0Pset,
     getBoltzSession, setBoltzSession,
-    getLocalStorageFull, setLocalStorageFull,
     subscribe, publish,
     saveSwap,
     getAllSwaps,
@@ -39,6 +38,58 @@ const app: HTMLElement | null = document.getElementById('app')
 
 const RANDOM_MNEMONIC_KEY: string = "random_mnemonic"
 const AMP2_DATA_KEY_PREFIX: string = "amp2_data_v2_"
+const wolletStores = new Map<string, JsMemoryStore>()
+
+type JsMemoryStore = {
+    get(key: string): Uint8Array | null;
+    put(key: string, value: Uint8Array | null): void;
+    remove(key: string): void;
+    isPersisted(): boolean;
+    _data: Map<string, Uint8Array | null>;
+}
+
+function createMemoryStore(): JsMemoryStore {
+    const store = new Map<string, Uint8Array | null>()
+    return {
+        get(key: string): Uint8Array | null {
+            return store.get(key) || null
+        },
+        put(key: string, value: Uint8Array | null): void {
+            const valueCopy = value ? new Uint8Array(value) : null
+            store.set(key, valueCopy)
+        },
+        remove(key: string): void {
+            store.delete(key)
+        },
+        isPersisted(): boolean {
+            return false
+        },
+        _data: store
+    }
+}
+
+function getMemoryStore(descriptor: lwk.WolletDescriptor): JsMemoryStore {
+    const key = `${network.toString()}:${getUtxoOnly()}:${descriptor.toString()}`
+    let store = wolletStores.get(key)
+    if (store == null) {
+        store = createMemoryStore()
+        wolletStores.set(key, store)
+    }
+    return store
+}
+
+function buildStoredWollet(descriptor: lwk.WolletDescriptor): lwk.Wollet {
+    return new lwk.WolletBuilder(network, descriptor)
+        .utxoOnly(getUtxoOnly())
+        .withExperimentalStore(getMemoryStore(descriptor))
+        .build()
+}
+
+function publishPersistLoadedIfNeeded(wolletLocal: lwk.Wollet): void {
+    if (!wolletLocal.neverScanned()) {
+        publish('persist-loaded', null)
+    }
+}
 
 /// Re-enables initially disabled buttons, and add listener to buttons on the first page
 /// First page doesn't use components because we want to be loaded before the wasm is loaded, which takes time
@@ -200,14 +251,14 @@ async function init(): Promise<void> {
 
             let desc = await ledger.wpkhSlip77Descriptor()
 
-            let wollet = new lwk.Wollet(network, desc)
+            let wollet = buildStoredWollet(desc)
             console.log("wollet", wollet)
             setLedger(ledger)
             setWollet(wollet)
             setBoltzSession(await createBoltzSession(wollet))
             setWolletSelected("Ledger")
             setScanRunning(false)
-            loadPersisted(wollet)
+            publishPersistLoadedIfNeeded(wollet)
             await fullScanAndApply(wollet, getScanState())
 
         } catch (e) {
@@ -334,12 +385,12 @@ async function handleWatchOnlyClick(_e?: Event): Promise<void> {
             throw new Error("The descriptor has wrong network")
         }
 
-        const wollet = new lwk.Wollet(network, descriptor)
+        const wollet = buildStoredWollet(descriptor)
         setWollet(wollet)
         setBoltzSession(await createBoltzSession(wollet))
         setWolletSelected("Descriptor")
         setScanRunning(false)
-        loadPersisted(wollet)
+        publishPersistLoadedIfNeeded(wollet)
 
         await fullScanAndApply(wollet, getScanState())
     } catch (e) {
@@ -390,7 +441,7 @@ async function handleAmp0Login(_e: Event) {
         setBoltzSession(await createBoltzSession(wollet))
         setWolletSelected("Amp0")
         setScanRunning(false)
-        loadPersisted(wollet)
+        publishPersistLoadedIfNeeded(wollet)
 
         await fullScanAndApply(wollet, getScanState())
 
@@ -639,11 +690,11 @@ class WalletSelector extends HTMLElement {
             descriptor = await jade.multi(getWolletSelected())
         }
         console.log(descriptor.toString())
-        const wollet = new lwk.Wollet(network, descriptor)
+        const wollet = buildStoredWollet(descriptor)
         setWollet(wollet)
         setBoltzSession(await createBoltzSession(wollet))
         setScanRunning(false)
-        loadPersisted(wollet)
+        publishPersistLoadedIfNeeded(wollet)
 
         await fullScanAndApply(wollet, getScanState())
     }
@@ -3131,30 +3182,6 @@ async function createBoltzSession(wolletLocal: lwk.Wollet): Promise<lwk.BoltzSes
     return session;
 }
 
-function loadPersisted(wolletLocal: lwk.Wollet) {
-    const descriptor = wolletLocal.descriptor()
-    var loaded = false
-    var precStatus
-    while (true) {
-        const walletStatus = wolletLocal.status().toString()
-        const retrievedUpdate = localStorage.getItem(walletStatus)
-        if (retrievedUpdate) {
-            if (precStatus === walletStatus) {
-                // FIXME this prevents infinite loop in case the applied update doesn't change anything
-                return loaded
-            }
-            console.log("Found persisted update, applying " + walletStatus)
-            const update = lwk.Update.deserializeDecryptedBase64(retrievedUpdate, descriptor)
-            wolletLocal.applyUpdate(update)
-            loaded = true
-            precStatus = walletStatus
-            publish('persist-loaded', null)
-        } else {
-            return loaded
-        }
-    }
-}
-
 function warning(message, helper = "") {
     return createMessage(message, true, helper)
 }
@@ -3271,32 +3298,7 @@ async function fullScanAndApply(wolletLocal: lwk.Wollet, scanState: { running: b
             if (update instanceof lwk.Update) {
                 publish('scan-update', update)
                 updated = true
-                const walletStatus = wolletLocal.status().toString()
                 wolletLocal.applyUpdate(update)
-                if (update.onlyTip()) {
-                    // this is a shortcut, the restored from persisted state UI won't see "updated at <most recent scan>" but "updated at <most recent scan with tx>".
-                    // The latter is possible by deleting the previous update if both this and the previous are `onlyTip()` but the
-                    // more complex logic is avoided for now
-                    console.log("avoid persisting only tip update")
-                } else {
-                    // Skip localStorage saving if we already know it was full
-                    if (!getLocalStorageFull()) {
-                        console.log("Saving persisted update " + walletStatus)
-                        update.prune(wolletLocal)
-                        const base64 = update.serializeEncryptedBase64(wolletLocal.descriptor())
-
-                        try {
-                            localStorage.setItem(walletStatus, base64)
-                        } catch (_e) {
-                            console.log("Saving persisted update " + walletStatus + " failed, too big")
-                            alert("Attempt to store too much data in the local storage, skipping")
-                            setLocalStorageFull(true)
-                        }
-                    } else {
-                        console.log("Skipping localStorage save - already alerted user about storage being full")
-                    }
-                }
-
             }
             if (!getRegistryFetched()) {
                 setRegistryFetched(true)
