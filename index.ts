@@ -2626,7 +2626,8 @@ class WalletAmp2 extends HTMLElement {
             setBusyDisabled(this.button, true)
             let amp2 = lwk.Amp2.newTestnet()
             let keyoriginXpub = await keyoriginXpubUnified(lwk.Bip.bip87());
-            let amp2_desc = amp2.descriptorFromStr(keyoriginXpub)
+            let defaultBlinding = "slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67)";
+            let amp2_desc = amp2.descriptorFromStr(keyoriginXpub, defaultBlinding)
             let uuid = await amp2.register(amp2_desc);
             let uuid_descriptor = uuid + "|" + amp2_desc.descriptor(); // TODO: remove `descriptor()` once Amp2Descriptor support toString()
             localStorage.setItem(AMP2_DATA_KEY_PREFIX + keyoriginXpub, uuid_descriptor)
