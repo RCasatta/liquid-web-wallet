@@ -992,10 +992,8 @@ class WalletTransactions extends HTMLElement {
         if (!wollet || wollet.neverScanned()) {
             return
         }
-        // TODO we need the total transactions number support in LWK
-        // without calling the whole transactions()
-        const allTransactions = wollet.transactions()
-        const totalTransactions = allTransactions.length
+
+        const totalTransactions = wollet.numTxs()
         const totalPages = Math.max(1, Math.ceil(totalTransactions / WalletTransactions.PAGE_SIZE))
         this.currentPage = Math.min(this.currentPage, totalPages - 1)
 
