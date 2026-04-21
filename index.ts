@@ -998,11 +998,8 @@ class WalletTransactions extends HTMLElement {
         this.currentPage = Math.min(this.currentPage, totalPages - 1)
 
         const offset = this.currentPage * WalletTransactions.PAGE_SIZE
-        const transactions = wollet.transactionsPaginated(offset, WalletTransactions.PAGE_SIZE)
-
-        // TODO: migrate to this once availableUrl and txType are available
-        // const txsOpt = lwk.TxsOpt.withPagination(offset, WalletTransactions.PAGE_SIZE)
-        // const transactions = wollet.txs(txsOpt)
+        const txsOpt = lwk.TxsOpt.withPagination(offset, WalletTransactions.PAGE_SIZE)
+        const transactions = wollet.txs(txsOpt)
 
         if (totalTransactions === 1) {
             this.txsTitle.innerText = "1 Transaction"
