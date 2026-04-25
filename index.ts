@@ -14,7 +14,6 @@ import {
     getAmp0, setAmp0,
     getAmp0Pset, setAmp0Pset,
     getBoltzSession, setBoltzSession,
-    getLocalStorageFull, setLocalStorageFull,
     subscribe, publish,
     saveSwap,
     getAllSwaps,
@@ -39,10 +38,160 @@ const app: HTMLElement | null = document.getElementById('app')
 
 const RANDOM_MNEMONIC_KEY: string = "random_mnemonic"
 const AMP2_DATA_KEY_PREFIX: string = "amp2_data_v2_"
+const WOLLET_STORE_PREFIX: string = "wollet-store-v1:"
+const LOCAL_STORAGE_NULL_VALUE: string = "__null__"
+const LEGACY_UPDATE_CLEANUP_KEY: string = "legacy-update-cleanup-v1"
+const WOLLET_TX_KEY_PREFIX: string = "wollet:tx:"
+
+type JsLocalStorageStore = {
+    get(key: string): Uint8Array | null;
+    put(key: string, value: Uint8Array | null): void;
+    remove(key: string): void;
+    isPersisted(): boolean;
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+    let binary = ""
+    const chunkSize = 0x8000
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(i, i + chunkSize)
+        binary += String.fromCharCode(...chunk)
+    }
+    return btoa(binary)
+}
+
+function base64ToBytes(base64: string): Uint8Array {
+    const binary = atob(base64)
+    const bytes = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i)
+    }
+    return bytes
+}
+
+function getStoragePrefix(namespace: string): string {
+    return `${WOLLET_STORE_PREFIX}${btoa(namespace)}:`
+}
+
+function createLocalStorageStore(prefix: string): JsLocalStorageStore {
+    return {
+        get(key: string): Uint8Array | null {
+            const stored = localStorage.getItem(prefix + key)
+            if (stored == null || stored === LOCAL_STORAGE_NULL_VALUE) {
+                return null
+            }
+            return base64ToBytes(stored)
+        },
+        put(key: string, value: Uint8Array | null): void {
+            const encoded = value == null ? LOCAL_STORAGE_NULL_VALUE : bytesToBase64(new Uint8Array(value))
+            localStorage.setItem(prefix + key, encoded)
+        },
+        remove(key: string): void {
+            localStorage.removeItem(prefix + key)
+        },
+        isPersisted(): boolean {
+            return true
+        }
+    }
+}
+
+function createRemoteTxsStore(baseUrl: string): JsLocalStorageStore {
+    const normalizedBaseUrl = baseUrl.replace(/\/+$/, "")
+    const txCache = new Map<string, Uint8Array | null>()
+    return {
+        get(key: string): Uint8Array | null {
+            if (!key.startsWith(WOLLET_TX_KEY_PREFIX)) {
+                return null
+            }
+
+            const cached = txCache.get(key)
+            if (cached !== undefined) {
+                return cached
+            }
+
+            const txid = key.slice(WOLLET_TX_KEY_PREFIX.length)
+            const request = new XMLHttpRequest()
+            try {
+                request.open("GET", `${normalizedBaseUrl}/tx/${txid}/raw`, false)
+                request.overrideMimeType("text/plain; charset=x-user-defined")
+                request.send()
+            } catch (error) {
+                console.log(`Error fetching transaction ${txid}:`, error)
+                txCache.set(key, null)
+                return null
+            }
+
+            if (request.status < 200 || request.status >= 300 || request.responseText == null) {
+                console.log(`Transaction ${txid} fetch failed with status ${request.status}`)
+                txCache.set(key, null)
+                return null
+            }
+
+            const bytes = new Uint8Array(request.responseText.length)
+            for (let i = 0; i < request.responseText.length; i++) {
+                bytes[i] = request.responseText.charCodeAt(i) & 0xff
+            }
+            txCache.set(key, bytes)
+            return bytes
+        },
+        put(key: string, value: Uint8Array | null): void {
+
+        },
+        remove(key: string): void {
+            txCache.delete(key)
+        },
+        isPersisted(): boolean {
+            return true
+        }
+    }
+}
+
+function getLocalStorageStore(descriptor: lwk.WolletDescriptor): JsLocalStorageStore {
+    const dwid = new lwk.Wollet(network, descriptor).dwid()
+    const namespace = `${network.toString()}:${getUtxoOnly()}:${dwid}`
+    const prefix = getStoragePrefix(namespace)
+    return createLocalStorageStore(prefix)
+}
+
+
+function buildStoredWollet(descriptor: lwk.WolletDescriptor): lwk.Wollet {
+    const store = getLocalStorageStore(descriptor)
+    const txsStore = createRemoteTxsStore(getEsploraConfig().url)
+    return new lwk.WolletBuilder(network, descriptor)
+        .utxoOnly(getUtxoOnly())
+        .withExperimentalStore(store)
+        .withTxsStore(txsStore, false)
+        .withMergeThreshold(1)
+        .build()
+}
+
+function publishPersistLoadedIfNeeded(wolletLocal: lwk.Wollet): void {
+    if (!wolletLocal.neverScanned()) {
+        publish('persist-loaded', null)
+    }
+}
+
+function cleanupLegacyUpdateEntries(): void {
+    if (localStorage.getItem(LEGACY_UPDATE_CLEANUP_KEY) === "done") {
+        return
+    }
+
+    let removed = 0
+    for (const key of Object.keys(localStorage)) {
+        if (/^\d+$/.test(key)) {
+            localStorage.removeItem(key)
+            removed += 1
+        }
+    }
+
+    localStorage.setItem(LEGACY_UPDATE_CLEANUP_KEY, "done")
+    console.log(`Legacy update cleanup removed ${removed} entries`)
+}
 
 /// Re-enables initially disabled buttons, and add listener to buttons on the first page
 /// First page doesn't use components because we want to be loaded before the wasm is loaded, which takes time
 async function init(): Promise<void> {
+    cleanupLegacyUpdateEntries()
 
     let connectJade: HTMLButtonElement | null = document.getElementById("connect-jade-button") as HTMLButtonElement | null
     let descriptorTextarea: HTMLTextAreaElement | null = document.getElementById("descriptor-textarea") as HTMLTextAreaElement | null
@@ -200,14 +349,14 @@ async function init(): Promise<void> {
 
             let desc = await ledger.wpkhSlip77Descriptor()
 
-            let wollet = new lwk.Wollet(network, desc)
+            let wollet = buildStoredWollet(desc)
             console.log("wollet", wollet)
             setLedger(ledger)
             setWollet(wollet)
             setBoltzSession(await createBoltzSession(wollet))
             setWolletSelected("Ledger")
             setScanRunning(false)
-            loadPersisted(wollet)
+            publishPersistLoadedIfNeeded(wollet)
             await fullScanAndApply(wollet, getScanState())
 
         } catch (e) {
@@ -334,12 +483,12 @@ async function handleWatchOnlyClick(_e?: Event): Promise<void> {
             throw new Error("The descriptor has wrong network")
         }
 
-        const wollet = new lwk.Wollet(network, descriptor)
+        const wollet = buildStoredWollet(descriptor)
         setWollet(wollet)
         setBoltzSession(await createBoltzSession(wollet))
         setWolletSelected("Descriptor")
         setScanRunning(false)
-        loadPersisted(wollet)
+        publishPersistLoadedIfNeeded(wollet)
 
         await fullScanAndApply(wollet, getScanState())
     } catch (e) {
@@ -390,7 +539,7 @@ async function handleAmp0Login(_e: Event) {
         setBoltzSession(await createBoltzSession(wollet))
         setWolletSelected("Amp0")
         setScanRunning(false)
-        loadPersisted(wollet)
+        publishPersistLoadedIfNeeded(wollet)
 
         await fullScanAndApply(wollet, getScanState())
 
@@ -639,11 +788,11 @@ class WalletSelector extends HTMLElement {
             descriptor = await jade.multi(getWolletSelected())
         }
         console.log(descriptor.toString())
-        const wollet = new lwk.Wollet(network, descriptor)
+        const wollet = buildStoredWollet(descriptor)
         setWollet(wollet)
         setBoltzSession(await createBoltzSession(wollet))
         setScanRunning(false)
-        loadPersisted(wollet)
+        publishPersistLoadedIfNeeded(wollet)
 
         await fullScanAndApply(wollet, getScanState())
     }
@@ -3131,30 +3280,6 @@ async function createBoltzSession(wolletLocal: lwk.Wollet): Promise<lwk.BoltzSes
     return session;
 }
 
-function loadPersisted(wolletLocal: lwk.Wollet) {
-    const descriptor = wolletLocal.descriptor()
-    var loaded = false
-    var precStatus
-    while (true) {
-        const walletStatus = wolletLocal.status().toString()
-        const retrievedUpdate = localStorage.getItem(walletStatus)
-        if (retrievedUpdate) {
-            if (precStatus === walletStatus) {
-                // FIXME this prevents infinite loop in case the applied update doesn't change anything
-                return loaded
-            }
-            console.log("Found persisted update, applying " + walletStatus)
-            const update = lwk.Update.deserializeDecryptedBase64(retrievedUpdate, descriptor)
-            wolletLocal.applyUpdate(update)
-            loaded = true
-            precStatus = walletStatus
-            publish('persist-loaded', null)
-        } else {
-            return loaded
-        }
-    }
-}
-
 function warning(message, helper = "") {
     return createMessage(message, true, helper)
 }
@@ -3222,7 +3347,7 @@ function websocketClient(): WebSocket {
     return ws;
 }
 
-function esploraClient(): lwk.EsploraClient {
+function getEsploraConfig(): { url: string; waterfalls: boolean } {
     const urlParams = new URLSearchParams(window.location.search);
     const overrideUrl = urlParams.get('esploraUrl');
     const waterfallsParam = urlParams.get('waterfalls');
@@ -3232,6 +3357,11 @@ function esploraClient(): lwk.EsploraClient {
     const regtestUrl = "http://localhost:3000/"
     const url = overrideUrl ?? (network.isMainnet() ? mainnetUrl : network.isTestnet() ? testnetUrl : regtestUrl)
     const waterfalls = waterfallsParam !== null ? waterfallsParam === 'true' : true
+    return { url, waterfalls }
+}
+
+function esploraClient(): lwk.EsploraClient {
+    const { url, waterfalls } = getEsploraConfig()
     const utxoOnly = getUtxoOnly()
     const client = new lwk.EsploraClient(network, url, waterfalls, 4, utxoOnly)
     if (waterfalls && (network.isMainnet() || network.isTestnet())) {
@@ -3271,32 +3401,7 @@ async function fullScanAndApply(wolletLocal: lwk.Wollet, scanState: { running: b
             if (update instanceof lwk.Update) {
                 publish('scan-update', update)
                 updated = true
-                const walletStatus = wolletLocal.status().toString()
                 wolletLocal.applyUpdate(update)
-                if (update.onlyTip()) {
-                    // this is a shortcut, the restored from persisted state UI won't see "updated at <most recent scan>" but "updated at <most recent scan with tx>".
-                    // The latter is possible by deleting the previous update if both this and the previous are `onlyTip()` but the
-                    // more complex logic is avoided for now
-                    console.log("avoid persisting only tip update")
-                } else {
-                    // Skip localStorage saving if we already know it was full
-                    if (!getLocalStorageFull()) {
-                        console.log("Saving persisted update " + walletStatus)
-                        update.prune(wolletLocal)
-                        const base64 = update.serializeEncryptedBase64(wolletLocal.descriptor())
-
-                        try {
-                            localStorage.setItem(walletStatus, base64)
-                        } catch (_e) {
-                            console.log("Saving persisted update " + walletStatus + " failed, too big")
-                            alert("Attempt to store too much data in the local storage, skipping")
-                            setLocalStorageFull(true)
-                        }
-                    } else {
-                        console.log("Skipping localStorage save - already alerted user about storage being full")
-                    }
-                }
-
             }
             if (!getRegistryFetched()) {
                 setRegistryFetched(true)
