@@ -231,9 +231,10 @@
                         <summary role="button" class="secondary">Issuance</summary>
 
                         <form>
-                            <label for="asset_amount">Asset amount. The number of assets units to issue as a whole
-                                number (eg. Bitcoin would have 21M*100M satoshi because it has 8 as precision)</label>
-                            <input type="number" step="1" min="0" max="2100000000000000" lang="en" name="asset_amount"
+                            <label for="asset_amount">Asset amount. The number of asset base units to issue as a whole
+                                number. For assets with precision 8, one displayed unit equals 100,000,000 base
+                                units.</label>
+                            <input type="number" step="1" min="0" lang="en" name="asset_amount"
                                 required="required" placeholder="1">
 
                             <label for="asset_address">Asset address. The address receiving the issued assets. If left
@@ -296,7 +297,7 @@
                                 placeholder="0000000000000000000000000000000000000000000000000000000000000000">
 
                             <label for="reissuance_satoshi">Satoshi. The amount to reissue in satoshi.</label>
-                            <input type="number" step="1" min="0" max="2100000000000000" lang="en"
+                            <input type="number" step="1" min="0" lang="en"
                                 name="reissuance_satoshi" required="required" placeholder="1">
 
                             <label for="reissuance_address">Address. The address receiving the reissued assets. If left
