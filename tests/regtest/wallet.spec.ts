@@ -58,7 +58,7 @@ test.describe('Wallet Functionality', () => {
         await createTransactionPset(page);
     }
 
-    async function createIssuancePset(page) {
+    async function createIssuancePset(page, assetAmount = '1000') {
 
         // Navigate to create page
         await page.getByRole('link', { name: 'Create' }).click();
@@ -73,7 +73,7 @@ test.describe('Wallet Functionality', () => {
         const ticker = [...Array(5)].map(() => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[Math.floor(Math.random() * 36)]).join('');
 
         // Fill in the issuance form
-        await page.locator('input[name="asset_amount"]').fill('1000');
+        await page.locator('input[name="asset_amount"]').fill(assetAmount);
         await page.locator('input[name="token_amount"]').fill('1');
         await page.locator('input[name="domain"]').fill('liquidtestnet.com');
         await page.locator('input[name="name"]').fill('Test Asset');
@@ -331,6 +331,19 @@ test.describe('Wallet Functionality', () => {
         const txid = await signAndBroadcastPset(page);
         const txFound = await waitForTransactionToAppear(page, txid);
         expect(txFound).toBe(true);
+    });
+
+    test('should create issuance above legacy 21 million limit', async ({ page }) => {
+        await loadWallet(page);
+        const { ticker } = await createIssuancePset(page, '2100000000000001');
+        const txid = await signAndBroadcastPset(page);
+
+        await expect(page.locator('input[value="Asset registered in the asset registry"]')).toBeVisible({ timeout: 15000 });
+
+        const txFound = await waitForTransactionToAppear(page, txid);
+        expect(txFound).toBe(true);
+
+        await checkAssetBalance(page, ticker, "21000000.00000001");
     });
 
     test('issuance/reissuance/burn', async ({ page }) => {
