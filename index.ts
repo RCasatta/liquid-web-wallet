@@ -2315,7 +2315,7 @@ class SignTransaction extends HTMLElement {
         this.signDivAnalyze.appendChild(hgroup)
 
         var psetBalance = details.balance().balances().entries()
-        psetBalance.set("fee", details.balance().fee())
+        psetBalance.set("fee", details.balance().feesIn(network.policyAsset()))
         this.signDivAnalyze.appendChild(mapToTable(mapBalance(psetBalance), true))
 
         let h3 = document.createElement("h3")
