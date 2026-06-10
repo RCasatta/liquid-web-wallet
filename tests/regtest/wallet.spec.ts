@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Wallet Functionality', () => {
+    const broadcastTimeout = 15000;
+    const transactionSyncTimeout = 30000;
+
     test.beforeEach(async ({ page }) => {
         await page.goto('/');
         await page.waitForLoadState('networkidle');
@@ -45,12 +48,52 @@ test.describe('Wallet Functionality', () => {
 
         // Click the + button
         await page.getByRole('button', { name: '+' }).click();
+        await expect(page.locator('create-transaction fieldset.recipients')).toBeVisible();
 
         // Click create button
         await page.getByRole('button', { name: 'Create' }).click();
 
         // Verify the PSET was created successfully and we're on the sign page
-        await expect(page.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible({ timeout: 15000 });
+    }
+
+    async function waitForBroadcastSuccess(page) {
+        const message = page.locator('sign-transaction div.message');
+        const deadline = Date.now() + broadcastTimeout;
+        let lastMessage = '';
+
+        while (Date.now() < deadline) {
+            const result = await message.evaluate((messageElement) => {
+                const input = messageElement.querySelector('input') as HTMLInputElement | null;
+                const helper = messageElement.querySelector('small')?.textContent?.trim() ?? '';
+                const value = input?.value?.trim() ?? '';
+                const invalid = input?.getAttribute('aria-invalid');
+
+                if (helper.includes('Tx broadcasted')) {
+                    return { status: 'success', txid: value, message: helper };
+                }
+
+                if (invalid === 'true') {
+                    return { status: 'error', txid: '', message: [value, helper].filter(Boolean).join(' - ') };
+                }
+
+                return { status: 'pending', txid: '', message: [value, helper].filter(Boolean).join(' - ') };
+            });
+
+            if (result.status === 'success') {
+                expect(result.txid).toMatch(/^[0-9a-f]{64}$/);
+                return result.txid;
+            }
+
+            if (result.status === 'error') {
+                throw new Error(`Broadcast failed: ${result.message}`);
+            }
+
+            lastMessage = result.message;
+            await page.waitForTimeout(250);
+        }
+
+        throw new Error(`Timed out waiting for broadcast success. Last message: ${lastMessage || '<empty>'}`);
     }
 
     async function createTransaction(page) {
@@ -125,13 +168,7 @@ test.describe('Wallet Functionality', () => {
         // Press the Sign button
         await page.getByRole('button', { name: 'Broadcast', exact: true }).click();
 
-        // Verify broadcast success message appears
-        await expect(page.getByText('Tx broadcasted')).toBeVisible();
-
-        // Get the txid from the broadcast success message
-        const txElement = page.getByText('Tx broadcasted').locator('..');
-        const txid = await txElement.getByRole('textbox').inputValue();
-        return txid;
+        return await waitForBroadcastSuccess(page);
     }
 
     async function signAndBroadcastPsetWithJade(page) {
@@ -144,29 +181,24 @@ test.describe('Wallet Functionality', () => {
         // Press the Sign button
         await page.getByRole('button', { name: 'Broadcast', exact: true }).click();
 
-        // Verify broadcast success message appears
-        await expect(page.getByText('Tx broadcasted')).toBeVisible();
-
-        // Get the txid from the broadcast success message
-        const txElement = page.getByText('Tx broadcasted').locator('..');
-        const txid = await txElement.getByRole('textbox').inputValue();
-        return txid;
+        return await waitForBroadcastSuccess(page);
     }
 
     async function waitForTransactionToAppear(page, txid) {
-        // Navigate to transactions page
-        await page.getByRole('link', { name: 'Transactions' }).click();
-
-        // Wait for the transactions page to load
-        await expect(page.locator('wallet-transactions article[aria-busy="true"]')).not.toBeVisible();
-
         // Get the first 8 characters of the txid to search for
         const txidPrefix = txid.substring(0, 8);
+        const deadline = Date.now() + transactionSyncTimeout;
 
-        // Try up to 5 times with 1 second delay between attempts
-        for (let attempt = 0; attempt < 5; attempt++) {
+        while (Date.now() < deadline) {
+            // Navigate to transactions page. Re-rendering the page lets the scan loop's latest
+            // wallet state populate the transaction table.
+            await page.getByRole('link', { name: 'Transactions' }).click();
+
+            // Wait for the transactions page to load
+            await expect(page.locator('wallet-transactions article[aria-busy="true"]')).not.toBeVisible({ timeout: 10000 });
+
             // Get the transactions list content
-            const transactionsContent = await page.locator('wallet-transactions table').textContent();
+            const transactionsContent = await page.locator('wallet-transactions table').textContent() ?? '';
 
             // Check if the txid prefix is in the transactions list
             if (transactionsContent.includes(txidPrefix)) {
@@ -174,18 +206,10 @@ test.describe('Wallet Functionality', () => {
                 return true;
             }
 
-            // console.log(`Transaction ${txidPrefix}... not found on attempt ${attempt + 1}, waiting...`);
-
-            // Wait 1 second before the next attempt (if not the last attempt)
-            if (attempt < 4) {
-                await page.waitForTimeout(1000);
-                // Refresh the transactions list by clicking on Transactions link again
-                await page.getByRole('link', { name: 'Transactions' }).click();
-                await expect(page.locator('wallet-transactions article[aria-busy="true"]')).not.toBeVisible();
-            }
+            await page.waitForTimeout(1000);
         }
 
-        console.log(`Transaction ${txidPrefix}... not found after 5 attempts`);
+        console.log(`Transaction ${txidPrefix}... not found after ${transactionSyncTimeout / 1000} seconds`);
         return false;
     }
 
