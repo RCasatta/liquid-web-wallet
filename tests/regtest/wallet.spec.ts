@@ -473,7 +473,6 @@ test.describe('Wallet Functionality', () => {
         // Get all options and select the first non-empty one that is not the policy asset
         const options = await utxoSelect.locator('option').all();
         let selectedOption: any = null;
-        let sellingAssetId: string = '';
 
         for (const option of options) {
             const value = await option.getAttribute('value');
@@ -481,11 +480,6 @@ test.describe('Wallet Functionality', () => {
             // Skip empty options and options containing the policy asset (LBTC or rLBTC)
             if (value && value !== '' && text && !text.includes('rLBTC')) {
                 selectedOption = option;
-                // Parse the JSON to extract the asset ID
-                if (value) {
-                    const utxoData = JSON.parse(value);
-                    sellingAssetId = utxoData.asset;
-                }
                 break;
             }
         }
@@ -502,9 +496,6 @@ test.describe('Wallet Functionality', () => {
         // Set the asset wanted to rLBTC
         await page.locator('input[name="asset_wanted"]').click();
         await page.getByRole('button', { name: 'LBTC' }).click();
-
-        // Get the buying asset ID (rLBTC in regtest)
-        const buyingAssetId = '5ac9f65c0efcc4775e0baec4ec03abdde22473cd3cf33c0419ca290e0751b225';
 
         // Set the amount wanted
         await page.locator('input[name="amount_wanted"]').fill('0.0001');
@@ -531,115 +522,6 @@ test.describe('Wallet Functionality', () => {
         const proposalText = page.locator('textarea.proposal-text');
         await expect(proposalText).toBeVisible();
         const proposalTextString = await proposalText.inputValue();
-
-        // Create WebSocket connection and subscribe to the proposal channel
-        await page.evaluateHandle(async ({ sellingAssetId, buyingAssetId }) => {
-            return new Promise((resolve) => {
-                // Create websocket - convert http to ws for the connection
-                const wsUrl = 'ws://localhost:3330/';
-                const ws = new WebSocket(wsUrl);
-
-                // Store on window object so we can access it later
-                (window as any).liquidexTestWs = ws;
-                (window as any).liquidexTestResults = [];
-
-                ws.onopen = () => {
-                    console.log('WebSocket connected');
-                    // Subscribe to the selling/buying asset pair
-                    const subscribeMsg = JSON.stringify({
-                        "jsonrpc": "2.0",
-                        "method": "subscribe",
-                        "id": 1,
-                        "params": {
-                            "pair": {
-                                "input": sellingAssetId,
-                                "output": buyingAssetId
-                            }
-                        }
-                    });
-                    console.log('Sending subscription:', subscribeMsg);
-                    ws.send(subscribeMsg);
-                    resolve(true);
-                };
-
-                ws.onmessage = (event) => {
-                    console.log('WebSocket message received:', event.data);
-                    (window as any).liquidexTestResults.push(event.data);
-                };
-
-                ws.onerror = (error) => {
-                    console.error('WebSocket error:', error);
-                    resolve(false);
-                };
-            });
-        }, { sellingAssetId, buyingAssetId });
-
-        // Give the WebSocket time to connect
-        await page.waitForTimeout(1000);
-
-        // Click the Publish Proposal button
-        await page.getByRole('button', { name: 'Publish proposal' }).click();
-
-        // Wait for success message
-        await expect(page.locator('input[value="Proposal published!"]')).toBeVisible({ timeout: 10000 });
-
-        // Wait a bit for the WebSocket to receive the response
-        await page.waitForTimeout(2000);
-
-        // Get the WebSocket messages
-        const receivedMessages = await page.evaluate(() => {
-            return (window as any).liquidexTestResults || [];
-        });
-
-        // Verify we received at least one message and it contains "subscribed"
-        expect(receivedMessages.length).toBeGreaterThan(0);
-        expect(receivedMessages.some((msg: string) => msg.includes('subscribed'))).toBe(true);
-
-        // Check for proposal - it might be in a JSON-RPC response/notification format
-        const proposalReceived = receivedMessages.some((msg: string) => {
-            try {
-                const parsed = JSON.parse(msg);
-                // Check if it's a JSON-RPC response/notification with proposal data
-                if (parsed.jsonrpc === "2.0") {
-                    // Check if result contains proposal data (server response)
-                    if (parsed.result && typeof parsed.result === 'object') {
-                        const resultStr = JSON.stringify(parsed.result);
-                        return resultStr.includes(proposalTextString) ||
-                            resultStr.includes('"version":1') && resultStr.includes('"tx":');
-                    }
-                    // Check if params contains proposal data (notification)
-                    if (parsed.params && typeof parsed.params === 'object') {
-                        const paramsStr = JSON.stringify(parsed.params);
-                        return paramsStr.includes(proposalTextString) ||
-                            paramsStr.includes('"version":1') && paramsStr.includes('"tx":');
-                    }
-                }
-            } catch {
-                // If not JSON, check if it contains the proposal text directly
-                return msg.includes(proposalTextString);
-            }
-            return false;
-        });
-
-        // If proposal not found, log more details
-        if (!proposalReceived) {
-            console.log('Proposal text to find:', proposalTextString.substring(0, 100) + '...');
-            console.log('Message contents:');
-            receivedMessages.forEach((msg, index) => {
-                console.log(`Message ${index}:`, msg.substring(0, 200) + '...');
-            });
-        }
-
-        // Use a standard expect() without custom message to avoid linter issues
-        expect(proposalReceived).toBe(true);
-
-        // Clean up WebSocket
-        await page.evaluate(() => {
-            const ws = (window as any).liquidexTestWs;
-            if (ws) {
-                ws.close();
-            }
-        });
 
         // Press the disconnect button (it's actually a link)
         await page.getByRole('link', { name: 'Disconnect' }).click();
@@ -720,83 +602,6 @@ test.describe('Wallet Functionality', () => {
         // 8. Verify the transasctions created is in the list
         const txFound = await waitForTransactionToAppear(page, txid);
         expect(txFound).toBe(true);
-    });
-
-    test('should display payment received notification', async ({ browser }) => {
-        // Create two browser contexts to simulate different sessions
-        const context1 = await browser.newContext();
-        const context2 = await browser.newContext();
-
-        // Create pages for each context
-        const receiverPage = await context1.newPage();
-        const senderPage = await context2.newPage();
-
-        // Set up receiver wallet (first context)
-        await receiverPage.goto('/');
-        await receiverPage.waitForLoadState('networkidle');
-        await loadWallet(receiverPage);
-
-        // Navigate to receive page
-        await receiverPage.getByRole('link', { name: 'Receive' }).click();
-
-        // Wait for the receive page to load
-        await expect(receiverPage.getByRole('heading', { name: 'Receive' })).toBeVisible();
-
-        // Show the address
-        await receiverPage.getByRole('button', { name: 'Show address', exact: true }).click();
-
-        // Get the address that was generated
-        const addressText = await receiverPage.getByRole('code').textContent();
-        expect(addressText).not.toBeNull();
-        if (!addressText) {
-            throw new Error('Address text is null');
-        }
-        expect(addressText).toMatch(/^el1/);
-
-        // Set up sender wallet (second context)
-        await senderPage.goto('/');
-        await senderPage.waitForLoadState('networkidle');
-        await loadWallet(senderPage);
-
-        // Navigate to create page
-        await senderPage.getByRole('link', { name: 'Create' }).click();
-
-        // Wait for the sync to complete
-        await expect(senderPage.locator('create-transaction article[aria-busy="true"]')).not.toBeVisible();
-
-        // Fill in the recipient details with the address from the receiver
-        await senderPage.locator('#add-recipient-div input[name="address"]').fill(addressText);
-
-        // Fill in the amount field
-        await senderPage.locator('#add-recipient-div input[name="amount"]').fill('0.000042');
-
-        // Select rLBTC
-        await senderPage.locator('#add-recipient-div select[name="asset"]').selectOption({ label: 'rLBTC' });
-
-        // Click the + button to add the recipient
-        await senderPage.getByRole('button', { name: '+' }).click();
-
-        // Click create button
-        await senderPage.getByRole('button', { name: 'Create' }).click();
-
-        // Verify the PSET was created successfully and we're on the sign page
-        await expect(senderPage.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible();
-
-        // Sign and broadcast the transaction
-        const txid = await signAndBroadcastPset(senderPage);
-
-        // Verify broadcast success
-        expect(txid).toBeTruthy();
-
-        // Check for payment notification on the receiver page
-        // We may need to wait a bit for the WebSocket message to arrive
-        await expect(receiverPage.locator('.payment-notification input[value="Payment received!"]')).toBeVisible({
-            timeout: 10000 // Allow a longer timeout for the notification to appear
-        });
-
-        // Clean up
-        await context1.close();
-        await context2.close();
     });
 
     test('should create multisignature wallet between Jade and abandon wallet', async ({ browser }) => {

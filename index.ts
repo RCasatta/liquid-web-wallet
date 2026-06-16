@@ -659,9 +659,6 @@ class AddressView extends HTMLElement {
     addressQR!: HTMLElement;
     addressLink!: HTMLAnchorElement;
     addressImage!: HTMLImageElement;
-    paymentNotification!: HTMLElement;
-    pingInterval!: ReturnType<typeof setInterval> | null;
-    currentUnconfidential!: string | null;
 
     constructor() {
         super()
@@ -674,33 +671,11 @@ class AddressView extends HTMLElement {
         this.addressQR = this.querySelector(".address-qr")
         this.addressLink = this.querySelector(".address-qr a")
         this.addressImage = this.querySelector(".address-qr img")
-        this.paymentNotification = this.querySelector(".payment-notification")
-        this.pingInterval = null
-        this.currentUnconfidential = null
 
         this.showButton.addEventListener("click", this.handleShow)
     }
 
-    disconnectedCallback() {
-        // Clear ping interval when component is removed
-        this.clearPingInterval();
-    }
-
-    clearPingInterval() {
-        if (this.pingInterval) {
-            clearInterval(this.pingInterval);
-            this.pingInterval = null;
-            console.log("Cleared websocket ping interval");
-        }
-    }
-
     displayAddress(address: lwk.AddressResult) {
-        // Clear any existing ping interval
-        this.clearPingInterval();
-
-        // Clear payment notification when showing a new address
-        this.paymentNotification.innerHTML = "";
-
         const addr = address.address()
         const addrString = addr.toString()
 
@@ -712,100 +687,6 @@ class AddressView extends HTMLElement {
         this.addressLink.href = `liquidnetwork:${addrString}`
         this.addressImage.src = addr.QRCodeUri(null)
         this.addressQR.hidden = false
-
-        const unconfidential = addr.toUnconfidential().toString();
-        this.currentUnconfidential = unconfidential;
-        const subscribe = JSON.stringify({
-            "jsonrpc": "2.0",
-            "method": "subscribe",
-            "id": 1,
-            "params": {
-                "address": unconfidential
-            }
-        });
-        console.log(subscribe)
-        const ws = websocketClient();
-
-        // Setup websocket message listener - check for payments
-        ws.onmessage = (event) => {
-            console.log("Received websocket message:")
-
-            try {
-                const message = JSON.parse(event.data);
-                console.log("Received websocket JSON message:", message)
-
-
-                // Check if message is in the expected JSON-RPC 2.0 format
-                if (message.jsonrpc === "2.0" &&
-                    message.result &&
-                    message.result.address &&
-                    message.result.tx_hex &&
-                    message.result.txid &&
-                    message.result.where &&
-                    message.id === -1) {
-                    const tx = new lwk.Transaction(message.result.tx_hex)
-
-                    // Check if the address in the message matches our monitored address
-                    if (this.currentUnconfidential &&
-                        message.result.address === this.currentUnconfidential) {
-
-                        console.log("Payment detected for monitored address!", {
-                            txid: message.result.txid,
-                            where: message.result.where
-                        });
-
-                        let balance = getWollet().applyTransaction(tx)
-                        console.log("Balance after transaction:", JSON.stringify(balance))
-
-                        this.paymentNotification.innerHTML = success("Payment received!");
-                        this.paymentNotification.appendChild(mapToTable(mapBalance(balance.entries())));
-                    }
-                } else if (message.jsonrpc === "2.0" &&
-                    message.result === "pong" &&
-                    message.id === 1) {
-                    // This is a ping response, don't log as unexpected format
-                    console.log("Received ping response (pong)");
-                } else if (message.jsonrpc === "2.0" &&
-                    message.result === "subscribed" &&
-                    message.id === 1) {
-                    // This is a subscription confirmation, don't log as unexpected format
-                    console.log("Received subscription confirmation");
-                } else {
-                    console.log("Received websocket message in unexpected format:", message);
-                }
-            } catch (error) {
-                console.error("Failed to parse websocket message as JSON:", error);
-            }
-        }
-
-        ws.onopen = () => {
-            ws.send(subscribe);
-            console.log("Websocket connection opened and subscription sent")
-
-            // Set up a ping interval to keep the connection alive
-            this.pingInterval = setInterval(() => {
-                const ping = JSON.stringify({
-                    "jsonrpc": "2.0",
-                    "method": "publish",
-                    "id": 1,
-                    "params": {
-                        "ping": null
-                    }
-                });
-                ws.send(ping);
-                console.log("Sent ping to websocket");
-            }, 25000); // 25 seconds
-        }
-
-        ws.onerror = (error) => {
-            console.error("Websocket error:", error)
-            this.clearPingInterval();
-        }
-
-        ws.onclose = () => {
-            console.log("Websocket connection closed");
-            this.clearPingInterval();
-        }
     }
 
     handleShow = async (_e) => {
@@ -1933,7 +1814,6 @@ class SignTransaction extends HTMLElement {
     downloadPsetButton!: HTMLAnchorElement;
     uploadPsetFile!: HTMLInputElement;
     proposalButton!: HTMLButtonElement;
-    publishButton!: HTMLButtonElement;
     combineButton!: HTMLButtonElement;
     saveMnemonicButton!: HTMLButtonElement;
     messageDiv!: HTMLElement;
@@ -1964,7 +1844,6 @@ class SignTransaction extends HTMLElement {
         this.downloadPsetButton = this.querySelector("a.download-pset-icon")
         this.uploadPsetFile = this.querySelector("#upload-pset-input")
         this.proposalButton = this.querySelector("button.proposal")
-        this.publishButton = this.querySelector("button.publish-proposal")
         this.combineButton = this.querySelector("button.combine")
         this.saveMnemonicButton = this.querySelector("button.saveMnemonic")
 
@@ -1990,7 +1869,6 @@ class SignTransaction extends HTMLElement {
         this.broadcastButton.addEventListener("click", this.handleBroadcastClick)
         this.downloadPsetButton.addEventListener("click", this.handleDownloadPset)
         this.uploadPsetFile.addEventListener("change", this.handleUploadPset)
-        this.publishButton.addEventListener("click", this.handlePublishProposal)
         this.combineButton.addEventListener("click", this.handleCombineClick)
 
         this.saveMnemonicButton.addEventListener("click", this.handleSaveMnemonicClick)
@@ -2373,87 +2251,11 @@ class SignTransaction extends HTMLElement {
             this.proposalText.value = proposal.toString()
             this.proposalContainer.hidden = false
 
-            // Show the publish button
-            this.publishButton.hidden = false
-
             this.messageDiv.innerHTML = success("Proposal generated!")
         } catch (error) {
             this.messageDiv.innerHTML = warning(error.toString())
         } finally {
             setBusyDisabled(this.proposalButton, false)
-        }
-    }
-
-    // Add handler for the publish proposal button
-    handlePublishProposal = async (_e: Event) => {
-        try {
-            // Get the proposal from the textarea
-            const proposalText = this.proposalText.value.trim()
-            if (!proposalText) {
-                throw new Error("No proposal to publish")
-            }
-
-            // Set button to busy state
-            setBusyDisabled(this.publishButton, true)
-
-            // Get websocket client and send the proposal
-            const ws = websocketClient()
-
-            // Format the message for the websocket using JSON-RPC 2.0
-            const message = JSON.stringify({
-                "jsonrpc": "2.0",
-                "method": "publish",
-                "id": 1,
-                "params": {
-                    "proposal": JSON.parse(proposalText)
-                }
-            })
-
-            // Create a promise to handle the websocket connection and response
-            const publishPromise = new Promise<void>((resolve, reject) => {
-                ws.onopen = () => {
-                    ws.send(message)
-                    console.log("Proposal published to websocket")
-                }
-
-                ws.onmessage = (event) => {
-                    console.log("Received websocket response:", event.data)
-                    try {
-                        const response = JSON.parse(event.data)
-                        if (response.jsonrpc === "2.0" && response.id === 1) {
-                            if (response.result) {
-                                console.log("Proposal published successfully:", response.result)
-                                this.messageDiv.innerHTML = success("Proposal published!")
-                                resolve()
-                            } else if (response.error) {
-                                this.messageDiv.innerHTML = warning(`Server error: ${response.error}`)
-                                reject(new Error(`Server error: ${response.error.message || response.error}`))
-                            } else {
-                                this.messageDiv.innerHTML = warning("Unexpected response format")
-                                reject(new Error("Unexpected response format"))
-                            }
-                        }
-                    } catch (parseError) {
-                        console.error("Failed to parse websocket response:", parseError)
-                        reject(new Error("Invalid response from server"))
-                    }
-                }
-
-                ws.onerror = (error) => {
-                    console.error("Websocket error:", error)
-                    reject(new Error("Failed to connect to server"))
-                }
-
-                // Set a timeout in case the connection hangs
-                setTimeout(() => reject(new Error("Connection timeout")), 10000)
-            })
-
-            await publishPromise
-
-        } catch (error) {
-            this.messageDiv.innerHTML = warning(error.toString())
-        } finally {
-            setBusyDisabled(this.publishButton, false)
         }
     }
 
@@ -3211,15 +3013,6 @@ function updatedAt(wolletLocal, node) {
         const unix_ts = wolletLocal.tip().timestamp()
         node.innerText = "updated at " + new Date(unix_ts * 1000).toLocaleString()
     }
-}
-
-function websocketClient(): WebSocket {
-    const mainnetUrl = "https://nexus.liquidwebwallet.org/"
-    const testnetUrl = "https://nexus.liquidwebwallet.org/testnet"
-    const regtestUrl = "http://localhost:3330/"
-    const wsUrl = network.isMainnet() ? mainnetUrl : network.isTestnet() ? testnetUrl : regtestUrl
-    const ws = new WebSocket(wsUrl);
-    return ws;
 }
 
 function esploraClient(): lwk.EsploraClient {
