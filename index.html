@@ -33,10 +33,83 @@
             padding: 0.4rem 0.6rem;
             margin-right: 0.5rem;
         }
+
+        wallet-notifications {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 1000;
+            display: grid;
+            gap: 0.5rem;
+            width: min(24rem, calc(100vw - 2rem));
+            pointer-events: none;
+        }
+
+        wallet-notifications[hidden] {
+            display: none;
+        }
+
+        .wallet-notification {
+            --wallet-notification-accent: #2a6f97;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 0.25rem 0.75rem;
+            align-items: start;
+            margin: 0;
+            padding: 0.75rem 0.875rem;
+            border-left: 0.25rem solid var(--wallet-notification-accent);
+            box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.16);
+            pointer-events: auto;
+        }
+
+        .wallet-notification-success {
+            --wallet-notification-accent: #2a9d8f;
+        }
+
+        .wallet-notification-warning {
+            --wallet-notification-accent: #b7791f;
+        }
+
+        .wallet-notification-error {
+            --wallet-notification-accent: #c44536;
+        }
+
+        .wallet-notification-content {
+            min-width: 0;
+        }
+
+        .wallet-notification-title {
+            display: block;
+            margin-bottom: 0.125rem;
+        }
+
+        .wallet-notification-message {
+            margin: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .wallet-notification-close {
+            width: 2rem;
+            height: 2rem;
+            margin: 0;
+            padding: 0;
+            line-height: 1;
+        }
+
+        @media (max-width: 640px) {
+            wallet-notifications {
+                top: auto;
+                right: 1rem;
+                bottom: 1rem;
+                left: 1rem;
+                width: auto;
+            }
+        }
     </style>
 </head>
 
 <body>
+    <wallet-notifications></wallet-notifications>
 
     <!-- Main page -->
     <header class="container">

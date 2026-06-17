@@ -16,6 +16,9 @@ import {
     getBoltzSession, setBoltzSession,
     getLocalStorageFull, setLocalStorageFull,
     subscribe, publish,
+    getWalletNotifications,
+    dismissWalletNotification,
+    WalletNotification,
     saveSwap,
     getAllSwaps,
     removeSwap
@@ -403,6 +406,106 @@ async function handleAmp0Login(_e: Event) {
 }
 
 await init()
+
+class WalletNotifications extends HTMLElement {
+    subscriptions!: (() => void)[];
+    dismissTimers!: Map<string, ReturnType<typeof setTimeout>>;
+
+    constructor() {
+        super()
+
+        this.subscriptions = [
+            subscribe('wallet-notifications-changed', this.render)
+        ];
+        this.dismissTimers = new Map();
+
+        this.setAttribute("aria-live", "polite");
+        this.addEventListener("click", this.handleClick);
+
+        this.render();
+    }
+
+    disconnectedCallback() {
+        this.subscriptions.forEach(unsubscribe => unsubscribe());
+        this.dismissTimers.forEach(timer => clearTimeout(timer));
+        this.dismissTimers.clear();
+        this.removeEventListener("click", this.handleClick);
+    }
+
+    handleClick = (event: Event) => {
+        const target = event.target as Element | null;
+        const closeButton = target?.closest("button[data-notification-id]") as HTMLButtonElement | null;
+        const notificationId = closeButton?.getAttribute("data-notification-id");
+
+        if (notificationId) {
+            dismissWalletNotification(notificationId);
+        }
+    }
+
+    syncDismissTimers(notifications: WalletNotification[]) {
+        const currentIds = new Set(notifications.map(notification => notification.id));
+
+        this.dismissTimers.forEach((timer, id) => {
+            if (!currentIds.has(id)) {
+                clearTimeout(timer);
+                this.dismissTimers.delete(id);
+            }
+        });
+
+        notifications.forEach(notification => {
+            if (notification.timeoutMs === null || this.dismissTimers.has(notification.id)) {
+                return;
+            }
+
+            const timer = setTimeout(() => {
+                dismissWalletNotification(notification.id);
+            }, notification.timeoutMs);
+            this.dismissTimers.set(notification.id, timer);
+        });
+    }
+
+    render = () => {
+        const notifications = getWalletNotifications();
+        this.syncDismissTimers(notifications);
+
+        this.replaceChildren();
+        this.hidden = notifications.length === 0;
+
+        notifications.forEach(notification => {
+            const article = document.createElement("article");
+            article.className = `wallet-notification wallet-notification-${notification.level}`;
+            article.setAttribute("role", notification.level === "error" || notification.level === "warning" ? "alert" : "status");
+
+            const content = document.createElement("div");
+            content.className = "wallet-notification-content";
+
+            if (notification.title !== "") {
+                const title = document.createElement("strong");
+                title.className = "wallet-notification-title";
+                title.textContent = notification.title;
+                content.appendChild(title);
+            }
+
+            const message = document.createElement("p");
+            message.className = "wallet-notification-message";
+            message.textContent = notification.message;
+            content.appendChild(message);
+            article.appendChild(content);
+
+            if (notification.closable) {
+                const closeButton = document.createElement("button");
+                closeButton.type = "button";
+                closeButton.className = "wallet-notification-close secondary outline";
+                closeButton.setAttribute("aria-label", "Close notification");
+                closeButton.setAttribute("data-notification-id", notification.id);
+                closeButton.textContent = "x";
+                article.appendChild(closeButton);
+            }
+
+            this.appendChild(article);
+        });
+    }
+}
 
 class MyFooter extends HTMLElement {
     footer!: HTMLElement;
@@ -2783,6 +2886,7 @@ class LightningPage extends HTMLElement {
 
 customElements.define("my-nav", MyNav)
 customElements.define("my-footer", MyFooter)
+customElements.define("wallet-notifications", WalletNotifications)
 
 customElements.define("wallet-selector", WalletSelector)
 customElements.define("address-view", AddressView)

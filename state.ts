@@ -27,6 +27,7 @@ const _state: {
     amp0Pset: lwk.Amp0Pset | null;
     boltzSession: lwk.BoltzSession | null;
     localStorageFullAlertShown: boolean;
+    notifications: WalletNotification[];
 } = {
     // Page state
     page: null, // id of the last rendered page
@@ -73,8 +74,36 @@ const _state: {
     boltzSession: null, // lwk.BoltzSession instance
 
     // LocalStorage state
-    localStorageFullAlertShown: false // Whether the localStorage full alert has been shown
+    localStorageFullAlertShown: false, // Whether the localStorage full alert has been shown
+
+    // UI notifications
+    notifications: []
 };
+
+export type WalletNotificationLevel = "info" | "success" | "warning" | "error";
+
+export interface WalletNotificationInput {
+    id?: string;
+    level?: WalletNotificationLevel;
+    title?: string;
+    message: string;
+    timeoutMs?: number | null;
+    closable?: boolean;
+}
+
+export interface WalletNotification {
+    id: string;
+    level: WalletNotificationLevel;
+    title: string;
+    message: string;
+    timeoutMs: number | null;
+    closable: boolean;
+    createdAt: number;
+}
+
+const DEFAULT_NOTIFICATION_TIMEOUT_MS = 6000;
+const MAX_NOTIFICATIONS = 5;
+let notificationSequence = 0;
 
 // Initialize state from localStorage if available
 (function initState() {
@@ -129,6 +158,37 @@ export function publish(eventName: string, data: any): void {
     if (subscribers) {
         subscribers.forEach(callback => callback(data));
     }
+}
+
+export function getWalletNotifications(): WalletNotification[] {
+    return [..._state.notifications];
+}
+
+export function notifyWallet(input: WalletNotificationInput): WalletNotification {
+    const closable = input.closable === true;
+    const notification: WalletNotification = {
+        id: input.id || `notification-${Date.now()}-${notificationSequence++}`,
+        level: input.level || "info",
+        title: input.title || "",
+        message: input.message,
+        timeoutMs: input.timeoutMs === undefined ? (closable ? null : DEFAULT_NOTIFICATION_TIMEOUT_MS) : input.timeoutMs,
+        closable,
+        createdAt: Date.now()
+    };
+
+    _state.notifications = [..._state.notifications, notification].slice(-MAX_NOTIFICATIONS);
+    publish('wallet-notifications-changed', getWalletNotifications());
+    return notification;
+}
+
+export function dismissWalletNotification(id: string): void {
+    _state.notifications = _state.notifications.filter(notification => notification.id !== id);
+    publish('wallet-notifications-changed', getWalletNotifications());
+}
+
+export function clearWalletNotifications(): void {
+    _state.notifications = [];
+    publish('wallet-notifications-changed', getWalletNotifications());
 }
 
 // Page state management
