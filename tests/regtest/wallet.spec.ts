@@ -9,6 +9,19 @@ test.describe('Wallet Functionality', () => {
         await page.waitForLoadState('networkidle');
     });
 
+    function notification(page, text: string) {
+        return page.locator('wallet-notifications .wallet-notification').filter({ hasText: text }).last();
+    }
+
+    function errorNotification(page, text?: string) {
+        const locator = page.locator('wallet-notifications .wallet-notification-error');
+        return text === undefined ? locator.last() : locator.filter({ hasText: text }).last();
+    }
+
+    async function expectNotification(page, text: string, options = {}) {
+        await expect(notification(page, text)).toBeVisible(options);
+    }
+
     async function loadWallet(page) {
         // Open options section if it is not already open
         const options = page.locator('main details').first();
@@ -62,20 +75,20 @@ test.describe('Wallet Functionality', () => {
 
     async function waitForBroadcastSuccess(page) {
         const message = page.locator('sign-transaction div.message');
-        const notification = page.locator('wallet-notifications .wallet-notification').filter({ hasText: 'Tx broadcasted!' }).last();
-        const errorNotification = page.locator('wallet-notifications .wallet-notification-error').last();
+        const broadcastNotification = notification(page, 'Tx broadcasted!');
+        const broadcastErrorNotification = errorNotification(page);
         const deadline = Date.now() + broadcastTimeout;
         let lastMessage = '';
 
         while (Date.now() < deadline) {
-            if (await notification.isVisible()) {
-                const txid = (await notification.locator('.wallet-notification-message').textContent())?.trim() ?? '';
+            if (await broadcastNotification.isVisible()) {
+                const txid = (await broadcastNotification.locator('.wallet-notification-message').textContent())?.trim() ?? '';
                 expect(txid).toMatch(/^[0-9a-f]{64}$/);
                 return txid;
             }
 
-            if (await errorNotification.isVisible()) {
-                const errorText = (await errorNotification.textContent())?.trim() ?? '';
+            if (await broadcastErrorNotification.isVisible()) {
+                const errorText = (await broadcastErrorNotification.textContent())?.trim() ?? '';
                 throw new Error(`Broadcast failed: ${errorText}`);
             }
 
@@ -183,10 +196,10 @@ test.describe('Wallet Functionality', () => {
     async function expectUnsignedBroadcastError(page) {
         await page.getByRole('button', { name: 'Broadcast', exact: true }).click();
 
-        const errorNotification = page.locator('wallet-notifications .wallet-notification-error').filter({ hasText: 'Broadcast failed' }).last();
-        await expect(errorNotification).toBeVisible();
-        await expect(errorNotification.locator('.wallet-notification-title')).toHaveText('Broadcast failed');
-        await expect(errorNotification.locator('.wallet-notification-message')).toHaveText('Cannot broadcast tx, is it signed?');
+        const broadcastErrorNotification = errorNotification(page, 'Broadcast failed');
+        await expect(broadcastErrorNotification).toBeVisible();
+        await expect(broadcastErrorNotification.locator('.wallet-notification-title')).toHaveText('Broadcast failed');
+        await expect(broadcastErrorNotification.locator('.wallet-notification-message')).toHaveText('Cannot broadcast tx, is it signed?');
     }
 
     async function expectPsetSignatures(page, hasFingerprints: string[], missingFingerprints: string[]) {
@@ -414,7 +427,7 @@ test.describe('Wallet Functionality', () => {
         const { ticker } = await createIssuancePset(page, '2100000000000001');
         const txid = await signAndBroadcastPset(page);
 
-        await expect(page.locator('wallet-notifications .wallet-notification').filter({ hasText: 'Asset registered in the asset registry' })).toBeVisible({ timeout: 15000 });
+        await expectNotification(page, 'Asset registered in the asset registry', { timeout: 15000 });
 
         const txFound = await waitForTransactionToAppear(page, txid);
         expect(txFound).toBe(true);
@@ -427,7 +440,7 @@ test.describe('Wallet Functionality', () => {
         const { assetId, ticker } = await createIssuancePset(page);
         const txid = await signAndBroadcastPset(page);
 
-        await expect(page.locator('wallet-notifications .wallet-notification').filter({ hasText: 'Asset registered in the asset registry' })).toBeVisible({ timeout: 15000 })
+        await expectNotification(page, 'Asset registered in the asset registry', { timeout: 15000 })
 
         // Ensure we are synced
         const txFound = await waitForTransactionToAppear(page, txid);
@@ -568,7 +581,7 @@ test.describe('Wallet Functionality', () => {
 
         // Get the proposal
         await page.getByRole('button', { name: 'Proposal' }).click();
-        await expect(page.locator('wallet-notifications .wallet-notification').filter({ hasText: 'Proposal generated!' })).toBeVisible();
+        await expectNotification(page, 'Proposal generated!');
 
         // Verify proposal text is shown and copy is available
         const proposalText = page.locator('textarea.proposal-text');
@@ -780,12 +793,12 @@ test.describe('Wallet Functionality', () => {
         await combineDetails.getByRole('button', { name: 'Combine with another PSET' }).click();
         await combineDetails.locator('textarea[placeholder="PSET"]').fill(jadeSignedPset);
         await combineDetails.getByRole('button', { name: 'Combine', exact: true }).click();
-        await expect(abandonPage.locator('wallet-notifications .wallet-notification').filter({ hasText: 'PSET combined!' })).toBeVisible();
+        await expectNotification(abandonPage, 'PSET combined!');
         await expectPsetSignatures(abandonPage, ['73c5da0a', 'e3ebcc79'], []);
 
         // Broadcast the combined PSET
         await abandonPage.getByRole('button', { name: 'Broadcast', exact: true }).click();
-        await expect(abandonPage.locator('wallet-notifications .wallet-notification').filter({ hasText: 'Tx broadcasted!' })).toBeVisible();
+        await expectNotification(abandonPage, 'Tx broadcasted!');
 
         // Clean up
         await context1.close();

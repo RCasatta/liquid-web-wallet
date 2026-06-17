@@ -6,6 +6,14 @@ test.describe('Wallet Functionality', () => {
         await page.waitForLoadState('networkidle');
     });
 
+    function notification(page, text: string) {
+        return page.locator('wallet-notifications .wallet-notification').filter({ hasText: text }).last();
+    }
+
+    async function expectNotification(page, text: string, options = {}) {
+        await expect(notification(page, text)).toBeVisible(options);
+    }
+
     async function loadWallet(page) {
         // Open options section
         await page.getByRole('button', { name: 'Options' }).click();
@@ -142,7 +150,7 @@ test.describe('Wallet Functionality', () => {
         await page.locator('button.sign').first().click();
 
         // Wait for success notification "Transaction signed!"
-        await expect(page.locator('wallet-notifications .wallet-notification').filter({ hasText: 'Transaction signed!' })).toBeVisible();
+        await expectNotification(page, 'Transaction signed!');
 
         // Click Cosign Amp0 button
         const cosignAmp0Button = page.locator('button.cosign-amp0');
@@ -150,6 +158,6 @@ test.describe('Wallet Functionality', () => {
         await cosignAmp0Button.click();
 
         // Should show success notification "Transaction signed with Amp0!"
-        await expect(page.locator('wallet-notifications .wallet-notification').filter({ hasText: 'Transaction signed with Amp0!' })).toBeVisible();
+        await expectNotification(page, 'Transaction signed with Amp0!');
     });
 });

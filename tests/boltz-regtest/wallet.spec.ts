@@ -65,6 +65,14 @@ test.describe('Wallet Functionality', () => {
         await page.waitForLoadState('networkidle');
     });
 
+    function notification(page, text: string) {
+        return page.locator('wallet-notifications .wallet-notification').filter({ hasText: text }).last();
+    }
+
+    async function expectNotification(page, text: string, options = {}) {
+        await expect(notification(page, text)).toBeVisible(options);
+    }
+
     async function loadWallet(page) {
         // Open options section
         await page.getByRole('button', { name: 'Options' }).click();
@@ -93,11 +101,11 @@ test.describe('Wallet Functionality', () => {
         await page.getByRole('button', { name: 'Broadcast', exact: true }).click();
 
         // Verify broadcast success notification appears
-        const notification = page.locator('wallet-notifications .wallet-notification').filter({ hasText: 'Tx broadcasted!' }).last();
-        await expect(notification).toBeVisible();
+        const broadcastNotification = notification(page, 'Tx broadcasted!');
+        await expectNotification(page, 'Tx broadcasted!');
 
         // Get the txid from the broadcast success notification
-        const txid = (await notification.locator('.wallet-notification-message').textContent())?.trim() ?? '';
+        const txid = (await broadcastNotification.locator('.wallet-notification-message').textContent())?.trim() ?? '';
         return txid;
     }
 
