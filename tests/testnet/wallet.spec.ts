@@ -142,17 +142,15 @@ test.describe('Wallet Functionality', () => {
         // Click Sign button (the first one, not the hidden one or the summary)
         await page.locator('button.sign').first().click();
 
-        // Wait for success message "Transaction signed!"
-        await expect(page.locator('div.message input[aria-invalid="false"]')).toBeVisible();
-        await expect(page.locator('div.message input[aria-invalid="false"]')).toHaveValue('Transaction signed!');
+        // Wait for success notification "Transaction signed!"
+        await expect(page.locator('wallet-notifications .wallet-notification').filter({ hasText: 'Transaction signed!' })).toBeVisible();
 
         // Click Cosign Amp0 button
         const cosignAmp0Button = page.locator('button.cosign-amp0');
         await expect(cosignAmp0Button).toBeVisible();
         await cosignAmp0Button.click();
 
-        // Should show error message "Amp0 sign failed: error sending request"
-        await expect(page.locator('div.message input[aria-invalid="false"]')).toBeVisible();
-        await expect(page.locator('div.message input[aria-invalid="false"]')).toHaveValue('Transaction signed with Amp0!');
+        // Should show success notification "Transaction signed with Amp0!"
+        await expect(page.locator('wallet-notifications .wallet-notification').filter({ hasText: 'Transaction signed with Amp0!' })).toBeVisible();
     });
 });

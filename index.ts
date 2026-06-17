@@ -2003,7 +2003,7 @@ class SignTransaction extends HTMLElement {
             let signedPset = await jade.sign(pset)
             this.pset.value = signedPset.toString()
             this.renderAnalyze()
-            this.messageDiv.innerHTML = success("Transaction signed!")
+            this.notifyTransactionSignSuccess()
         } catch (e) {
             this.messageDiv.innerHTML = warning(e.toString())
         } finally {
@@ -2022,7 +2022,7 @@ class SignTransaction extends HTMLElement {
             let signedPset = await ledger.sign(pset)
             this.pset.value = signedPset.toString().toString()
             this.renderAnalyze()
-            this.messageDiv.innerHTML = success("Transaction signed!")
+            this.notifyTransactionSignSuccess()
         } catch (e) {
             this.messageDiv.innerHTML = warning(e.toString())
         } finally {
@@ -2044,7 +2044,7 @@ class SignTransaction extends HTMLElement {
 
             this.pset.value = signedPset.toString()
             this.renderAnalyze()
-            this.messageDiv.innerHTML = success("Transaction signed!")
+            this.notifyTransactionSignSuccess()
 
         } catch (e) {
             this.messageDiv.innerHTML = warning(e.toString())
@@ -2092,6 +2092,17 @@ class SignTransaction extends HTMLElement {
             title: "Tx broadcasted!",
             message: txid.toString(),
             closable: true,
+        })
+    }
+
+    notifyTransactionSignSuccess = (message = "Transaction signed!") => {
+        this.messageDiv.innerHTML = ""
+        dismissWalletNotification("transaction-sign-success")
+        notifyWallet({
+            id: "transaction-sign-success",
+            level: "success",
+            title: message,
+            message: "The PSET has been updated."
         })
     }
 
@@ -2170,7 +2181,7 @@ class SignTransaction extends HTMLElement {
             // Update the UI with the signed PSET
             this.pset.value = signedPset.toString()
             this.renderAnalyze()
-            this.messageDiv.innerHTML = success("Transaction signed!")
+            this.notifyTransactionSignSuccess()
 
         } catch (error) {
             this.messageDiv.innerHTML = warning(error.toString())
@@ -2190,7 +2201,7 @@ class SignTransaction extends HTMLElement {
 
         try {
             let signedPset = await amp2.cosign(pset)
-            this.messageDiv.innerHTML = success("Transaction cosigned!")
+            this.notifyTransactionSignSuccess("Transaction cosigned!")
             this.pset.value = signedPset.toString()
             this.renderAnalyze()
         } catch (e) {
@@ -2216,7 +2227,7 @@ class SignTransaction extends HTMLElement {
             }
 
             let tx = await amp0.sign(amp0Pset)
-            this.messageDiv.innerHTML = success("Transaction signed with Amp0!")
+            this.notifyTransactionSignSuccess("Transaction signed with Amp0!")
             this.pset.value = tx.toString()
 
         } catch (e) {
