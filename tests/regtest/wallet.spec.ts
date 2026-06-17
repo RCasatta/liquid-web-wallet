@@ -10,8 +10,11 @@ test.describe('Wallet Functionality', () => {
     });
 
     async function loadWallet(page) {
-        // Open options section
-        await page.getByRole('button', { name: 'Options' }).click();
+        // Open options section if it is not already open
+        const options = page.locator('main details').first();
+        if (await options.getAttribute('open') === null) {
+            await page.getByRole('button', { name: 'Options' }).click();
+        }
 
         // Click the Abandon wallet button
         const abandonWalletButton = page.getByRole('button', { name: 'Abandon wallet' });
@@ -152,17 +155,6 @@ test.describe('Wallet Functionality', () => {
     }
 
     async function signAndBroadcastPset(page) {
-        // Click on the "Sign with software signer" section
-        await page.getByText('Sign with software signer').click();
-
-        // Verify that the mnemonic textarea contains the expected mnemonic
-        const mnemonicTextarea = page.locator('details:has-text("Sign with software signer") textarea[placeholder="Mnemonic"]');
-        await expect(mnemonicTextarea).toBeVisible();
-        const mnemonicValue = await mnemonicTextarea.inputValue();
-        expect(mnemonicValue).toMatch(/^[a-z ]+$/); // Should contain lowercase words separated by spaces
-        const wordCount = mnemonicValue.split(' ').length;
-        expect(wordCount === 12 || wordCount === 24).toBe(true); // Should be a 12 or 24-word mnemonic
-
         // Press the Sign button
         await page.getByRole('button', { name: 'Sign', exact: true }).click();
 
@@ -559,6 +551,8 @@ test.describe('Wallet Functionality', () => {
 
         // Press the disconnect button (it's actually a link)
         await page.getByRole('link', { name: 'Disconnect' }).click();
+        await page.waitForLoadState('networkidle');
+        await page.getByRole('button', { name: 'Options' }).click();
 
         // Click the Ledger test wallet button (now input type="button")
         const ledgerTestWalletButton = page.getByRole('button', { name: 'Ledger test wallet' });

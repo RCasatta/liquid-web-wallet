@@ -185,7 +185,8 @@ async function init(): Promise<void> {
     loadingBar.setAttribute("style", "visibility: hidden;") // by using visibility we avoid layout shifts
 
     let randomWalletButton = document.getElementById("random-wallet-button") as HTMLButtonElement;
-    let savedMnemonicWalletButton = document.getElementById("saved-mnemonic-wallet-button") as HTMLButtonElement;
+    let softwareMnemonicTextarea = document.getElementById("software-mnemonic-textarea") as HTMLTextAreaElement;
+    let useMnemonicButton = document.getElementById("use-mnemonic-button") as HTMLButtonElement;
 
     let ledgerDescriptorDiv = document.getElementById("ledger-descriptor-div")
     let ledgerDescriptorButton = document.getElementById("ledger-connect-button") as HTMLButtonElement
@@ -258,9 +259,10 @@ async function init(): Promise<void> {
     if (!network.isMainnet()) {
         document.getElementById("random-wallet-div").hidden = false
         randomWalletButton.disabled = false
+        useMnemonicButton.disabled = false
 
         // Function to handle wallet creation with a specific mnemonic
-        const createWalletWithMnemonic = (mnemonicStr) => {
+        const createWalletWithMnemonic = (mnemonicStr: string) => {
             const mnemonicToUse = new lwk.Mnemonic(mnemonicStr)
             const swSigner = new lwk.Signer(mnemonicToUse, network)
             setSwSigner(swSigner)
@@ -283,11 +285,17 @@ async function init(): Promise<void> {
             return null
         }
 
-        const updateSavedMnemonicButton = () => {
-            const hasSavedMnemonic = getSavedMnemonic() != null
+        const saveAndUseMnemonic = (mnemonicStr: string) => {
+            const mnemonic = new lwk.Mnemonic(mnemonicStr)
+            const normalizedMnemonic = mnemonic.toString()
+            localStorage.setItem(RANDOM_MNEMONIC_KEY, normalizedMnemonic)
+            softwareMnemonicTextarea.value = normalizedMnemonic
+            createWalletWithMnemonic(normalizedMnemonic)
+        }
 
-            savedMnemonicWalletButton.hidden = !hasSavedMnemonic
-            savedMnemonicWalletButton.disabled = !hasSavedMnemonic
+        const savedMnemonic = getSavedMnemonic()
+        if (savedMnemonic != null) {
+            softwareMnemonicTextarea.value = savedMnemonic
         }
 
         // Show test-specific buttons only in regtest mode
@@ -309,22 +317,17 @@ async function init(): Promise<void> {
         }
 
         randomWalletButton.addEventListener("click", (_e) => {
+            if (softwareMnemonicTextarea.value.trim() !== "" && !window.confirm("Replace the mnemonic with a new random mnemonic? Make sure you have backed it up.")) {
+                return
+            }
+
             const mnemonicToUse = lwk.Mnemonic.fromRandom(12)
-            if (getSavedMnemonic() == null) {
-                localStorage.setItem(RANDOM_MNEMONIC_KEY, mnemonicToUse.toString())
-            }
-            updateSavedMnemonicButton()
-            createWalletWithMnemonic(mnemonicToUse.toString())
+            saveAndUseMnemonic(mnemonicToUse.toString())
         });
 
-        savedMnemonicWalletButton.addEventListener("click", (_e) => {
-            const mnemonicFromStorage = getSavedMnemonic()
-            if (mnemonicFromStorage != null) {
-                createWalletWithMnemonic(mnemonicFromStorage)
-            }
+        useMnemonicButton.addEventListener("click", (_e) => {
+            saveAndUseMnemonic(softwareMnemonicTextarea.value.trim())
         });
-
-        updateSavedMnemonicButton()
     }
 
     const hashDescriptor = decodeURIComponent(window.location.hash.slice(1))
@@ -1924,7 +1927,6 @@ class CreateTransaction extends HTMLElement {
 class SignTransaction extends HTMLElement {
     pset!: HTMLTextAreaElement;
     contract!: HTMLTextAreaElement;
-    mnemonic!: HTMLTextAreaElement;
     combineTextarea!: HTMLTextAreaElement;
     contractSection!: HTMLElement;
     analyzeButton!: HTMLButtonElement;
@@ -1936,17 +1938,12 @@ class SignTransaction extends HTMLElement {
     uploadPsetFile!: HTMLInputElement;
     proposalButton!: HTMLButtonElement;
     combineButton!: HTMLButtonElement;
-    saveMnemonicButton!: HTMLButtonElement;
     messageDiv!: HTMLElement;
     contractDiv!: HTMLElement;
     signDivAnalyze!: HTMLElement;
     recipientsDiv!: HTMLElement;
     proposalContainer!: HTMLElement;
     proposalText!: HTMLTextAreaElement;
-    signDetails!: HTMLDetailsElement;
-    signWithJadeButton!: HTMLButtonElement;
-    signWithLedgerButton!: HTMLButtonElement;
-    softwareSignButton!: HTMLButtonElement;
 
     constructor() {
         super()
@@ -1954,8 +1951,7 @@ class SignTransaction extends HTMLElement {
         const textareas = this.querySelectorAll("textarea")
         this.pset = textareas[0]           // PSET textarea
         this.contract = textareas[1]       // Contract textarea
-        this.mnemonic = textareas[3]       // Mnemonic textarea
-        this.combineTextarea = textareas[4] // Combine PSET textarea
+        this.combineTextarea = textareas[3] // Combine PSET textarea
         this.contractSection = this.querySelector("div.contract-section")
         this.analyzeButton = this.querySelector("button.analyze")
         this.signButton = this.querySelector("button.sign")
@@ -1966,7 +1962,6 @@ class SignTransaction extends HTMLElement {
         this.uploadPsetFile = this.querySelector("#upload-pset-input")
         this.proposalButton = this.querySelector("button.proposal")
         this.combineButton = this.querySelector("button.combine")
-        this.saveMnemonicButton = this.querySelector("button.saveMnemonic")
 
         this.messageDiv = this.querySelector("div.message")
         this.contractDiv = this.querySelector("div.contract")
@@ -1974,11 +1969,6 @@ class SignTransaction extends HTMLElement {
         this.recipientsDiv = this.querySelector("div.recipients")
         this.proposalContainer = this.querySelector("div.proposal-container")
         this.proposalText = this.querySelector("textarea.proposal-text")
-
-        const details = this.querySelectorAll("details")
-        this.signDetails = details[0]
-
-        this.signDetails.hidden = !getDevMode() && network.isMainnet()
 
         this.analyzeButton.addEventListener("click", (_e) => {
             this.renderAnalyze()
@@ -1992,8 +1982,6 @@ class SignTransaction extends HTMLElement {
         this.uploadPsetFile.addEventListener("change", this.handleUploadPset)
         this.combineButton.addEventListener("click", this.handleCombineClick)
 
-        this.saveMnemonicButton.addEventListener("click", this.handleSaveMnemonicClick)
-
         if (getPset() != null) {
             this.pset.value = getPset().toString()
             setPset(null)
@@ -2004,70 +1992,7 @@ class SignTransaction extends HTMLElement {
             this.contractSection.hidden = false
         }
 
-        if (getSwSigner() != null) {
-            this.mnemonic.value = getSwSigner().mnemonic().toString()
-        }
-
         this.renderAnalyze()
-    }
-
-    handleSignWithJadeClick = async (_e) => {
-        setBusyDisabled(this.signWithJadeButton, true)
-        try {
-            let psetString = this.pset.value
-            let pset = new lwk.Pset(psetString)
-            let jade = await lwk.Jade.fromSerial(network, true)
-            let signedPset = await jade.sign(pset)
-            this.pset.value = signedPset.toString()
-            this.renderAnalyze()
-            this.notifyTransactionSignSuccess()
-        } catch (e) {
-            this.notifySigningPageError(e.toString())
-        } finally {
-            setBusyDisabled(this.signWithJadeButton, false)
-        }
-    }
-
-
-    handleSignWithLedgerClick = async (_e) => {
-        setBusyDisabled(this.signWithLedgerButton, true)
-        try {
-            let psetString = this.pset.value
-            let pset = new lwk.Pset(psetString)
-            let device = await lwk.searchLedgerDevice()
-            let ledger = new lwk.LedgerWeb(device, network)
-            let signedPset = await ledger.sign(pset)
-            this.pset.value = signedPset.toString().toString()
-            this.renderAnalyze()
-            this.notifyTransactionSignSuccess()
-        } catch (e) {
-            this.notifySigningPageError(e.toString())
-        } finally {
-            setBusyDisabled(this.signWithLedgerButton, false)
-        }
-    }
-
-    handleSoftwareSignClick = async (_e) => {
-        setBusyDisabled(this.softwareSignButton, true)
-        try {
-            let psetString = this.pset.value
-            let pset = new lwk.Pset(psetString)
-
-            let mnemonicStr = this.mnemonic.value
-            let mnemonic = new lwk.Mnemonic(mnemonicStr)
-
-            let signer = new lwk.Signer(mnemonic, network)
-            let signedPset = signer.sign(pset)
-
-            this.pset.value = signedPset.toString()
-            this.renderAnalyze()
-            this.notifyTransactionSignSuccess()
-
-        } catch (e) {
-            this.notifySigningPageError(e.toString())
-
-        }
-        setBusyDisabled(this.softwareSignButton, false)
     }
 
     handleBroadcastClick = async (_e) => {
@@ -2173,18 +2098,6 @@ class SignTransaction extends HTMLElement {
             level: "success",
             title: "Asset registered",
             message: "Asset registered in the asset registry",
-            closable: true
-        })
-    }
-
-    notifyMnemonicSavedSuccess = () => {
-        this.messageDiv.innerHTML = ""
-        dismissWalletNotification("mnemonic-saved-success")
-        notifyWallet({
-            id: "mnemonic-saved-success",
-            level: "success",
-            title: "Mnemonic saved",
-            message: "Reload the page and select Use saved mnemonic.",
             closable: true
         })
     }
@@ -2338,37 +2251,6 @@ class SignTransaction extends HTMLElement {
             this.notifySigningPageSuccess("PSET combined!")
         } catch (e) {
             this.notifySigningPageError(e.toString())
-        }
-    }
-
-    handleSaveMnemonicClick = async (_e: Event) => {
-        try {
-            setBusyDisabled(this.saveMnemonicButton, true)
-
-            const mnemonicStr = this.mnemonic.value.trim()
-            if (!mnemonicStr) {
-                throw new Error("Mnemonic cannot be empty")
-            }
-
-            // Validate the mnemonic by creating a Mnemonic object
-            const mnemonic = new lwk.Mnemonic(mnemonicStr)
-
-            // Create a signer with the validated mnemonic
-            const signer = new lwk.Signer(mnemonic, network)
-
-            // Save to state
-            setSwSigner(signer)
-
-            // Also save raw mnemonic to localStorage for persistence
-            localStorage.setItem(RANDOM_MNEMONIC_KEY, mnemonicStr)
-
-            // Update UI
-            this.mnemonic.disabled = true
-            this.notifyMnemonicSavedSuccess()
-        } catch (e) {
-            this.notifySigningPageError(e.toString())
-        } finally {
-            setBusyDisabled(this.saveMnemonicButton, false)
         }
     }
 

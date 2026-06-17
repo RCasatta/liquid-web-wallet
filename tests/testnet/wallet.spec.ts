@@ -10,10 +10,10 @@ test.describe('Wallet Functionality', () => {
         // Open options section
         await page.getByRole('button', { name: 'Options' }).click();
 
-        // Click the example wallet button
-        const abandonWalletButton = page.getByRole('button', { name: 'Random wallet' });
-        await expect(abandonWalletButton).toBeVisible();
-        await abandonWalletButton.click();
+        // Click the random mnemonic button
+        const randomMnemonicButton = page.getByRole('button', { name: 'Random mnemonic' });
+        await expect(randomMnemonicButton).toBeVisible();
+        await randomMnemonicButton.click();
 
         // Wait for the balance page to be shown
         await expect(page.getByRole('heading', { name: 'Balance' })).toBeVisible();
@@ -56,6 +56,16 @@ test.describe('Wallet Functionality', () => {
 
     test('should login and operate with Amp0 wallet', async ({ page }) => {
         // Open options section
+        await page.getByRole('button', { name: 'Options' }).click();
+
+        // Set up the software signer mnemonic from the login page
+        await page.locator('#software-mnemonic-textarea').fill('student lady today genius gentle zero satoshi book just link gauge tooth');
+        await page.getByRole('button', { name: 'Use mnemonic' }).click();
+        await expect(page.getByRole('heading', { name: 'Balance' })).toBeVisible({ timeout: 15000 });
+        await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible({ timeout: 20000 });
+
+        await page.getByRole('link', { name: 'Disconnect' }).click();
+        await page.waitForLoadState('networkidle');
         await page.getByRole('button', { name: 'Options' }).click();
 
         // Check that Amp0 section is visible (only in testnet)
@@ -127,17 +137,6 @@ test.describe('Wallet Functionality', () => {
 
         // Should navigate to the sign page
         await expect(page.locator('h2:has-text("Sign")')).toBeVisible();
-
-        // Expand the software signer details section first
-        const softwareSignerDetails = page.locator('details:has-text("Sign with software signer")');
-        await softwareSignerDetails.locator('summary').click();
-
-        // Set mnemonic in the software signer section
-        const mnemonicTextarea = page.locator('details:has-text("Sign with software signer") textarea[placeholder="Mnemonic"]');
-        await mnemonicTextarea.fill('student lady today genius gentle zero satoshi book just link gauge tooth');
-
-        // Click Save to save the mnemonic
-        await page.getByRole('button', { name: 'Save' }).click();
 
         // Click Sign button (the first one, not the hidden one or the summary)
         await page.locator('button.sign').first().click();

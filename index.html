@@ -184,19 +184,24 @@
                 <br>
             </div>
 
+            <div id="random-wallet-div" hidden>
+                <h3>Software wallet</h3>
+                <label for="software-mnemonic-textarea">Mnemonic</label>
+                <textarea id="software-mnemonic-textarea" placeholder="Mnemonic"></textarea>
+                <p>
+                    <input type="button" id="use-mnemonic-button" disabled value="Use mnemonic">
+                    <input type="button" id="random-wallet-button" disabled value="Random mnemonic" class="secondary">
+                </p>
+                <div id="test-buttons-div" hidden>
+                    <p><input type="button" id="abandon-wallet-button" value="Abandon wallet" class="secondary"></p>
+                    <p><input type="button" id="ledger-test-wallet-button" value="Ledger test wallet" class="secondary">
+                    </p>
+                </div>
+            </div>
+
         </details>
 
         <br><br>
-
-        <div id="random-wallet-div" hidden>
-            <p><input type="button" id="random-wallet-button" disabled value="Random wallet" class="secondary"></p>
-            <p><input type="button" id="saved-mnemonic-wallet-button" disabled hidden value="Use saved mnemonic"
-                    class="secondary"></p>
-            <div id="test-buttons-div" hidden>
-                <p><input type="button" id="abandon-wallet-button" value="Abandon wallet" class="secondary"></p>
-                <p><input type="button" id="ledger-test-wallet-button" value="Ledger test wallet" class="secondary"></p>
-            </div>
-        </div>
 
     </main>
 
@@ -506,17 +511,6 @@
                 <div class="recipients"></div>
 
                 <br><br>
-
-                <details>
-                    <summary role="button" class="secondary">Sign with software signer</summary>
-                    <p>Note: this should be used only for testing purposes (not recommended on mainnet)</p>
-                    <textarea placeholder="Mnemonic"></textarea>
-                    <p>
-                        <button class="saveMnemonic">Save</button>
-                    </p>
-                    <br><br>
-                </details>
-
 
                 <details>
                     <summary role="button" class="secondary">Combine with another PSET</summary>

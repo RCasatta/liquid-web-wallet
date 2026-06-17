@@ -83,17 +83,6 @@ test.describe('Wallet Functionality', () => {
     }
 
     async function signAndBroadcastPset(page) {
-        // Click on the "Sign with software signer" section
-        await page.getByText('Sign with software signer').click();
-
-        // Verify that the mnemonic textarea contains the expected mnemonic
-        const mnemonicTextarea = page.locator('details:has-text("Sign with software signer") textarea[placeholder="Mnemonic"]');
-        await expect(mnemonicTextarea).toBeVisible();
-        const mnemonicValue = await mnemonicTextarea.inputValue();
-        expect(mnemonicValue).toMatch(/^[a-z ]+$/); // Should contain lowercase words separated by spaces
-        const wordCount = mnemonicValue.split(' ').length;
-        expect(wordCount === 12 || wordCount === 24).toBe(true); // Should be a 12 or 24-word mnemonic
-
         // Press the Sign button
         await page.getByRole('button', { name: 'Sign', exact: true }).click();
 
