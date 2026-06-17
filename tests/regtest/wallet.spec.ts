@@ -60,6 +60,7 @@ test.describe('Wallet Functionality', () => {
     async function waitForBroadcastSuccess(page) {
         const message = page.locator('sign-transaction div.message');
         const notification = page.locator('wallet-notifications .wallet-notification').filter({ hasText: 'Tx broadcasted!' }).last();
+        const errorNotification = page.locator('wallet-notifications .wallet-notification-error').last();
         const deadline = Date.now() + broadcastTimeout;
         let lastMessage = '';
 
@@ -68,6 +69,11 @@ test.describe('Wallet Functionality', () => {
                 const txid = (await notification.locator('.wallet-notification-message').textContent())?.trim() ?? '';
                 expect(txid).toMatch(/^[0-9a-f]{64}$/);
                 return txid;
+            }
+
+            if (await errorNotification.isVisible()) {
+                const errorText = (await errorNotification.textContent())?.trim() ?? '';
+                throw new Error(`Broadcast failed: ${errorText}`);
             }
 
             const result = await message.evaluate((messageElement) => {
@@ -180,6 +186,15 @@ test.describe('Wallet Functionality', () => {
         await page.getByRole('button', { name: 'Broadcast', exact: true }).click();
 
         return await waitForBroadcastSuccess(page);
+    }
+
+    async function expectUnsignedBroadcastError(page) {
+        await page.getByRole('button', { name: 'Broadcast', exact: true }).click();
+
+        const errorNotification = page.locator('wallet-notifications .wallet-notification-error').filter({ hasText: 'Broadcast failed' }).last();
+        await expect(errorNotification).toBeVisible();
+        await expect(errorNotification.locator('.wallet-notification-title')).toHaveText('Broadcast failed');
+        await expect(errorNotification.locator('.wallet-notification-message')).toHaveText('Cannot broadcast tx, is it signed?');
     }
 
     async function waitForTransactionToAppear(page, txid) {
@@ -350,6 +365,7 @@ test.describe('Wallet Functionality', () => {
 
     test('should sign a created pset', async ({ page }) => {
         await createTransaction(page);
+        await expectUnsignedBroadcastError(page);
         const txid = await signAndBroadcastPset(page);
         const txFound = await waitForTransactionToAppear(page, txid);
         expect(txFound).toBe(true);

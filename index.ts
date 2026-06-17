@@ -2005,7 +2005,7 @@ class SignTransaction extends HTMLElement {
             this.renderAnalyze()
             this.notifyTransactionSignSuccess()
         } catch (e) {
-            this.messageDiv.innerHTML = warning(e.toString())
+            this.notifySigningPageError(e.toString())
         } finally {
             setBusyDisabled(this.signWithJadeButton, false)
         }
@@ -2024,7 +2024,7 @@ class SignTransaction extends HTMLElement {
             this.renderAnalyze()
             this.notifyTransactionSignSuccess()
         } catch (e) {
-            this.messageDiv.innerHTML = warning(e.toString())
+            this.notifySigningPageError(e.toString())
         } finally {
             setBusyDisabled(this.signWithLedgerButton, false)
         }
@@ -2047,7 +2047,7 @@ class SignTransaction extends HTMLElement {
             this.notifyTransactionSignSuccess()
 
         } catch (e) {
-            this.messageDiv.innerHTML = warning(e.toString())
+            this.notifySigningPageError(e.toString())
 
         }
         setBusyDisabled(this.softwareSignButton, false)
@@ -2057,6 +2057,7 @@ class SignTransaction extends HTMLElement {
         try {
             setBusyDisabled(this.broadcastButton, true)
             dismissWalletNotification("broadcast-success")
+            dismissWalletNotification("signing-page-error")
 
             if (getAmp0() == null) {
                 let psetString = this.pset.value
@@ -2078,7 +2079,7 @@ class SignTransaction extends HTMLElement {
             }
 
         } catch (e) {
-            this.messageDiv.innerHTML = warning("Cannot broadcast tx, is it signed?")
+            this.notifySigningPageError("Cannot broadcast tx, is it signed?", "Broadcast failed")
             console.error(e)
         }
         setBusyDisabled(this.broadcastButton, false)
@@ -2086,6 +2087,7 @@ class SignTransaction extends HTMLElement {
 
     notifyBroadcastSuccess = (txid: lwk.Txid) => {
         this.messageDiv.innerHTML = ""
+        dismissWalletNotification("signing-page-error")
         notifyWallet({
             id: "broadcast-success",
             level: "success",
@@ -2097,12 +2099,25 @@ class SignTransaction extends HTMLElement {
 
     notifyTransactionSignSuccess = (message = "Transaction signed!") => {
         this.messageDiv.innerHTML = ""
+        dismissWalletNotification("signing-page-error")
         dismissWalletNotification("transaction-sign-success")
         notifyWallet({
             id: "transaction-sign-success",
             level: "success",
             title: message,
             message: "The PSET has been updated."
+        })
+    }
+
+    notifySigningPageError = (message: string, title = "Signing error") => {
+        this.messageDiv.innerHTML = ""
+        dismissWalletNotification("signing-page-error")
+        notifyWallet({
+            id: "signing-page-error",
+            level: "error",
+            title,
+            message,
+            closable: true
         })
     }
 
@@ -2184,7 +2199,7 @@ class SignTransaction extends HTMLElement {
             this.notifyTransactionSignSuccess()
 
         } catch (error) {
-            this.messageDiv.innerHTML = warning(error.toString())
+            this.notifySigningPageError(error.toString())
         } finally {
             // Always reset button state when operation is complete
             setBusyDisabled(this.signButton, false)
@@ -2205,7 +2220,7 @@ class SignTransaction extends HTMLElement {
             this.pset.value = signedPset.toString()
             this.renderAnalyze()
         } catch (e) {
-            this.messageDiv.innerHTML = warning(e.toString())
+            this.notifySigningPageError(e.toString())
         } finally {
             setBusyDisabled(this.cosignButton, false)
         }
@@ -2231,7 +2246,7 @@ class SignTransaction extends HTMLElement {
             this.pset.value = tx.toString()
 
         } catch (e) {
-            this.messageDiv.innerHTML = warning("Amp0 sign failed: " + e.toString())
+            this.notifySigningPageError("Amp0 sign failed: " + e.toString())
         } finally {
             setBusyDisabled(this.cosignAmp0Button, false)
         }
@@ -2254,7 +2269,7 @@ class SignTransaction extends HTMLElement {
 
             this.messageDiv.innerHTML = success("PSET combined!")
         } catch (e) {
-            this.messageDiv.innerHTML = warning(e.toString())
+            this.notifySigningPageError(e.toString())
         }
     }
 
@@ -2283,7 +2298,7 @@ class SignTransaction extends HTMLElement {
             this.mnemonic.disabled = true
             this.messageDiv.innerHTML = success("Mnemonic saved successfully, reload the page and select Random wallet")
         } catch (e) {
-            this.messageDiv.innerHTML = warning(e.toString())
+            this.notifySigningPageError(e.toString())
         } finally {
             setBusyDisabled(this.saveMnemonicButton, false)
         }
@@ -2380,7 +2395,7 @@ class SignTransaction extends HTMLElement {
 
             this.messageDiv.innerHTML = success("Proposal generated!")
         } catch (error) {
-            this.messageDiv.innerHTML = warning(error.toString())
+            this.notifySigningPageError(error.toString())
         } finally {
             setBusyDisabled(this.proposalButton, false)
         }
@@ -2390,7 +2405,7 @@ class SignTransaction extends HTMLElement {
         e.preventDefault()
         const psetText = this.pset.value
         if (!psetText) {
-            this.messageDiv.innerHTML = warning("PSET is empty, nothing to download.")
+            this.notifySigningPageError("PSET is empty, nothing to download.", "Download failed")
             return
         }
         const blob = new Blob([psetText], { type: "text/plain" })
@@ -2417,7 +2432,7 @@ class SignTransaction extends HTMLElement {
             this.messageDiv.innerHTML = success("PSET loaded successfully.")
         }
         reader.onerror = (error) => {
-            this.messageDiv.innerHTML = warning(`Error reading file: ${error}`)
+            this.notifySigningPageError(`Error reading file: ${error}`, "Upload failed")
         }
         reader.readAsText(file)
         e.target.value = "" // Reset file input
