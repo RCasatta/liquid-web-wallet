@@ -332,6 +332,32 @@ test.describe('Wallet Functionality', () => {
         expect(transactionCount).toBeGreaterThan(0);
     });
 
+    test('should reload the same wallet from a saved random mnemonic', async ({ page }) => {
+        await page.getByRole('button', { name: 'Options' }).click();
+        await page.getByRole('button', { name: 'Random mnemonic' }).click();
+
+        await expect(page.getByRole('heading', { name: 'Balance' })).toBeVisible();
+        await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible();
+
+        await page.getByRole('link', { name: 'Wallet' }).click();
+        await expect(page.locator('wallet-descriptor h2')).toHaveText('Wallet');
+        const descriptor = await page.locator('wallet-descriptor textarea').first().inputValue();
+        expect(descriptor).toMatch(/^ct\(/);
+
+        await page.getByRole('link', { name: 'Disconnect' }).click();
+        await page.waitForLoadState('networkidle');
+
+        await page.getByRole('button', { name: 'Options' }).click();
+        await expect(page.locator('#software-mnemonic-textarea')).not.toHaveValue('');
+        await page.getByRole('button', { name: 'Use mnemonic' }).click();
+
+        await expect(page.getByRole('heading', { name: 'Balance' })).toBeVisible();
+        await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible();
+
+        await page.getByRole('link', { name: 'Wallet' }).click();
+        await expect(page.locator('wallet-descriptor textarea').first()).toHaveValue(descriptor);
+    });
+
     test('should paginate transactions', async ({ page }) => {
         await loadWallet(page);
         await openTransactionsPage(page);
