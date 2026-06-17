@@ -59,19 +59,22 @@ test.describe('Wallet Functionality', () => {
 
     async function waitForBroadcastSuccess(page) {
         const message = page.locator('sign-transaction div.message');
+        const notification = page.locator('wallet-notifications .wallet-notification').filter({ hasText: 'Tx broadcasted!' }).last();
         const deadline = Date.now() + broadcastTimeout;
         let lastMessage = '';
 
         while (Date.now() < deadline) {
+            if (await notification.isVisible()) {
+                const txid = (await notification.locator('.wallet-notification-message').textContent())?.trim() ?? '';
+                expect(txid).toMatch(/^[0-9a-f]{64}$/);
+                return txid;
+            }
+
             const result = await message.evaluate((messageElement) => {
                 const input = messageElement.querySelector('input') as HTMLInputElement | null;
                 const helper = messageElement.querySelector('small')?.textContent?.trim() ?? '';
                 const value = input?.value?.trim() ?? '';
                 const invalid = input?.getAttribute('aria-invalid');
-
-                if (helper.includes('Tx broadcasted')) {
-                    return { status: 'success', txid: value, message: helper };
-                }
 
                 if (invalid === 'true') {
                     return { status: 'error', txid: '', message: [value, helper].filter(Boolean).join(' - ') };
@@ -79,11 +82,6 @@ test.describe('Wallet Functionality', () => {
 
                 return { status: 'pending', txid: '', message: [value, helper].filter(Boolean).join(' - ') };
             });
-
-            if (result.status === 'success') {
-                expect(result.txid).toMatch(/^[0-9a-f]{64}$/);
-                return result.txid;
-            }
 
             if (result.status === 'error') {
                 throw new Error(`Broadcast failed: ${result.message}`);
@@ -720,7 +718,7 @@ test.describe('Wallet Functionality', () => {
         await abandonPage.getByRole('button', { name: 'Sign', exact: true }).click();
         await expect(abandonPage.locator('h3:has-text("Signatures")').locator('~div table td:has-text("Has")')).toBeVisible();
         await abandonPage.getByRole('button', { name: 'Broadcast', exact: true }).click();
-        await expect(abandonPage.getByText('Tx broadcasted')).toBeVisible();
+        await expect(abandonPage.locator('wallet-notifications .wallet-notification').filter({ hasText: 'Tx broadcasted!' })).toBeVisible();
 
         // Clean up
         await context1.close();

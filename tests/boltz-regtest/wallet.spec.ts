@@ -103,12 +103,12 @@ test.describe('Wallet Functionality', () => {
         // Press the Broadcast button
         await page.getByRole('button', { name: 'Broadcast', exact: true }).click();
 
-        // Verify broadcast success message appears
-        await expect(page.getByText('Tx broadcasted')).toBeVisible();
+        // Verify broadcast success notification appears
+        const notification = page.locator('wallet-notifications .wallet-notification').filter({ hasText: 'Tx broadcasted!' }).last();
+        await expect(notification).toBeVisible();
 
-        // Get the txid from the broadcast success message
-        const txElement = page.getByText('Tx broadcasted').locator('..');
-        const txid = await txElement.getByRole('textbox').inputValue();
+        // Get the txid from the broadcast success notification
+        const txid = (await notification.locator('.wallet-notification-message').textContent())?.trim() ?? '';
         return txid;
     }
 
@@ -228,4 +228,3 @@ test.describe('Wallet Functionality', () => {
         await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible();
     });
 });
-

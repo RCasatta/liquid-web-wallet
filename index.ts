@@ -17,6 +17,7 @@ import {
     getLocalStorageFull, setLocalStorageFull,
     subscribe, publish,
     getWalletNotifications,
+    notifyWallet,
     dismissWalletNotification,
     WalletNotification,
     saveSwap,
@@ -2055,6 +2056,7 @@ class SignTransaction extends HTMLElement {
     handleBroadcastClick = async (_e) => {
         try {
             setBusyDisabled(this.broadcastButton, true)
+            dismissWalletNotification("broadcast-success")
 
             if (getAmp0() == null) {
                 let psetString = this.pset.value
@@ -2065,14 +2067,14 @@ class SignTransaction extends HTMLElement {
                 console.log(tx)
                 let client = esploraClient()
                 let txid = await client.broadcast(psetFinalized)
-                this.messageDiv.innerHTML = success(txid, "Tx broadcasted!")
+                this.notifyBroadcastSuccess(txid)
 
                 this.broadcastContractIfAny()
             } else {
                 const tx = new lwk.Transaction(this.pset.value)
                 let client = esploraClient()
                 let txid = await client.broadcastTx(tx)
-                this.messageDiv.innerHTML = success(txid, "Tx broadcasted!")
+                this.notifyBroadcastSuccess(txid)
             }
 
         } catch (e) {
@@ -2080,6 +2082,17 @@ class SignTransaction extends HTMLElement {
             console.error(e)
         }
         setBusyDisabled(this.broadcastButton, false)
+    }
+
+    notifyBroadcastSuccess = (txid: lwk.Txid) => {
+        this.messageDiv.innerHTML = ""
+        notifyWallet({
+            id: "broadcast-success",
+            level: "success",
+            title: "Tx broadcasted!",
+            message: txid.toString(),
+            closable: true,
+        })
     }
 
     broadcastContractIfAny = async () => {
