@@ -2148,6 +2148,18 @@ class SignTransaction extends HTMLElement {
         })
     }
 
+    notifyAssetRegistrySuccess = () => {
+        this.contractDiv.innerHTML = ""
+        dismissWalletNotification("asset-registry-success")
+        notifyWallet({
+            id: "asset-registry-success",
+            level: "success",
+            title: "Asset registered",
+            message: "Asset registered in the asset registry",
+            closable: true
+        })
+    }
+
     broadcastContractIfAny = async () => {
         if (getContract() != null) {
             const broadcastEvery = network.isRegtest() ? 1 : 10
@@ -2163,7 +2175,7 @@ class SignTransaction extends HTMLElement {
                     if (successBroadcast) {
                         console.log("Contract broadcast succeeded!")
                         setContract(null)
-                        this.contractDiv.innerHTML = success("Asset registered in the asset registry")
+                        this.notifyAssetRegistrySuccess()
                     } else {
                         console.log(`Contract broadcast failed, retrying in ${broadcastEvery} seconds...`)
                         // Schedule another attempt in 30 seconds

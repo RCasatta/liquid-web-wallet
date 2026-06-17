@@ -396,7 +396,7 @@ test.describe('Wallet Functionality', () => {
         const { ticker } = await createIssuancePset(page, '2100000000000001');
         const txid = await signAndBroadcastPset(page);
 
-        await expect(page.locator('input[value="Asset registered in the asset registry"]')).toBeVisible({ timeout: 15000 });
+        await expect(page.locator('wallet-notifications .wallet-notification').filter({ hasText: 'Asset registered in the asset registry' })).toBeVisible({ timeout: 15000 });
 
         const txFound = await waitForTransactionToAppear(page, txid);
         expect(txFound).toBe(true);
@@ -409,8 +409,7 @@ test.describe('Wallet Functionality', () => {
         const { assetId, ticker } = await createIssuancePset(page);
         const txid = await signAndBroadcastPset(page);
 
-        // Look for an input element with this value instead of direct text
-        await expect(page.locator('input[value="Asset registered in the asset registry"]')).toBeVisible({ timeout: 15000 })
+        await expect(page.locator('wallet-notifications .wallet-notification').filter({ hasText: 'Asset registered in the asset registry' })).toBeVisible({ timeout: 15000 })
 
         // Ensure we are synced
         const txFound = await waitForTransactionToAppear(page, txid);
