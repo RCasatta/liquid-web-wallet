@@ -2100,6 +2100,7 @@ class SignTransaction extends HTMLElement {
     notifyTransactionSignSuccess = (message = "Transaction signed!") => {
         this.messageDiv.innerHTML = ""
         dismissWalletNotification("signing-page-error")
+        dismissWalletNotification("signing-page-prompt")
         dismissWalletNotification("transaction-sign-success")
         notifyWallet({
             id: "transaction-sign-success",
@@ -2112,6 +2113,7 @@ class SignTransaction extends HTMLElement {
     notifySigningPageSuccess = (message: string) => {
         this.messageDiv.innerHTML = ""
         dismissWalletNotification("signing-page-error")
+        dismissWalletNotification("signing-page-prompt")
         dismissWalletNotification("signing-page-success")
         notifyWallet({
             id: "signing-page-success",
@@ -2124,11 +2126,24 @@ class SignTransaction extends HTMLElement {
     notifySigningPageError = (message: string, title = "Signing error") => {
         this.messageDiv.innerHTML = ""
         dismissWalletNotification("signing-page-error")
+        dismissWalletNotification("signing-page-prompt")
         notifyWallet({
             id: "signing-page-error",
             level: "error",
             title,
             message,
+            closable: true
+        })
+    }
+
+    notifySigningPagePrompt = (message: string) => {
+        this.messageDiv.innerHTML = ""
+        dismissWalletNotification("signing-page-prompt")
+        notifyWallet({
+            id: "signing-page-prompt",
+            level: "warning",
+            title: message,
+            message: "Confirm the transaction details on the hardware wallet.",
             closable: true
         })
     }
@@ -2178,12 +2193,12 @@ class SignTransaction extends HTMLElement {
 
             // Try to sign with Jade first if available
             if (getJade() != null) {
-                this.messageDiv.innerHTML = warning("Check the transaction on the Jade")
+                this.notifySigningPagePrompt("Check the transaction on the Jade")
                 signedPset = await getJade().sign(pset)
             }
             // Try to sign with Ledger if available
             else if (getLedger() != null) {
-                this.messageDiv.innerHTML = warning("Check the transaction on the Ledger")
+                this.notifySigningPagePrompt("Check the transaction on the Ledger")
                 let ledger = getLedger()
                 signedPset = await ledger.sign(pset)
                 signedPset = signedPset.toString() // Ensure consistent return type
