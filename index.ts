@@ -185,6 +185,7 @@ async function init(): Promise<void> {
     loadingBar.setAttribute("style", "visibility: hidden;") // by using visibility we avoid layout shifts
 
     let randomWalletButton = document.getElementById("random-wallet-button") as HTMLButtonElement;
+    let savedMnemonicWalletButton = document.getElementById("saved-mnemonic-wallet-button") as HTMLButtonElement;
 
     let ledgerDescriptorDiv = document.getElementById("ledger-descriptor-div")
     let ledgerDescriptorButton = document.getElementById("ledger-connect-button") as HTMLButtonElement
@@ -268,6 +269,27 @@ async function init(): Promise<void> {
             handleWatchOnlyClick()
         }
 
+        const getSavedMnemonic = (): string | null => {
+            const mnemonicFromStorage = localStorage.getItem(RANDOM_MNEMONIC_KEY)
+            if (mnemonicFromStorage != null) {
+                try {
+                    new lwk.Mnemonic(mnemonicFromStorage)
+                    return mnemonicFromStorage
+                } catch (_e) {
+                    return null
+                }
+            }
+
+            return null
+        }
+
+        const updateSavedMnemonicButton = () => {
+            const hasSavedMnemonic = getSavedMnemonic() != null
+
+            savedMnemonicWalletButton.hidden = !hasSavedMnemonic
+            savedMnemonicWalletButton.disabled = !hasSavedMnemonic
+        }
+
         // Show test-specific buttons only in regtest mode
         if (network.isRegtest()) {
             const testButtonsDiv = document.getElementById("test-buttons-div")
@@ -287,27 +309,22 @@ async function init(): Promise<void> {
         }
 
         randomWalletButton.addEventListener("click", (_e) => {
-
-            let mnemonicFromCookie = localStorage.getItem(RANDOM_MNEMONIC_KEY)
-            var mnemonicToUse
-            if (mnemonicFromCookie == null) {
-                mnemonicToUse = lwk.Mnemonic.fromRandom(12)
+            const mnemonicToUse = lwk.Mnemonic.fromRandom(12)
+            if (getSavedMnemonic() == null) {
                 localStorage.setItem(RANDOM_MNEMONIC_KEY, mnemonicToUse.toString())
-            } else {
-                try {
-                    mnemonicToUse = new lwk.Mnemonic(mnemonicFromCookie)
-                } catch {
-                    mnemonicToUse = lwk.Mnemonic.fromRandom(12)
-                    localStorage.setItem(RANDOM_MNEMONIC_KEY, mnemonicToUse.toString())
-                }
             }
-            const swSigner = new lwk.Signer(mnemonicToUse, network)
-            setSwSigner(swSigner)
-            let desc = swSigner.wpkhSlip77Descriptor()
-
-            descriptorTextarea.value = desc.toString()
-            handleWatchOnlyClick()
+            updateSavedMnemonicButton()
+            createWalletWithMnemonic(mnemonicToUse.toString())
         });
+
+        savedMnemonicWalletButton.addEventListener("click", (_e) => {
+            const mnemonicFromStorage = getSavedMnemonic()
+            if (mnemonicFromStorage != null) {
+                createWalletWithMnemonic(mnemonicFromStorage)
+            }
+        });
+
+        updateSavedMnemonicButton()
     }
 
     const hashDescriptor = decodeURIComponent(window.location.hash.slice(1))
@@ -2160,6 +2177,18 @@ class SignTransaction extends HTMLElement {
         })
     }
 
+    notifyMnemonicSavedSuccess = () => {
+        this.messageDiv.innerHTML = ""
+        dismissWalletNotification("mnemonic-saved-success")
+        notifyWallet({
+            id: "mnemonic-saved-success",
+            level: "success",
+            title: "Mnemonic saved",
+            message: "Reload the page and select Use saved mnemonic.",
+            closable: true
+        })
+    }
+
     broadcastContractIfAny = async () => {
         if (getContract() != null) {
             const broadcastEvery = network.isRegtest() ? 1 : 10
@@ -2335,7 +2364,7 @@ class SignTransaction extends HTMLElement {
 
             // Update UI
             this.mnemonic.disabled = true
-            this.messageDiv.innerHTML = success("Mnemonic saved successfully, reload the page and select Random wallet")
+            this.notifyMnemonicSavedSuccess()
         } catch (e) {
             this.notifySigningPageError(e.toString())
         } finally {
