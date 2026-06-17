@@ -2109,6 +2109,18 @@ class SignTransaction extends HTMLElement {
         })
     }
 
+    notifySigningPageSuccess = (message: string) => {
+        this.messageDiv.innerHTML = ""
+        dismissWalletNotification("signing-page-error")
+        dismissWalletNotification("signing-page-success")
+        notifyWallet({
+            id: "signing-page-success",
+            level: "success",
+            title: message,
+            message: "The signing page has been updated."
+        })
+    }
+
     notifySigningPageError = (message: string, title = "Signing error") => {
         this.messageDiv.innerHTML = ""
         dismissWalletNotification("signing-page-error")
@@ -2267,7 +2279,7 @@ class SignTransaction extends HTMLElement {
             this.combineTextarea.value = ""
             this.renderAnalyze()
 
-            this.messageDiv.innerHTML = success("PSET combined!")
+            this.notifySigningPageSuccess("PSET combined!")
         } catch (e) {
             this.notifySigningPageError(e.toString())
         }
@@ -2393,7 +2405,7 @@ class SignTransaction extends HTMLElement {
             this.proposalText.value = proposal.toString()
             this.proposalContainer.hidden = false
 
-            this.messageDiv.innerHTML = success("Proposal generated!")
+            this.notifySigningPageSuccess("Proposal generated!")
         } catch (error) {
             this.notifySigningPageError(error.toString())
         } finally {
@@ -2429,7 +2441,7 @@ class SignTransaction extends HTMLElement {
             const content = event.target.result
             this.pset.value = typeof content === 'string' ? content : new TextDecoder().decode(content)
             this.renderAnalyze()
-            this.messageDiv.innerHTML = success("PSET loaded successfully.")
+            this.notifySigningPageSuccess("PSET loaded successfully.")
         }
         reader.onerror = (error) => {
             this.notifySigningPageError(`Error reading file: ${error}`, "Upload failed")

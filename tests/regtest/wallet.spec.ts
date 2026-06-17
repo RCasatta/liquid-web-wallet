@@ -531,6 +531,7 @@ test.describe('Wallet Functionality', () => {
 
         // Get the proposal
         await page.getByRole('button', { name: 'Proposal' }).click();
+        await expect(page.locator('wallet-notifications .wallet-notification').filter({ hasText: 'Proposal generated!' })).toBeVisible();
 
         // Verify proposal text is shown and copy is available
         const proposalText = page.locator('textarea.proposal-text');
