@@ -197,6 +197,26 @@ test.describe('Wallet Functionality', () => {
         await expect(errorNotification.locator('.wallet-notification-message')).toHaveText('Cannot broadcast tx, is it signed?');
     }
 
+    async function expectPsetSignatures(page, hasFingerprints: string[], missingFingerprints: string[]) {
+        const signatureTable = page.locator('h3:has-text("Signatures")').locator('~div table').first();
+        const hasRow = signatureTable.locator('tr:has(td:has-text("Has"))');
+        const missingRow = signatureTable.locator('tr:has(td:has-text("Missing"))');
+
+        await expect(hasRow).toBeVisible();
+        for (const fingerprint of hasFingerprints) {
+            await expect(hasRow).toContainText(fingerprint);
+        }
+
+        if (missingFingerprints.length === 0) {
+            await expect(missingRow).toHaveCount(0);
+        } else {
+            await expect(missingRow).toBeVisible();
+            for (const fingerprint of missingFingerprints) {
+                await expect(missingRow).toContainText(fingerprint);
+            }
+        }
+    }
+
     async function waitForTransactionToAppear(page, txid) {
         // Get the first 8 characters of the txid to search for
         const txidPrefix = txid.substring(0, 8);
@@ -720,20 +740,31 @@ test.describe('Wallet Functionality', () => {
         await jadePage.getByRole('button', { name: '+' }).click();
         await jadePage.getByRole('button', { name: 'Create' }).click();
 
-        // Wait for sign page and sign with Jade
+        // Wait for sign page and keep the unsigned PSET so each cosigner signs independently
         await expect(jadePage.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible();
+        const unsignedPset = await jadePage.locator('sign-transaction textarea').first().inputValue();
+
+        // Sign the unsigned PSET with Jade only
         await jadePage.getByRole('button', { name: 'Sign', exact: true }).click();
-        await expect(jadePage.locator('h3:has-text("Signatures")').locator('~div table td:has-text("Has")')).toBeVisible();
+        await expectPsetSignatures(jadePage, ['e3ebcc79'], ['73c5da0a']);
+        const jadeSignedPset = await jadePage.locator('sign-transaction textarea').first().inputValue();
 
-        // Get the PSET
-        const pset = await jadePage.locator('sign-transaction textarea').first().inputValue();
-
-        // Switch to abandon wallet and sign/broadcast
+        // Switch to abandon wallet and sign the same unsigned PSET with the abandon signer only
         await abandonPage.getByRole('link', { name: 'Sign' }).click();
         await expect(abandonPage.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible();
-        await abandonPage.locator('sign-transaction textarea').first().fill(pset);
+        await abandonPage.locator('sign-transaction textarea').first().fill(unsignedPset);
         await abandonPage.getByRole('button', { name: 'Sign', exact: true }).click();
-        await expect(abandonPage.locator('h3:has-text("Signatures")').locator('~div table td:has-text("Has")')).toBeVisible();
+        await expectPsetSignatures(abandonPage, ['73c5da0a'], ['e3ebcc79']);
+
+        // Combine the two independently signed PSETs and verify the result has both signatures
+        const combineDetails = abandonPage.locator('details:has-text("Combine with another PSET")');
+        await combineDetails.getByRole('button', { name: 'Combine with another PSET' }).click();
+        await combineDetails.locator('textarea[placeholder="PSET"]').fill(jadeSignedPset);
+        await combineDetails.getByRole('button', { name: 'Combine', exact: true }).click();
+        await expect(abandonPage.locator('wallet-notifications .wallet-notification').filter({ hasText: 'PSET combined!' })).toBeVisible();
+        await expectPsetSignatures(abandonPage, ['73c5da0a', 'e3ebcc79'], []);
+
+        // Broadcast the combined PSET
         await abandonPage.getByRole('button', { name: 'Broadcast', exact: true }).click();
         await expect(abandonPage.locator('wallet-notifications .wallet-notification').filter({ hasText: 'Tx broadcasted!' })).toBeVisible();
 
