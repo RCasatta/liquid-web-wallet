@@ -91,6 +91,8 @@ export interface WalletNotificationInput {
     closable?: boolean;
 }
 
+export type WalletNotificationOptions = Omit<WalletNotificationInput, "level" | "title" | "message">;
+
 export interface WalletNotification {
     id: string;
     level: WalletNotificationLevel;
@@ -179,6 +181,35 @@ export function notifyWallet(input: WalletNotificationInput): WalletNotification
     _state.notifications = [..._state.notifications, notification].slice(-MAX_NOTIFICATIONS);
     publish('wallet-notifications-changed', getWalletNotifications());
     return notification;
+}
+
+export function notifySuccess(title: string, message = "", options: WalletNotificationOptions = {}): WalletNotification {
+    return notifyWallet({
+        ...options,
+        level: "success",
+        title,
+        message,
+    });
+}
+
+export function notifyError(title: string, message: string, options: WalletNotificationOptions = {}): WalletNotification {
+    return notifyWallet({
+        closable: true,
+        ...options,
+        level: "error",
+        title,
+        message,
+    });
+}
+
+export function notifyWarning(title: string, message = "", options: WalletNotificationOptions = {}): WalletNotification {
+    return notifyWallet({
+        closable: true,
+        ...options,
+        level: "warning",
+        title,
+        message,
+    });
 }
 
 export function dismissWalletNotification(id: string): void {

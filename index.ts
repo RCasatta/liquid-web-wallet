@@ -17,7 +17,9 @@ import {
     getLocalStorageFull, setLocalStorageFull,
     subscribe, publish,
     getWalletNotifications,
-    notifyWallet,
+    notifyError,
+    notifySuccess,
+    notifyWarning,
     dismissWalletNotification,
     WalletNotification,
     saveSwap,
@@ -2030,11 +2032,8 @@ class SignTransaction extends HTMLElement {
     notifyBroadcastSuccess = (txid: lwk.Txid) => {
         this.messageDiv.innerHTML = ""
         dismissWalletNotification("signing-page-error")
-        notifyWallet({
+        notifySuccess("Tx broadcasted!", txid.toString(), {
             id: "broadcast-success",
-            level: "success",
-            title: "Tx broadcasted!",
-            message: txid.toString(),
             closable: true,
         })
     }
@@ -2044,11 +2043,8 @@ class SignTransaction extends HTMLElement {
         dismissWalletNotification("signing-page-error")
         dismissWalletNotification("signing-page-prompt")
         dismissWalletNotification("transaction-sign-success")
-        notifyWallet({
+        notifySuccess(message, "The PSET has been updated.", {
             id: "transaction-sign-success",
-            level: "success",
-            title: message,
-            message: "The PSET has been updated."
         })
     }
 
@@ -2057,11 +2053,8 @@ class SignTransaction extends HTMLElement {
         dismissWalletNotification("signing-page-error")
         dismissWalletNotification("signing-page-prompt")
         dismissWalletNotification("signing-page-success")
-        notifyWallet({
+        notifySuccess(message, "The signing page has been updated.", {
             id: "signing-page-success",
-            level: "success",
-            title: message,
-            message: "The signing page has been updated."
         })
     }
 
@@ -2069,11 +2062,8 @@ class SignTransaction extends HTMLElement {
         this.messageDiv.innerHTML = ""
         dismissWalletNotification("signing-page-error")
         dismissWalletNotification("signing-page-prompt")
-        notifyWallet({
+        notifyError(title, message, {
             id: "signing-page-error",
-            level: "error",
-            title,
-            message,
             closable: true
         })
     }
@@ -2081,11 +2071,8 @@ class SignTransaction extends HTMLElement {
     notifySigningPagePrompt = (message: string) => {
         this.messageDiv.innerHTML = ""
         dismissWalletNotification("signing-page-prompt")
-        notifyWallet({
+        notifyWarning(message, "Confirm the transaction details on the hardware wallet.", {
             id: "signing-page-prompt",
-            level: "warning",
-            title: message,
-            message: "Confirm the transaction details on the hardware wallet.",
             closable: true
         })
     }
@@ -2093,11 +2080,8 @@ class SignTransaction extends HTMLElement {
     notifyAssetRegistrySuccess = () => {
         this.contractDiv.innerHTML = ""
         dismissWalletNotification("asset-registry-success")
-        notifyWallet({
+        notifySuccess("Asset registered", "Asset registered in the asset registry", {
             id: "asset-registry-success",
-            level: "success",
-            title: "Asset registered",
-            message: "Asset registered in the asset registry",
             closable: true
         })
     }
