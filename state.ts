@@ -221,8 +221,10 @@ export function notifyWarning(title: string, message = "", options: WalletNotifi
     });
 }
 
-export function dismissWalletNotification(id: string): void {
-    _state.notifications = _state.notifications.filter(notification => notification.id !== id);
+export function dismissWalletNotification(id: string | string[]): void {
+    const ids = Array.isArray(id) ? id : [id];
+    const idsToDismiss = new Set(ids);
+    _state.notifications = _state.notifications.filter(notification => !idsToDismiss.has(notification.id));
     publish('wallet-notifications-changed', getWalletNotifications());
 }
 

@@ -907,8 +907,7 @@ class AddressView extends HTMLElement {
     }
 
     notifyAddressError(message: string) {
-        dismissWalletNotification("receive-address-prompt")
-        dismissWalletNotification("receive-address-error")
+        dismissWalletNotification(["receive-address-prompt", "receive-address-error"])
         notifyError("Receive address error", message, {
             id: "receive-address-error"
         })
@@ -2025,8 +2024,7 @@ class SignTransaction extends HTMLElement {
     handleBroadcastClick = async (_e) => {
         try {
             setBusyDisabled(this.broadcastButton, true)
-            dismissWalletNotification("broadcast-success")
-            dismissWalletNotification("signing-page-error")
+            dismissWalletNotification(["broadcast-success", "signing-page-error"])
 
             if (getAmp0() == null) {
                 let psetString = this.pset.value
@@ -2063,26 +2061,21 @@ class SignTransaction extends HTMLElement {
     }
 
     notifyTransactionSignSuccess = (message = "Transaction signed!") => {
-        dismissWalletNotification("signing-page-error")
-        dismissWalletNotification("signing-page-prompt")
-        dismissWalletNotification("transaction-sign-success")
+        dismissWalletNotification(["signing-page-error", "signing-page-prompt", "transaction-sign-success"])
         notifySuccess(message, "The PSET has been updated.", {
             id: "transaction-sign-success",
         })
     }
 
     notifySigningPageSuccess = (message: string) => {
-        dismissWalletNotification("signing-page-error")
-        dismissWalletNotification("signing-page-prompt")
-        dismissWalletNotification("signing-page-success")
+        dismissWalletNotification(["signing-page-error", "signing-page-prompt", "signing-page-success"])
         notifySuccess(message, "The signing page has been updated.", {
             id: "signing-page-success",
         })
     }
 
     notifySigningPageError = (message: string, title = "Signing error") => {
-        dismissWalletNotification("signing-page-error")
-        dismissWalletNotification("signing-page-prompt")
+        dismissWalletNotification(["signing-page-error", "signing-page-prompt"])
         notifyError(title, message, {
             id: "signing-page-error",
             closable: true
@@ -2629,9 +2622,7 @@ class RegisterWallet extends HTMLElement {
 
         try {
             setBusyDisabled(this.register, true)
-            dismissWalletNotification("register-wallet-success")
-            dismissWalletNotification("register-wallet-error")
-            dismissWalletNotification("register-wallet-prompt")
+            dismissWalletNotification(["register-wallet-success", "register-wallet-error", "register-wallet-prompt"])
             notifyWarning("Check confirmation on Jade", "Confirm multisig registration on the hardware wallet.", {
                 id: "register-wallet-prompt",
                 closable: true
@@ -2815,8 +2806,7 @@ class LightningPage extends HTMLElement {
         try {
             // Set button to loading state
             setBusyDisabled(this.sendButton, true);
-            dismissWalletNotification("lightning-send-success")
-            dismissWalletNotification("lightning-send-error")
+            dismissWalletNotification(["lightning-send-success", "lightning-send-error"])
 
             const payment = new lwk.LightningPayment(this.invoiceInput.value);
             const refundAddress = getWollet().address(null).address();
