@@ -2715,8 +2715,6 @@ class LightningPage extends HTMLElement {
     amountInput!: HTMLInputElement;
     descriptionInput!: HTMLInputElement;
     invoiceInput!: HTMLInputElement;
-    messageReceive!: HTMLElement;
-    messageSend!: HTMLElement;
     invoiceText!: HTMLElement;
     invoiceQR!: HTMLElement;
     invoiceCode!: HTMLElement;
@@ -2733,7 +2731,6 @@ class LightningPage extends HTMLElement {
         this.receiveForm = this.querySelector("#lightning-receive-form") as HTMLFormElement;
         this.amountInput = this.querySelector("#lightning_amount") as HTMLInputElement;
         this.descriptionInput = this.querySelector("#lightning_description") as HTMLInputElement;
-        this.messageReceive = this.querySelector(".messageReceive") as HTMLElement;
         this.invoiceButton = this.receiveForm.querySelector("button[type='submit']") as HTMLButtonElement;
 
         // Get the invoice display elements
@@ -2746,7 +2743,6 @@ class LightningPage extends HTMLElement {
         // Get the send form and its elements
         this.sendForm = this.querySelector("#lightning-send-form") as HTMLFormElement;
         this.invoiceInput = this.querySelector("#lightning_invoice") as HTMLInputElement;
-        this.messageSend = this.querySelector(".messageSend") as HTMLElement;
         this.sendButton = this.sendForm.querySelector("button[type='submit']") as HTMLButtonElement;
 
         // Get the download rescue file button
@@ -2763,6 +2759,7 @@ class LightningPage extends HTMLElement {
         try {
             // Set button to loading state
             setBusyDisabled(this.invoiceButton, true);
+            dismissWalletNotification("lightning-receive-error")
 
             const amount = BigInt(this.amountInput.value);
             const description = this.descriptionInput.value;
@@ -2785,14 +2782,13 @@ class LightningPage extends HTMLElement {
             this.invoiceImage.src = payment.toUriQr();
             this.invoiceQR.hidden = false;
 
-            // Clear any previous message
-            this.messageReceive.innerHTML = "";
-
             // Spawn background task to complete the payment
             spawnCompletePay(invoice);
         } catch (e) {
             console.error("Error generating lightning invoice:", e);
-            this.messageReceive.innerHTML = warning("Error generating lightning invoice: " + e);
+            notifyError("Error generating lightning invoice", e.toString(), {
+                id: "lightning-receive-error"
+            });
             // Hide invoice display on error
             this.invoiceText.hidden = true;
             this.invoiceQR.hidden = true;
@@ -2807,6 +2803,8 @@ class LightningPage extends HTMLElement {
         try {
             // Set button to loading state
             setBusyDisabled(this.sendButton, true);
+            dismissWalletNotification("lightning-send-success")
+            dismissWalletNotification("lightning-send-error")
 
             const payment = new lwk.LightningPayment(this.invoiceInput.value);
             const refundAddress = getWollet().address(null).address();
@@ -2828,7 +2826,9 @@ class LightningPage extends HTMLElement {
                 // Spawn background task to complete the payment
                 spawnCompletePay(swap);
 
-                this.messageSend.innerHTML = success("Lightning payment via Boltz swap");
+                notifySuccess("Lightning payment via Boltz swap", "Sign and broadcast the PSET to complete the payment.", {
+                    id: "lightning-send-success"
+                });
             } catch (prepareError: any) {
                 // Check for magic routing hint - direct Liquid payment possible
                 if (prepareError?.code === "Boltz::MagicRoutingHint" && prepareError?.details) {
@@ -2840,7 +2840,9 @@ class LightningPage extends HTMLElement {
                     builder = builder.addLbtcRecipient(address, amount);
                     pset = builder.finish(getWollet());
 
-                    this.messageSend.innerHTML = success("Direct Liquid payment (no swap needed)");
+                    notifySuccess("Direct Liquid payment (no swap needed)", "Sign and broadcast the PSET to complete the payment.", {
+                        id: "lightning-send-success"
+                    });
                 } else {
                     throw prepareError;
                 }
@@ -2849,7 +2851,9 @@ class LightningPage extends HTMLElement {
             setPset(pset);
         } catch (e) {
             console.error("Error creating lightning payment:", e);
-            this.messageSend.innerHTML = warning("Error creating lightning payment: " + e);
+            notifyError("Error creating lightning payment", e.toString(), {
+                id: "lightning-send-error"
+            });
         } finally {
             // Always reset button state when operation is complete
             setBusyDisabled(this.sendButton, false);
@@ -2871,7 +2875,9 @@ class LightningPage extends HTMLElement {
             URL.revokeObjectURL(url);
         } catch (e) {
             console.error("Error downloading rescue file:", e);
-            this.messageSend.innerHTML = warning("Error downloading rescue file: " + e);
+            notifyError("Error downloading rescue file", e.toString(), {
+                id: "lightning-rescue-error"
+            });
         }
     }
 }

@@ -149,6 +149,7 @@ test.describe('Wallet Functionality', () => {
 
         // The page should become the sign page
         await expect(page.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible({ timeout: 30000 });
+        await expectNotification(page, 'Direct Liquid payment');
 
         // Sign and broadcast the pset
         const txid = await signAndBroadcastPset(page);
@@ -180,6 +181,7 @@ test.describe('Wallet Functionality', () => {
 
         // The page should become the sign page
         await expect(page.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible({ timeout: 30000 });
+        await expectNotification(page, 'Lightning payment via Boltz swap');
 
         // Sign and broadcast the pset
         const txid = await signAndBroadcastPset(page);
