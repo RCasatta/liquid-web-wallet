@@ -74,11 +74,9 @@ test.describe('Wallet Functionality', () => {
     }
 
     async function waitForBroadcastSuccess(page) {
-        const message = page.locator('sign-transaction div.message');
         const broadcastNotification = notification(page, 'Tx broadcasted!');
         const broadcastErrorNotification = errorNotification(page);
         const deadline = Date.now() + broadcastTimeout;
-        let lastMessage = '';
 
         while (Date.now() < deadline) {
             if (await broadcastNotification.isVisible()) {
@@ -92,28 +90,10 @@ test.describe('Wallet Functionality', () => {
                 throw new Error(`Broadcast failed: ${errorText}`);
             }
 
-            const result = await message.evaluate((messageElement) => {
-                const input = messageElement.querySelector('input') as HTMLInputElement | null;
-                const helper = messageElement.querySelector('small')?.textContent?.trim() ?? '';
-                const value = input?.value?.trim() ?? '';
-                const invalid = input?.getAttribute('aria-invalid');
-
-                if (invalid === 'true') {
-                    return { status: 'error', txid: '', message: [value, helper].filter(Boolean).join(' - ') };
-                }
-
-                return { status: 'pending', txid: '', message: [value, helper].filter(Boolean).join(' - ') };
-            });
-
-            if (result.status === 'error') {
-                throw new Error(`Broadcast failed: ${result.message}`);
-            }
-
-            lastMessage = result.message;
             await page.waitForTimeout(250);
         }
 
-        throw new Error(`Timed out waiting for broadcast success. Last message: ${lastMessage || '<empty>'}`);
+        throw new Error('Timed out waiting for broadcast success notification');
     }
 
     async function createTransaction(page) {
@@ -570,6 +550,7 @@ test.describe('Wallet Functionality', () => {
 
         // Verify we're on the sign page
         await expect(page.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible();
+        await expectNotification(page, 'Proposal created successfully!');
 
         // Check that signatures section shows we need to sign
         await expect(page.locator('h3:has-text("Signatures")').locator('~div table td:has-text("Missing")')).toBeVisible();

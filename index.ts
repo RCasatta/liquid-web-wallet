@@ -1135,7 +1135,6 @@ class CreateTransaction extends HTMLElement {
     listRecipients!: HTMLElement;
     assetWanted!: HTMLInputElement;
     amountWanted!: HTMLInputElement;
-    messageLiquidex!: HTMLElement;
     proposalTextarea!: HTMLTextAreaElement;
     qrScannerModal!: HTMLDialogElement;
     videoStream!: MediaStream | null;
@@ -1301,9 +1300,6 @@ class CreateTransaction extends HTMLElement {
         this.proposalTextarea = this.takerForm.querySelector("textarea")
         this.acceptProposalButton = this.takerForm.querySelector("button[type='submit']")
 
-        // Map message div (which is now outside both details elements)
-        this.messageLiquidex = this.querySelector("div.messageLiquidex")
-
         // Add event listeners
         this.makerForm.addEventListener("submit", this.handleCreateProposal)
         this.takerForm.addEventListener("submit", this.handleAcceptProposal)
@@ -1324,7 +1320,10 @@ class CreateTransaction extends HTMLElement {
 
             // Make sure jsQR is loaded
             if (typeof jsQR !== 'function') {
-                this.message.innerHTML = warning("QR code scanner is not ready yet. Please try again in a moment.");
+                dismissWalletNotification("create-qr-scan")
+                notifyWarning("QR code scanner is not ready yet", "Please try again in a moment.", {
+                    id: "create-qr-scan"
+                });
                 return;
             }
 
@@ -1383,19 +1382,10 @@ class CreateTransaction extends HTMLElement {
                 errorMessage = "Camera is already in use by another application.";
             }
 
-            // Display the error message in the appropriate location based on the current target
-            switch (this.currentScanTarget) {
-                case "asset":
-                case "token":
-                    this.messageIssuance.innerHTML = warning(errorMessage);
-                    break;
-                case "reissuance":
-                    this.messageReissuance.innerHTML = warning(errorMessage);
-                    break;
-                default:
-                    this.message.innerHTML = warning(errorMessage);
-                    break;
-            }
+            dismissWalletNotification("create-qr-scan")
+            notifyError("QR code scanner error", errorMessage, {
+                id: "create-qr-scan"
+            })
 
             // Reset the current scan target
             this.currentScanTarget = null;
@@ -1434,25 +1424,36 @@ class CreateTransaction extends HTMLElement {
         switch (this.currentScanTarget) {
             case "asset":
                 this.assetAddress.value = address;
-                this.messageIssuance.innerHTML = success("Asset address QR code scanned successfully!");
+                this.messageIssuance.innerHTML = "";
+                this.notifyQrScanSuccess("Asset address QR code scanned successfully!");
                 break;
             case "token":
                 this.tokenAddress.value = address;
-                this.messageIssuance.innerHTML = success("Token address QR code scanned successfully!");
+                this.messageIssuance.innerHTML = "";
+                this.notifyQrScanSuccess("Token address QR code scanned successfully!");
                 break;
             case "reissuance":
                 this.reissuanceAddress.value = address;
-                this.messageReissuance.innerHTML = success("Reissuance address QR code scanned successfully!");
+                this.messageReissuance.innerHTML = "";
+                this.notifyQrScanSuccess("Reissuance address QR code scanned successfully!");
                 break;
             case "main":
             default:
                 this.addressInput.value = address;
-                this.message.innerHTML = success("QR code scanned successfully!");
+                this.message.innerHTML = "";
+                this.notifyQrScanSuccess("QR code scanned successfully!");
                 break;
         }
 
         // Reset the current scan target
         this.currentScanTarget = null;
+    }
+
+    notifyQrScanSuccess(message: string) {
+        dismissWalletNotification("create-qr-scan")
+        notifySuccess(message, "", {
+            id: "create-qr-scan"
+        })
     }
 
     handleReissue = async (e) => {
@@ -1860,7 +1861,7 @@ class CreateTransaction extends HTMLElement {
 
     handleCreateProposal = async (e) => {
         e.preventDefault()
-        this.messageLiquidex.innerHTML = ""
+        dismissWalletNotification(["liquidex-proposal-success", "liquidex-proposal-error"])
 
         try {
             // Check if a UTXO is selected
@@ -1904,17 +1905,20 @@ class CreateTransaction extends HTMLElement {
             // Pass the PSET to the sign page
             setPset(pset)
 
-            // Show success message
-            this.messageLiquidex.innerHTML = success("Proposal created successfully! Go to Sign page to continue.")
+            notifySuccess("Proposal created successfully!", "Go to Sign page to continue.", {
+                id: "liquidex-proposal-success"
+            })
 
         } catch (e) {
-            this.messageLiquidex.innerHTML = warning(e.toString())
+            notifyError("Proposal creation failed", e.toString(), {
+                id: "liquidex-proposal-error"
+            })
         }
     }
 
     handleAcceptProposal = async (e) => {
         e.preventDefault()
-        this.messageLiquidex.innerHTML = ""
+        dismissWalletNotification("liquidex-proposal-error")
 
         try {
             // Get the proposal text from the textarea
@@ -1945,7 +1949,9 @@ class CreateTransaction extends HTMLElement {
             setPset(pset)
 
         } catch (error) {
-            this.messageLiquidex.innerHTML = warning(error.toString())
+            notifyError("Proposal acceptance failed", error.toString(), {
+                id: "liquidex-proposal-error"
+            })
         }
     }
 }
