@@ -18,6 +18,7 @@ import {
     subscribe, publish,
     getWalletNotifications,
     notifyError,
+    notifyInfo,
     notifySuccess,
     notifyWarning,
     dismissWalletNotification,
@@ -897,7 +898,6 @@ class WalletBalance extends HTMLElement {
     div!: HTMLElement;
     faucetRequest!: HTMLButtonElement;
     subscriptions!: (() => void)[];
-    messageDiv!: HTMLElement;
 
     constructor() {
         super()
@@ -916,7 +916,6 @@ class WalletBalance extends HTMLElement {
         );
 
         this.faucetRequest.addEventListener('click', this.handleFaucetRequest)
-        this.messageDiv = this.querySelector("div.message")
 
         this.render()
     }
@@ -937,9 +936,15 @@ class WalletBalance extends HTMLElement {
         }
         const url = `https://liquidtestnet.com/api/faucet?address=${address}&action=lbtc`
         console.log(url)
-        this.messageDiv.innerHTML = success("Sending request to the faucet...")
+        dismissWalletNotification("faucet-request")
+        notifyInfo("Faucet request", "Sending request to the faucet...", {
+            id: "faucet-request",
+        })
         await fetch(url, { mode: "no-cors" })
-        this.messageDiv.innerHTML = success("Request sent to the faucet, wait a bit to see funds")
+        dismissWalletNotification("faucet-request")
+        notifySuccess("Faucet request sent", "Request sent to the faucet, wait a bit to see funds", {
+            id: "faucet-request",
+        })
     }
 
     render = () => {

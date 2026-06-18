@@ -192,6 +192,15 @@ export function notifySuccess(title: string, message = "", options: WalletNotifi
     });
 }
 
+export function notifyInfo(title: string, message = "", options: WalletNotificationOptions = {}): WalletNotification {
+    return notifyWallet({
+        ...options,
+        level: "info",
+        title,
+        message,
+    });
+}
+
 export function notifyError(title: string, message: string, options: WalletNotificationOptions = {}): WalletNotification {
     return notifyWallet({
         closable: true,
