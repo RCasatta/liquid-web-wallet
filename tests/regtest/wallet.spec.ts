@@ -311,6 +311,7 @@ test.describe('Wallet Functionality', () => {
         await expect(page.getByRole('heading', { name: 'Receive' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'Show address', exact: true })).toBeVisible();
         await page.getByRole('button', { name: 'Show address', exact: true }).click();
+        await expectNotification(page, 'Address generated without double checking without the hardware wallet are risky!');
 
         // Get the address and see it maches the network
         const address = await page.getByRole('code').textContent();

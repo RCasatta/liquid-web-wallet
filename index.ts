@@ -829,6 +829,7 @@ class AddressView extends HTMLElement {
                 await this.handleShowOnLedger()
             } else {
                 this.displayAddress(getWollet().address(null))
+                this.notifyUncheckedAddressWarning()
             }
         } catch (error) {
             this.messageDiv.innerHTML = warning(error.toString())
@@ -872,10 +873,6 @@ class AddressView extends HTMLElement {
         // Display the address so that it can be compared
         this.displayAddress(address)
 
-        if (getJade() == null) {
-            this.messageDiv.innerHTML = warning("Address generated without double checking without the hardware wallet are risky!")
-            return
-        }
         this.notifyAddressCheckPrompt("Check the address on the Jade")
         var jadeAddress
         if (getWolletSelected() === "Wpkh" || getWolletSelected() === "ShWpkh") {
@@ -896,6 +893,14 @@ class AddressView extends HTMLElement {
         dismissWalletNotification("receive-address-prompt")
         notifyWarning(message, "Confirm the receive address on the hardware wallet.", {
             id: "receive-address-prompt",
+            closable: true
+        })
+    }
+
+    notifyUncheckedAddressWarning() {
+        dismissWalletNotification("receive-address-warning")
+        notifyWarning("Address generated without double checking without the hardware wallet are risky!", "", {
+            id: "receive-address-warning",
             closable: true
         })
     }
