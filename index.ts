@@ -779,7 +779,6 @@ class WalletSelector extends HTMLElement {
 
 class AddressView extends HTMLElement {
     showButton!: HTMLButtonElement;
-    messageDiv!: HTMLElement;
     addressDisplay!: HTMLElement;
     addressText!: HTMLElement;
     addressCode!: HTMLElement;
@@ -791,7 +790,6 @@ class AddressView extends HTMLElement {
         super()
 
         this.showButton = this.querySelector("button.show-address")
-        this.messageDiv = this.querySelector("div.message")
         this.addressDisplay = this.querySelector("div.address-display")
         this.addressText = this.querySelector(".address-text")
         this.addressCode = this.querySelector(".address-text code")
@@ -832,7 +830,7 @@ class AddressView extends HTMLElement {
                 this.notifyUncheckedAddressWarning()
             }
         } catch (error) {
-            this.messageDiv.innerHTML = warning(error.toString())
+            this.notifyAddressError(error.toString())
         } finally {
             // Always reset button state when operation is complete
             setBusyDisabled(this.showButton, false)
@@ -861,7 +859,10 @@ class AddressView extends HTMLElement {
     handleShowOnAmp0 = async (_e?: Event) => {
         const address = await getAmp0().address(1)
         this.displayAddress(address)
-        this.messageDiv.innerHTML = warning("Fixed Amp0 address with index 1")
+        dismissWalletNotification("receive-address-info")
+        notifyInfo("Amp0 receive address", "Fixed Amp0 address with index 1", {
+            id: "receive-address-info"
+        })
     }
 
     handleShowOnJade = async (_e?: Event) => {
@@ -902,6 +903,14 @@ class AddressView extends HTMLElement {
         notifyWarning("Address generated without double checking without the hardware wallet are risky!", "", {
             id: "receive-address-warning",
             closable: true
+        })
+    }
+
+    notifyAddressError(message: string) {
+        dismissWalletNotification("receive-address-prompt")
+        dismissWalletNotification("receive-address-error")
+        notifyError("Receive address error", message, {
+            id: "receive-address-error"
         })
     }
 }
