@@ -1945,7 +1945,6 @@ class SignTransaction extends HTMLElement {
     uploadPsetFile!: HTMLInputElement;
     proposalButton!: HTMLButtonElement;
     combineButton!: HTMLButtonElement;
-    messageDiv!: HTMLElement;
     contractDiv!: HTMLElement;
     signDivAnalyze!: HTMLElement;
     recipientsDiv!: HTMLElement;
@@ -1970,7 +1969,6 @@ class SignTransaction extends HTMLElement {
         this.proposalButton = this.querySelector("button.proposal")
         this.combineButton = this.querySelector("button.combine")
 
-        this.messageDiv = this.querySelector("div.message")
         this.contractDiv = this.querySelector("div.contract")
         this.signDivAnalyze = this.querySelector("div.analyze")
         this.recipientsDiv = this.querySelector("div.recipients")
@@ -2035,7 +2033,6 @@ class SignTransaction extends HTMLElement {
     }
 
     notifyBroadcastSuccess = (txid: lwk.Txid) => {
-        this.messageDiv.innerHTML = ""
         dismissWalletNotification("signing-page-error")
         notifySuccess("Tx broadcasted!", txid.toString(), {
             id: "broadcast-success",
@@ -2044,7 +2041,6 @@ class SignTransaction extends HTMLElement {
     }
 
     notifyTransactionSignSuccess = (message = "Transaction signed!") => {
-        this.messageDiv.innerHTML = ""
         dismissWalletNotification("signing-page-error")
         dismissWalletNotification("signing-page-prompt")
         dismissWalletNotification("transaction-sign-success")
@@ -2054,7 +2050,6 @@ class SignTransaction extends HTMLElement {
     }
 
     notifySigningPageSuccess = (message: string) => {
-        this.messageDiv.innerHTML = ""
         dismissWalletNotification("signing-page-error")
         dismissWalletNotification("signing-page-prompt")
         dismissWalletNotification("signing-page-success")
@@ -2064,7 +2059,6 @@ class SignTransaction extends HTMLElement {
     }
 
     notifySigningPageError = (message: string, title = "Signing error") => {
-        this.messageDiv.innerHTML = ""
         dismissWalletNotification("signing-page-error")
         dismissWalletNotification("signing-page-prompt")
         notifyError(title, message, {
@@ -2074,7 +2068,6 @@ class SignTransaction extends HTMLElement {
     }
 
     notifySigningPagePrompt = (message: string) => {
-        this.messageDiv.innerHTML = ""
         dismissWalletNotification("signing-page-prompt")
         notifyWarning(message, "Confirm the transaction details on the hardware wallet.", {
             id: "signing-page-prompt",
@@ -2244,7 +2237,6 @@ class SignTransaction extends HTMLElement {
     }
 
     renderAnalyze() {
-        this.messageDiv.innerHTML = ""
         let psetString = this.pset.value
         if (!psetString) {
             return
