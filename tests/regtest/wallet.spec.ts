@@ -732,7 +732,13 @@ test.describe('Wallet Functionality', () => {
         // Check that the descriptor contains Jade's xpub
         expect(descriptor).toContain(jadeXpub);
 
+        // Threshold validation should be shown as a notification
+        await jadePage.locator('input[placeholder="Threshold"]').fill('3');
+        await jadePage.getByRole('button', { name: 'Create' }).click();
+        await expectNotification(jadePage, 'Threshold cannot be higher than participant');
+
         // Create the multisig wallet
+        await jadePage.locator('input[placeholder="Threshold"]').fill('2');
         await jadePage.getByRole('button', { name: 'Create' }).click();
 
         // Get the generated descriptor, we are checking it out, but use the fixed one so that the blinding key is always the same
@@ -746,8 +752,8 @@ test.describe('Wallet Functionality', () => {
         await jadePage.locator('input[placeholder="Wallet name"]').fill('multi');
         await jadePage.getByRole('button', { name: 'Register' }).click();
 
-        // Wait for success message
-        await expect(jadePage.locator('register-wallet div.message input')).toHaveValue('Wallet registered on the Jade!', { timeout: 15000 });
+        // Wait for success notification
+        await expectNotification(jadePage, 'Wallet registered on the Jade!', { timeout: 15000 });
 
         // Reload page and reconnect to Jade
         await jadePage.reload();

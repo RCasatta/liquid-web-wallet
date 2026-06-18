@@ -2583,8 +2583,6 @@ class RegisterWallet extends HTMLElement {
     listDiv!: HTMLElement;
     templatePart!: HTMLTemplateElement;
     descriptor!: HTMLTextAreaElement;
-    messageDivCreate!: HTMLElement;
-    messageDivRegister!: HTMLElement;
 
     constructor() {
         super()
@@ -2600,9 +2598,6 @@ class RegisterWallet extends HTMLElement {
         this.listDiv = this.querySelector("div")
         this.templatePart = this.querySelector("template")
         this.descriptor = this.querySelector("textarea")
-        const messagDivs = this.querySelectorAll("div.message")
-        this.messageDivCreate = messagDivs[0] as HTMLElement
-        this.messageDivRegister = messagDivs[1] as HTMLElement
 
         this.addParticipant.addEventListener("click", this.handleAdd)
         this.addJade.addEventListener("click", this.handleAddJade)
@@ -2634,22 +2629,36 @@ class RegisterWallet extends HTMLElement {
 
         try {
             setBusyDisabled(this.register, true)
-            this.messageDivRegister.innerHTML = warning("Check confirmation on Jade")
+            dismissWalletNotification("register-wallet-success")
+            dismissWalletNotification("register-wallet-error")
+            dismissWalletNotification("register-wallet-prompt")
+            notifyWarning("Check confirmation on Jade", "Confirm multisig registration on the hardware wallet.", {
+                id: "register-wallet-prompt",
+                closable: true
+            })
             let result = await getJade().registerDescriptor(jadeName, descriptor)
+            dismissWalletNotification("register-wallet-prompt")
             if (result) {
-                this.messageDivRegister.innerHTML = success("Wallet registered on the Jade!")
+                notifySuccess("Wallet registered on the Jade!", "The multisig descriptor is now registered.", {
+                    id: "register-wallet-success"
+                })
             } else {
-                this.messageDivRegister.innerHTML = warning("Failed to register the wallet on the Jade")
+                notifyError("Failed to register the wallet on the Jade", "The Jade did not confirm the registration.", {
+                    id: "register-wallet-error"
+                })
             }
         } catch (e) {
-            this.messageDivRegister.innerHTML = warning(e)
+            dismissWalletNotification("register-wallet-prompt")
+            notifyError("Failed to register the wallet on the Jade", e.toString(), {
+                id: "register-wallet-error"
+            })
         } finally {
             setBusyDisabled(this.register, false)
         }
     }
 
     handleCreate = (_) => {
-        this.messageDivCreate.innerHTML = ""
+        dismissWalletNotification("register-wallet-create-warning")
         var inputsValid = true
         const thresholdVal = this.threshold.value
         if (thresholdVal && parseInt(thresholdVal) > 0) {
@@ -2667,7 +2676,10 @@ class RegisterWallet extends HTMLElement {
             inputsValid = false
         }
         if (inputsValid && parseInt(thresholdVal) > participants.length) {
-            this.messageDivCreate.innerHTML = warning("Threshold cannot be higher than participant")
+            notifyWarning("Threshold cannot be higher than participant", "", {
+                id: "register-wallet-create-warning",
+                closable: true
+            })
             inputsValid = false
         }
         if (!inputsValid) {
