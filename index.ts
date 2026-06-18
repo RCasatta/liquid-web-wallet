@@ -53,7 +53,6 @@ async function init(): Promise<void> {
 
     let connectJade: HTMLButtonElement | null = document.getElementById("connect-jade-button") as HTMLButtonElement | null
     let descriptorTextarea: HTMLTextAreaElement | null = document.getElementById("descriptor-textarea") as HTMLTextAreaElement | null
-    let descriptorMessage: HTMLElement | null = document.getElementById("descriptor-message") as HTMLElement | null
     let exampleDescriptor: HTMLAnchorElement | null = document.getElementById("example-descriptor-link") as HTMLAnchorElement | null
     let loadingBar: HTMLElement | null = document.getElementById("loading-wasm") as HTMLElement | null;
     let devMode: HTMLInputElement | null = document.getElementById("dev-mode") as HTMLInputElement | null
@@ -98,7 +97,6 @@ async function init(): Promise<void> {
 
     if (connectJade) {
         connectJade.addEventListener("click", async (_e: Event) => {
-            let connectJadeMessage: HTMLElement | null = document.getElementById("connect-jade-message") as HTMLElement | null;
             try {
                 if (connectJade) setBusyDisabled(connectJade, true);
                 let filter = !getDevMode()
@@ -106,7 +104,10 @@ async function init(): Promise<void> {
 
                 const jade = await lwk.Jade.fromSerial(network, filter)
                 loadingBar.setAttribute("style", "visibility: visible;")
-                connectJadeMessage.innerHTML = warning("Insert the PIN on the Jade if locked")
+                dismissWalletNotification("jade-connect")
+                notifyWarning("Insert the PIN on the Jade if locked", "", {
+                    id: "jade-connect"
+                })
 
                 // Initialize jade and collect all related data
                 const xpub = await jade.getMasterXpub() // asking something that requires unlock
@@ -116,9 +117,13 @@ async function init(): Promise<void> {
                 // Set all jade-related state at once
                 setJade(jade, xpub, multiWallets, jadeDerivations)
 
+                dismissWalletNotification("jade-connect")
                 loadingBar.setAttribute("style", "visibility: hidden;") // by using visibility we avoid layout shifts
             } catch (e) {
-                if (connectJadeMessage) connectJadeMessage.innerHTML = warning(e);
+                dismissWalletNotification("jade-connect")
+                notifyError("Jade connection failed", e.toString(), {
+                    id: "jade-connect"
+                })
                 if (connectJade) setBusyDisabled(connectJade, false);
             }
         });
@@ -131,14 +136,16 @@ async function init(): Promise<void> {
         connectJadeWebSocket.disabled = false
 
         connectJadeWebSocket.addEventListener("click", async (_e) => {
-            let connectJadeWebSocketMessage = document.getElementById("connect-jade-websocket-message")
             try {
                 setBusyDisabled(connectJadeWebSocket, true)
 
                 // Connect to Jade via WebSocket on port 3331
                 const jadeWs = await lwk.JadeWebSocket.fromWebSocket(network, "ws://localhost:3331")
                 loadingBar.setAttribute("style", "visibility: visible;")
-                connectJadeWebSocketMessage.innerHTML = warning("Connecting to Jade via WebSocket...")
+                dismissWalletNotification("jade-websocket-connect")
+                notifyInfo("Connecting to Jade via WebSocket...", "", {
+                    id: "jade-websocket-connect"
+                })
 
                 // Call getVersion() and print result in console
                 const version = await jadeWs.getVersion()
@@ -154,11 +161,17 @@ async function init(): Promise<void> {
                 // Set all jade-related state at once (reusing the same state as regular Jade)
                 setJade(jadeWs, xpub, multiWallets, jadeDerivations)
 
-                connectJadeWebSocketMessage.innerHTML = success("Connected to Jade via WebSocket successfully!")
+                dismissWalletNotification("jade-websocket-connect")
+                notifySuccess("Connected to Jade via WebSocket successfully!", "", {
+                    id: "jade-websocket-connect"
+                })
                 loadingBar.setAttribute("style", "visibility: hidden;")
             } catch (e) {
                 console.error("Error connecting to Jade via WebSocket:", e)
-                connectJadeWebSocketMessage.innerHTML = warning("Error connecting to Jade via WebSocket: " + e.message)
+                dismissWalletNotification("jade-websocket-connect")
+                notifyError("Error connecting to Jade via WebSocket", e.toString(), {
+                    id: "jade-websocket-connect"
+                })
                 setBusyDisabled(connectJadeWebSocket, false)
             }
         })
@@ -174,7 +187,10 @@ async function init(): Promise<void> {
             descriptorTextarea.value = example
             handleWatchOnlyClick()
         } else {
-            descriptorMessage.innerHTML = warning("Clear the descriptor text area to try an example descriptor")
+            dismissWalletNotification("watch-only-descriptor")
+            notifyWarning("Clear the descriptor text area to try an example descriptor", "", {
+                id: "watch-only-descriptor"
+            })
         }
     })
 
@@ -194,15 +210,16 @@ async function init(): Promise<void> {
     let ledgerDescriptorDiv = document.getElementById("ledger-descriptor-div")
     let ledgerDescriptorButton = document.getElementById("ledger-connect-button") as HTMLButtonElement
     ledgerDescriptorButton.addEventListener("click", async (_e) => {
-        let connectLedgerMessage = document.getElementById("connect-ledger-message")
-
         var ledger
         try {
             let device = await lwk.searchLedgerDevice()
             ledger = new lwk.LedgerWeb(device, network)
         } catch (e) {
             console.error("Error connecting to Ledger:", e)
-            connectLedgerMessage.innerHTML = warning("Error. Is the Ledger connected and unlocked?")
+            dismissWalletNotification("ledger-connect")
+            notifyError("Ledger connection failed", "Error. Is the Ledger connected and unlocked?", {
+                id: "ledger-connect"
+            })
         }
         try {
             loadingBar.setAttribute("style", "visibility: visible;")
@@ -221,7 +238,10 @@ async function init(): Promise<void> {
 
         } catch (e) {
             console.error("Error getting descriptor:", e)
-            connectLedgerMessage.innerHTML = warning("Error. Is the Ledger unlocked and app is " + network + "?")
+            dismissWalletNotification("ledger-connect")
+            notifyError("Ledger descriptor failed", "Error. Is the Ledger unlocked and app is " + network + "?", {
+                id: "ledger-connect"
+            })
         } finally {
             loadingBar.setAttribute("style", "visibility: hidden;")
         }
@@ -349,8 +369,8 @@ async function init(): Promise<void> {
 }
 
 async function handleWatchOnlyClick(_e?: Event): Promise<void> {
-    let descriptorMessage = document.getElementById("descriptor-message")
     try {
+        dismissWalletNotification("watch-only-descriptor")
         let descriptorTextarea = document.getElementById("descriptor-textarea") as HTMLTextAreaElement
         const descriptorText = descriptorTextarea.value.trim()
         if (descriptorText == "") {
@@ -370,19 +390,20 @@ async function handleWatchOnlyClick(_e?: Event): Promise<void> {
 
         await fullScanAndApply(wollet, getScanState())
     } catch (e) {
-        descriptorMessage.innerHTML = warning(e)
+        dismissWalletNotification("watch-only-descriptor")
+        notifyError("Watch-only descriptor failed", e.toString(), {
+            id: "watch-only-descriptor"
+        })
     }
 }
 
 async function handleAmp0Login(_e: Event) {
-    let amp0Message = document.getElementById("amp0-message")
     let amp0User = document.getElementById("amp0-user") as HTMLInputElement
     let amp0Password = document.getElementById("amp0-password") as HTMLInputElement
     let amp0LoginButton = document.getElementById("amp0-login-button")
 
     try {
-        // Clear previous messages
-        amp0Message.innerHTML = ""
+        dismissWalletNotification(["amp0-login-success", "amp0-login-error"])
 
         // Get input values
         const username = amp0User.value.trim()
@@ -409,8 +430,9 @@ async function handleAmp0Login(_e: Event) {
         // Store amp0 instance in state
         setAmp0(amp0);
 
-        // Show success message
-        amp0Message.innerHTML = success("Login successful!")
+        notifySuccess("Login successful!", "", {
+            id: "amp0-login-success"
+        })
         const wollet = amp0.wollet()
 
         setWollet(wollet)
@@ -422,7 +444,10 @@ async function handleAmp0Login(_e: Event) {
         await fullScanAndApply(wollet, getScanState())
 
     } catch (e) {
-        amp0Message.innerHTML = warning("Login failed: " + e.toString())
+        dismissWalletNotification("amp0-login-error")
+        notifyError("Login failed", e.toString(), {
+            id: "amp0-login-error"
+        })
     } finally {
         // Always reset button state when operation is complete
         setBusyDisabled(amp0LoginButton, false)
