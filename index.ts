@@ -846,14 +846,14 @@ class AddressView extends HTMLElement {
         // Display the address so that it can be compared
         this.displayAddress(address)
 
-        this.messageDiv.innerHTML = warning("Check the address on the Ledger!")
+        this.notifyAddressCheckPrompt("Check the address on the Ledger")
 
         let ledger = getLedger()
         let addressLedger = await ledger.getReceiveAddressSingle(index)
 
         console.assert(addressLedger == address.address().toString(), "local and ledger address are different!")
 
-        this.messageDiv.innerHTML = ""
+        dismissWalletNotification("receive-address-prompt")
 
     }
 
@@ -876,7 +876,7 @@ class AddressView extends HTMLElement {
             this.messageDiv.innerHTML = warning("Address generated without double checking without the hardware wallet are risky!")
             return
         }
-        this.messageDiv.innerHTML = warning("Check the address on the Jade!")
+        this.notifyAddressCheckPrompt("Check the address on the Jade")
         var jadeAddress
         if (getWolletSelected() === "Wpkh" || getWolletSelected() === "ShWpkh") {
             // FIXME it breakes if someone call his registered wallet "Wpkh" or "ShWpkh"
@@ -889,7 +889,15 @@ class AddressView extends HTMLElement {
         }
 
         console.assert(jadeAddress == address.address().toString(), "local and jade address are different!")
-        this.messageDiv.hidden = true
+        dismissWalletNotification("receive-address-prompt")
+    }
+
+    notifyAddressCheckPrompt(message: string) {
+        dismissWalletNotification("receive-address-prompt")
+        notifyWarning(message, "Confirm the receive address on the hardware wallet.", {
+            id: "receive-address-prompt",
+            closable: true
+        })
     }
 }
 
