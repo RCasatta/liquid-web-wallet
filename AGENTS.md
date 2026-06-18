@@ -18,5 +18,12 @@ Follow the existing style in the repository: TypeScript with 4-space indentation
 ## Testing Guidelines
 Playwright is the test framework. Keep tests environment-specific and place them in the matching `tests/<env>/` directory. Regtest and Boltz suites require external environments described in the local test READMEs before running the npm commands above. Use focused `--grep` runs only while developing; do not leave `.only` in committed tests.
 
+### Running Tests as an Agent
+- **Disable HTML Report Auto-Open:** When running Playwright tests from an agent context, always prefix the command with `PLAYWRIGHT_HTML_OPEN=never`. This prevents Playwright from attempting to open or serve the HTML report in a browser (which the agent cannot interact with). For example:
+  ```bash
+  PLAYWRIGHT_HTML_OPEN=never npm test
+  ```
+- **Checking Regtest Environment:** Running  `regtest` or `boltz-regtest` require a test environment running. Failure in tests may simply indicate that the test environment is not running and you may ask the user to start it.
+
 ## Commit & Pull Request Guidelines
 Recent history favors short, imperative commit subjects such as `add boltz-test` or `links to btcpos.cash`. Keep commits small and descriptive; avoid `wip` for reviewable work. Pull requests should state the target network or environment, summarize behavior changes, link related issues, and include screenshots or Playwright output when the UI or flow changes.
