@@ -16,7 +16,7 @@ const _state: {
     multiWallets: string[];
     swSigner: lwk.Signer | null;
     scan: { running: boolean };
-    scanLoop: any;
+    walletSync: any;
     pset: lwk.Pset | null;
     contract: lwk.RegistryPost | null;
     registry: lwk.Registry | null;
@@ -48,9 +48,9 @@ const _state: {
     // Signer state (testnet only)
     swSigner: null, // lwk.Signer instance
 
-    // Scanning state
+    // Scanning and subscription state
     scan: { running: false },
-    scanLoop: null, // Interval ID for scan loop
+    walletSync: null, // Active wallet SSE subscription handle
 
     // Transaction state
     pset: null, // Current PSET being worked on
@@ -275,13 +275,13 @@ export function setScanRunning(isRunning: boolean): { running: boolean } {
     return _state.scan;
 }
 
-export function getScanLoop(): any {
-    return _state.scanLoop;
+export function getWalletSync(): any {
+    return _state.walletSync;
 }
 
-export function setScanLoop(intervalId: any): any {
-    _state.scanLoop = intervalId;
-    return _state.scanLoop;
+export function setWalletSync(handle: any): any {
+    _state.walletSync = handle;
+    return _state.walletSync;
 }
 
 // Jade state management

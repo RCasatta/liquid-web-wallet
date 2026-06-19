@@ -5,7 +5,7 @@ import {
     getLedger, setLedger,
     getXpub, getMultiWallets,
     getWollet, setWollet, getWolletSelected, setWolletSelected,
-    getScanState, setScanRunning, getScanLoop, setScanLoop,
+    getScanState, setScanRunning, getWalletSync, setWalletSync,
     getSwSigner, setSwSigner, getPset, setPset, getContract, setContract,
     getRegistry, setRegistry,
     getDevMode, setDevMode,
@@ -231,6 +231,7 @@ async function init(): Promise<void> {
 
             let wollet = new lwk.Wollet(network, desc)
             console.log("wollet", wollet)
+            stopWalletSync()
             setLedger(ledger)
             setWollet(wollet)
             setBoltzSession(await createBoltzSession(wollet))
@@ -238,6 +239,7 @@ async function init(): Promise<void> {
             setScanRunning(false)
             loadPersisted(wollet)
             await fullScanAndApply(wollet, getScanState())
+            startWalletSync()
 
         } catch (e) {
             console.error("Error getting descriptor:", e)
@@ -385,6 +387,7 @@ async function handleWatchOnlyClick(_e?: Event): Promise<void> {
         }
 
         const wollet = new lwk.Wollet(network, descriptor)
+        stopWalletSync()
         setWollet(wollet)
         setBoltzSession(await createBoltzSession(wollet))
         setWolletSelected("Descriptor")
@@ -392,6 +395,7 @@ async function handleWatchOnlyClick(_e?: Event): Promise<void> {
         loadPersisted(wollet)
 
         await fullScanAndApply(wollet, getScanState())
+        startWalletSync()
     } catch (e) {
         dismissWalletNotification("watch-only-descriptor")
         notifyError("Watch-only descriptor failed", e.toString(), {
@@ -438,6 +442,7 @@ async function handleAmp0Login(_e: Event) {
         })
         const wollet = amp0.wollet()
 
+        stopWalletSync()
         setWollet(wollet)
         setBoltzSession(await createBoltzSession(wollet))
         setWolletSelected("Amp0")
@@ -445,6 +450,7 @@ async function handleAmp0Login(_e: Event) {
         loadPersisted(wollet)
 
         await fullScanAndApply(wollet, getScanState())
+        startWalletSync()
 
     } catch (e) {
         dismissWalletNotification("amp0-login-error")
@@ -660,7 +666,6 @@ class MyNav extends HTMLElement {
 
             // Handle wallet selection
             subscribe('wallet-selected', () => {
-                scanLoop()
                 this.render()
                 this.renderPage("balance-page")
             }),
@@ -712,7 +717,7 @@ class MyNav extends HTMLElement {
             return
         }
         if (id == "disconnect") {
-            stopScanLoop()
+            stopWalletSync()
             location.reload()
             return
         }
@@ -795,12 +800,14 @@ class WalletSelector extends HTMLElement {
         }
         console.log(descriptor.toString())
         const wollet = new lwk.Wollet(network, descriptor)
+        stopWalletSync()
         setWollet(wollet)
         setBoltzSession(await createBoltzSession(wollet))
         setScanRunning(false)
         loadPersisted(wollet)
 
         await fullScanAndApply(wollet, getScanState())
+        startWalletSync()
     }
 }
 
@@ -2070,6 +2077,7 @@ class SignTransaction extends HTMLElement {
                 let client = esploraClient()
                 let txid = await client.broadcast(psetFinalized)
                 this.notifyBroadcastSuccess(txid)
+                await syncWalletAfterActivity()
 
                 this.broadcastContractIfAny()
             } else {
@@ -2077,6 +2085,7 @@ class SignTransaction extends HTMLElement {
                 let client = esploraClient()
                 let txid = await client.broadcastTx(tx)
                 this.notifyBroadcastSuccess(txid)
+                await syncWalletAfterActivity()
             }
 
         } catch (e) {
@@ -2419,25 +2428,103 @@ class SignTransaction extends HTMLElement {
     }
 }
 
-function scanLoop() {
-    const scanEvery = network.isRegtest() ? 1000 : 10000
-    if (getScanLoop() == null) {
-        const intervalId = setInterval(
-            async function () {
-                await fullScanAndApply(getWollet(), getScanState())
-                // TODO dispatch only on effective change
-                window.dispatchEvent(new CustomEvent("reload-page"))
-            },
-            scanEvery
-        );
-        setScanLoop(intervalId);
+async function syncWalletAfterActivity() {
+    const wollet = getWollet()
+    if (wollet == null) {
+        return
+    }
+
+    await fullScanAndApply(wollet, getScanState(), true)
+    window.dispatchEvent(new CustomEvent("reload-page"))
+    startWalletSync()
+}
+
+type WalletSyncHandle = {
+    source: EventSource;
+    reconnectTimer: ReturnType<typeof setTimeout> | null;
+    stopped: boolean;
+    syncing: boolean;
+    attempt: number;
+};
+
+function startWalletSync(reconnectAttempt = 0) {
+    const wollet = getWollet()
+    if (wollet == null) {
+        return
+    }
+
+    stopWalletSync()
+
+    if (!isWaterfallsEnabled()) {
+        return
+    }
+
+    const descriptor = wollet.descriptor().toString()
+    const subscribeUrl = joinUrl(esploraBaseUrl(), "v1/subscribe") + "?descriptor=" + encodeURIComponent(descriptor)
+    const source = new EventSource(subscribeUrl)
+    const handle: WalletSyncHandle = {
+        source,
+        reconnectTimer: null,
+        stopped: false,
+        syncing: false,
+        attempt: reconnectAttempt,
+    }
+
+    setWalletSync(handle)
+
+    source.onopen = () => {
+        handle.attempt = 0
+        console.log("Waterfalls SSE subscription opened")
+    }
+
+    source.addEventListener("changed", async (event) => {
+        if (handle.stopped || handle.syncing || getWalletSync() !== handle) {
+            return
+        }
+
+        handle.syncing = true
+        console.log("Waterfalls SSE changed event:", (event as MessageEvent).data)
+        await fullScanAndApply(wollet, getScanState(), true)
+        window.dispatchEvent(new CustomEvent("reload-page"))
+
+        if (!handle.stopped && getWalletSync() === handle) {
+            startWalletSync(0)
+        }
+    })
+
+    source.onerror = (event) => {
+        if (handle.stopped || handle.reconnectTimer != null || getWalletSync() !== handle) {
+            return
+        }
+
+        console.error("Waterfalls SSE error:", event)
+        source.close()
+
+        const delay = Math.min(30000, 1000 * Math.pow(2, handle.attempt))
+        handle.reconnectTimer = setTimeout(async () => {
+            if (handle.stopped || getWalletSync() !== handle) {
+                return
+            }
+
+            await fullScanAndApply(wollet, getScanState(), true)
+            window.dispatchEvent(new CustomEvent("reload-page"))
+
+            if (!handle.stopped && getWalletSync() === handle) {
+                startWalletSync(handle.attempt + 1)
+            }
+        }, delay)
     }
 }
 
-function stopScanLoop() {
-    if (getScanLoop() != null) {
-        clearInterval(getScanLoop())
-        setScanLoop(null)
+function stopWalletSync() {
+    const handle = getWalletSync() as WalletSyncHandle | null
+    if (handle != null) {
+        handle.stopped = true
+        if (handle.reconnectTimer != null) {
+            clearTimeout(handle.reconnectTimer)
+        }
+        handle.source.close()
+        setWalletSync(null)
     }
 }
 
@@ -3099,10 +3186,6 @@ function warning(message, helper = "") {
     return createMessage(message, true, helper)
 }
 
-function success(message, helper = "") {
-    return createMessage(message, false, helper)
-}
-
 /**
  * Interface for swap objects that can complete payment (PreparePayResponse or InvoiceResponse)
  */
@@ -3153,16 +3236,29 @@ function updatedAt(wolletLocal, node) {
     }
 }
 
-function esploraClient(): lwk.EsploraClient {
+function isWaterfallsEnabled(): boolean {
+    const urlParams = new URLSearchParams(window.location.search);
+    const waterfallsParam = urlParams.get('waterfalls');
+    return waterfallsParam !== null ? waterfallsParam === 'true' : true
+}
+
+function esploraBaseUrl(): string {
     const urlParams = new URLSearchParams(window.location.search);
     const overrideUrl = urlParams.get('esploraUrl');
-    const waterfallsParam = urlParams.get('waterfalls');
 
     const mainnetUrl = "https://waterfalls.liquidwebwallet.org/liquid/api"
     const testnetUrl = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api"
     const regtestUrl = "http://localhost:3000/"
-    const url = overrideUrl ?? (network.isMainnet() ? mainnetUrl : network.isTestnet() ? testnetUrl : regtestUrl)
-    const waterfalls = waterfallsParam !== null ? waterfallsParam === 'true' : true
+    return overrideUrl ?? (network.isMainnet() ? mainnetUrl : network.isTestnet() ? testnetUrl : regtestUrl)
+}
+
+function joinUrl(base: string, path: string): string {
+    return base.replace(/\/+$/, "") + "/" + path.replace(/^\/+/, "")
+}
+
+function esploraClient(): lwk.EsploraClient {
+    const url = esploraBaseUrl()
+    const waterfalls = isWaterfallsEnabled()
     const utxoOnly = getUtxoOnly()
     const client = new lwk.EsploraClient(network, url, waterfalls, 4, utxoOnly)
     if (waterfalls && (network.isMainnet() || network.isTestnet())) {
@@ -3199,8 +3295,9 @@ async function amp2Client(): Promise<lwk.Amp2> {
     return lwk.Amp2.new(info.keyorigin_xpub, AMP2_REGTEST_URL)
 }
 
-async function fullScanAndApply(wolletLocal: lwk.Wollet, scanState: { running: boolean }) {
+async function fullScanAndApply(wolletLocal: lwk.Wollet, scanState: { running: boolean }, publishWalletActivity = false) {
     var updated = false
+    var walletActivity = false
 
     if (!scanState.running) {
         setScanRunning(true)
@@ -3214,11 +3311,13 @@ async function fullScanAndApply(wolletLocal: lwk.Wollet, scanState: { running: b
             const update = await client.fullScan(wolletLocal)
 
             if (update instanceof lwk.Update) {
-                publish('scan-update', update)
                 updated = true
+                walletActivity = !update.onlyTip()
                 const walletStatus = wolletLocal.status().toString()
+                const onlyTip = update.onlyTip()
                 wolletLocal.applyUpdate(update)
-                if (update.onlyTip()) {
+                publish('scan-update', update)
+                if (onlyTip) {
                     // this is a shortcut, the restored from persisted state UI won't see "updated at <most recent scan>" but "updated at <most recent scan with tx>".
                     // The latter is possible by deleting the previous update if both this and the previous are `onlyTip()` but the
                     // more complex logic is avoided for now
@@ -3246,6 +3345,14 @@ async function fullScanAndApply(wolletLocal: lwk.Wollet, scanState: { running: b
             if (!getRegistryFetched()) {
                 setRegistryFetched(true)
                 fetchRegistry()
+            }
+
+            if (publishWalletActivity && walletActivity) {
+                publish('wallet-activity', null)
+                dismissWalletNotification("wallet-activity")
+                notifyInfo("Wallet activity detected", "Balance and transactions were updated.", {
+                    id: "wallet-activity",
+                })
             }
 
             // Publish a scan-end event instead of dispatching a DOM event

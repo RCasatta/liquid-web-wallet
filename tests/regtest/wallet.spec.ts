@@ -216,7 +216,7 @@ test.describe('Wallet Functionality', () => {
         const deadline = Date.now() + transactionSyncTimeout;
 
         while (Date.now() < deadline) {
-            // Navigate to transactions page. Re-rendering the page lets the scan loop's latest
+            // Navigate to transactions page. Re-rendering the page lets the latest synced
             // wallet state populate the transaction table.
             await page.getByRole('link', { name: 'Transactions' }).click();
 
@@ -241,7 +241,7 @@ test.describe('Wallet Functionality', () => {
 
     async function checkAssetBalance(page, ticker, expectedAmount) {
         await expect(async () => {
-            // Re-rendering the balance page lets the scan loop and registry refresh settle.
+            // Re-rendering the balance page lets wallet sync and registry refresh settle.
             await page.getByRole('link', { name: 'Balance' }).click();
             await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible({ timeout: 10000 });
 
