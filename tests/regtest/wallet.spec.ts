@@ -240,22 +240,20 @@ test.describe('Wallet Functionality', () => {
     }
 
     async function checkAssetBalance(page, ticker, expectedAmount) {
-        // Navigate to balance page to verify total amount
-        await page.getByRole('link', { name: 'Balance' }).click();
+        await expect(async () => {
+            // Re-rendering the balance page lets the scan loop and registry refresh settle.
+            await page.getByRole('link', { name: 'Balance' }).click();
+            await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible({ timeout: 10000 });
 
-        // Wait for balance to load
-        await expect(page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible();
+            const assetRow = page.locator(`wallet-balance table tr:has-text("${ticker}"):not(:has-text("Reissuance of"))`).first();
+            await expect(assetRow).toBeVisible({ timeout: 1000 });
 
-        // Find the specific row containing our ticker and verify the amount
-        // Use a more specific selector to exclude reissuance token rows
-        const assetRow = page.locator(`wallet-balance table tr:has-text("${ticker}"):not(:has-text("Reissuance of"))`).first();
-        await expect(assetRow).toBeVisible();
+            const reissuanceRow = page.locator(`wallet-balance table tr:has-text("Reissuance of ${ticker}")`);
+            await expect(reissuanceRow).toBeVisible({ timeout: 1000 });
 
-        const reissuanceRow = page.locator(`wallet-balance table tr:has-text("Reissuance of ${ticker}")`);
-        await expect(reissuanceRow).toBeVisible();
-
-        const assetAmount = await assetRow.locator('td:last-child').textContent();
-        expect(assetAmount?.trim()).toBe(expectedAmount);
+            const assetAmount = await assetRow.locator('td:last-child').textContent();
+            expect(assetAmount?.trim()).toBe(expectedAmount);
+        }).toPass({ timeout: transactionSyncTimeout });
     }
 
     async function openTransactionsPage(page) {
