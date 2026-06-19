@@ -46,6 +46,9 @@ const app: HTMLElement | null = document.getElementById('app')
 
 const RANDOM_MNEMONIC_KEY: string = "random_mnemonic"
 const AMP2_DATA_KEY_PREFIX: string = "amp2_data_v2_"
+const AMP2_REGTEST_URL = "http://127.0.0.1:5000"
+const AMP2_TESTNET_FINGERPRINT = "3d970d04"
+const AMP2_REGTEST_FINGERPRINT = "18778d8c"
 
 /// Re-enables initially disabled buttons, and add listener to buttons on the first page
 /// First page doesn't use components because we want to be loaded before the wasm is loaded, which takes time
@@ -2221,9 +2224,8 @@ class SignTransaction extends HTMLElement {
         let pset = new lwk.Pset(psetString)
         setBusyDisabled(this.cosignButton, true)
 
-        let amp2 = lwk.Amp2.newTestnet()
-
         try {
+            let amp2 = await amp2Client()
             let signedPset = await amp2.cosign(pset)
             this.notifyTransactionSignSuccess("Transaction cosigned!")
             this.pset.value = signedPset.toString()
@@ -2328,7 +2330,8 @@ class SignTransaction extends HTMLElement {
         }
         if (missing.length > 0) {
             sigMap.set("Missing", missing)
-            if (missing.includes("3d970d04") && !network.isMainnet()) {
+            const amp2Fingerprint = network.isRegtest() ? AMP2_REGTEST_FINGERPRINT : AMP2_TESTNET_FINGERPRINT
+            if (missing.includes(amp2Fingerprint) && !network.isMainnet()) {
                 this.cosignButton.hidden = false
             }
         }
@@ -2544,7 +2547,7 @@ class WalletAmp2 extends HTMLElement {
     handleRegister = async (_) => {
         try {
             setBusyDisabled(this.button, true)
-            let amp2 = lwk.Amp2.newTestnet()
+            let amp2 = await amp2Client()
             let keyoriginXpub = await keyoriginXpubUnified(lwk.Bip.bip87());
             let defaultBlinding = "slip77(0684e43749a3a3eb0362dcef8c66994bd51d33f8ce6b055126a800a626fc0d67)";
             let amp2_desc = amp2.descriptorFromStr(keyoriginXpub, defaultBlinding)
@@ -3180,6 +3183,20 @@ function keyoriginXpubUnified(bip) {
     } else {
         return null;
     }
+}
+
+async function amp2Client(): Promise<lwk.Amp2> {
+    if (!network.isRegtest()) {
+        return lwk.Amp2.newTestnet()
+    }
+
+    const response = await fetch(`${AMP2_REGTEST_URL}/info/xpub`)
+    if (!response.ok) {
+        throw new Error(`AMP2 mock xpub request failed: ${response.status}`)
+    }
+
+    const info = await response.json()
+    return lwk.Amp2.new(info.keyorigin_xpub, AMP2_REGTEST_URL)
 }
 
 async function fullScanAndApply(wolletLocal: lwk.Wollet, scanState: { running: boolean }) {

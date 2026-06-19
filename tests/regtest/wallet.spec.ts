@@ -43,7 +43,7 @@ test.describe('Wallet Functionality', () => {
         // TODO without waiting for the balance to be ready, other pages may break
     }
 
-    async function createTransactionPset(page) {
+    async function createTransactionPsetTo(page, address: string, amount: string) {
         // Navigate to create page
         await page.getByRole('link', { name: 'Create' }).click();
 
@@ -54,10 +54,10 @@ test.describe('Wallet Functionality', () => {
         await expect(page.getByRole('heading', { name: 'Create' })).toBeVisible();
 
         // Fill in the recipient details
-        await page.locator('#add-recipient-div input[name="address"]').fill('el1qqwmdgx74h58nfufxvvmm2ny8evkc6fv39h682u0jtpurq6969jwlvv6fyn40gm5qd6rtx5m6ztupt9grp4e6wq47g0thyayh7');
+        await page.locator('#add-recipient-div input[name="address"]').fill(address);
 
         // Fill in the amount field - use the ID selector to be specific
-        await page.locator('#add-recipient-div input[name="amount"]').fill('0.000023');
+        await page.locator('#add-recipient-div input[name="amount"]').fill(amount);
 
         // Select rLBTC by label
         await page.locator('#add-recipient-div select[name="asset"]').selectOption({ label: 'rLBTC' });
@@ -71,6 +71,10 @@ test.describe('Wallet Functionality', () => {
 
         // Verify the PSET was created successfully and we're on the sign page
         await expect(page.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible({ timeout: 15000 });
+    }
+
+    async function createTransactionPset(page) {
+        await createTransactionPsetTo(page, 'el1qqwmdgx74h58nfufxvvmm2ny8evkc6fv39h682u0jtpurq6969jwlvv6fyn40gm5qd6rtx5m6ztupt9grp4e6wq47g0thyayh7', '0.000023');
     }
 
     async function waitForBroadcastSuccess(page) {
@@ -187,9 +191,13 @@ test.describe('Wallet Functionality', () => {
         const hasRow = signatureTable.locator('tr:has(td:has-text("Has"))');
         const missingRow = signatureTable.locator('tr:has(td:has-text("Missing"))');
 
-        await expect(hasRow).toBeVisible();
-        for (const fingerprint of hasFingerprints) {
-            await expect(hasRow).toContainText(fingerprint);
+        if (hasFingerprints.length === 0) {
+            await expect(hasRow).toHaveCount(0);
+        } else {
+            await expect(hasRow).toBeVisible();
+            for (const fingerprint of hasFingerprints) {
+                await expect(hasRow).toContainText(fingerprint);
+            }
         }
 
         if (missingFingerprints.length === 0) {
@@ -401,6 +409,77 @@ test.describe('Wallet Functionality', () => {
         const txid = await signAndBroadcastPset(page);
         const txFound = await waitForTransactionToAppear(page, txid);
         expect(txFound).toBe(true);
+    });
+
+    test('should complete an amp2 flow funded by abandon wallet', async ({ page, browser }) => {
+        await loadWallet(page);
+
+        await page.getByRole('link', { name: 'Wallet' }).click();
+        await expect(page.locator('wallet-amp2 h3')).toHaveText('Amp2');
+
+        const registerWalletButton = page.getByRole('button', { name: 'Register wallet' });
+        await expect(registerWalletButton).toBeVisible();
+        await registerWalletButton.click();
+
+        const uuidTextarea = page.locator('wallet-amp2 textarea').nth(0);
+        await expect(uuidTextarea).toBeVisible({ timeout: 15000 });
+        await expect(uuidTextarea).not.toHaveValue('');
+        await expect(registerWalletButton).toBeHidden();
+
+        const amp2DescriptorTextarea = page.locator('wallet-amp2 textarea').nth(1);
+        await expect(amp2DescriptorTextarea).toHaveValue(/^ct\(/);
+        const amp2Descriptor = await amp2DescriptorTextarea.inputValue();
+
+        const amp2Context = await browser.newContext();
+        const amp2Page = await amp2Context.newPage();
+
+        try {
+            await amp2Page.goto(`/#${encodeURIComponent(amp2Descriptor)}`);
+            await amp2Page.waitForLoadState('networkidle');
+            await expect(amp2Page.getByRole('heading', { name: 'Balance' })).toBeVisible({ timeout: 15000 });
+            await expect(amp2Page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible({ timeout: 20000 });
+
+            await amp2Page.getByRole('link', { name: 'Receive' }).click();
+            await expect(amp2Page.getByRole('heading', { name: 'Receive' })).toBeVisible();
+            await amp2Page.getByRole('button', { name: 'Show address', exact: true }).click();
+            const amp2Address = (await amp2Page.getByRole('code').textContent())?.trim() ?? '';
+            expect(amp2Address).toMatch(/^el1/);
+
+            await createTransactionPsetTo(page, amp2Address, '0.0001');
+            const fundingTxid = await signAndBroadcastPset(page);
+            const fundingTxFound = await waitForTransactionToAppear(amp2Page, fundingTxid);
+            expect(fundingTxFound).toBe(true);
+
+            await createTransactionPset(amp2Page);
+            await expectPsetSignatures(amp2Page, [], ['73c5da0a', '18778d8c']);
+            const unsignedAmp2Pset = await amp2Page.locator('sign-transaction textarea').first().inputValue();
+
+            await page.getByRole('link', { name: 'Sign' }).click();
+            await expect(page.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible();
+            const signerPsetTextarea = page.locator('sign-transaction textarea').first();
+            await signerPsetTextarea.fill(unsignedAmp2Pset);
+            await page.getByRole('button', { name: 'Sign', exact: true }).click();
+            await expect(signerPsetTextarea).not.toHaveValue(unsignedAmp2Pset);
+            const userSignedAmp2Pset = await signerPsetTextarea.inputValue();
+
+            const amp2PsetTextarea = amp2Page.locator('sign-transaction textarea').first();
+            await amp2PsetTextarea.fill(userSignedAmp2Pset);
+            await amp2Page.getByRole('button', { name: 'Analyze' }).click();
+            await expectPsetSignatures(amp2Page, ['73c5da0a'], ['18778d8c']);
+
+            const cosignButton = amp2Page.locator('button.cosign');
+            await expect(cosignButton).toBeVisible();
+            await cosignButton.click();
+            await expectNotification(amp2Page, 'Transaction cosigned!', { timeout: 15000 });
+            await expectPsetSignatures(amp2Page, ['73c5da0a', '18778d8c'], []);
+
+            await amp2Page.getByRole('button', { name: 'Broadcast', exact: true }).click();
+            const txid = await waitForBroadcastSuccess(amp2Page);
+            const txFound = await waitForTransactionToAppear(amp2Page, txid);
+            expect(txFound).toBe(true);
+        } finally {
+            await amp2Context.close();
+        }
     });
 
     test('should create issuance above legacy 21 million limit', async ({ page }) => {
