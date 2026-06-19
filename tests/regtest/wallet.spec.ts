@@ -433,7 +433,7 @@ test.describe('Wallet Functionality', () => {
 
         try {
             await amp2Page.goto(`/#${encodeURIComponent(amp2Descriptor)}`);
-            await amp2Page.waitForLoadState('networkidle');
+            await amp2Page.waitForLoadState('domcontentloaded');
             await expect(amp2Page.getByRole('heading', { name: 'Balance' })).toBeVisible({ timeout: 15000 });
             await expect(amp2Page.locator('wallet-balance article[aria-busy="true"]')).not.toBeVisible({ timeout: 20000 });
 
@@ -444,7 +444,9 @@ test.describe('Wallet Functionality', () => {
             expect(amp2Address).toMatch(/^el1/);
 
             await createTransactionPsetTo(page, amp2Address, '0.0001');
+            const walletStateChanged = expectNotification(amp2Page, 'Wallet state changed', { timeout: transactionSyncTimeout });
             const fundingTxid = await signAndBroadcastPset(page);
+            await walletStateChanged;
             const fundingTxFound = await waitForTransactionToAppear(amp2Page, fundingTxid);
             expect(fundingTxFound).toBe(true);
 

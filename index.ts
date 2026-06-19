@@ -2434,7 +2434,7 @@ async function syncWalletAfterActivity() {
         return
     }
 
-    await fullScanAndApply(wollet, getScanState(), true)
+    await fullScanAndApply(wollet, getScanState())
     window.dispatchEvent(new CustomEvent("reload-page"))
     startWalletSync()
 }
@@ -2447,7 +2447,7 @@ type WalletSyncHandle = {
     attempt: number;
 };
 
-function startWalletSync(reconnectAttempt = 0) {
+async function startWalletSync(reconnectAttempt = 0) {
     const wollet = getWollet()
     if (wollet == null) {
         return
@@ -2459,7 +2459,8 @@ function startWalletSync(reconnectAttempt = 0) {
         return
     }
 
-    const descriptor = wollet.descriptor().toString()
+    const client = esploraClient()
+    const descriptor = await client.waterfallsDescriptor(wollet.descriptor())
     const subscribeUrl = joinUrl(esploraBaseUrl(), "v1/subscribe") + "?descriptor=" + encodeURIComponent(descriptor)
     const source = new EventSource(subscribeUrl)
     const handle: WalletSyncHandle = {
@@ -2506,7 +2507,7 @@ function startWalletSync(reconnectAttempt = 0) {
                 return
             }
 
-            await fullScanAndApply(wollet, getScanState(), true)
+            await fullScanAndApply(wollet, getScanState())
             window.dispatchEvent(new CustomEvent("reload-page"))
 
             if (!handle.stopped && getWalletSync() === handle) {
@@ -3295,9 +3296,8 @@ async function amp2Client(): Promise<lwk.Amp2> {
     return lwk.Amp2.new(info.keyorigin_xpub, AMP2_REGTEST_URL)
 }
 
-async function fullScanAndApply(wolletLocal: lwk.Wollet, scanState: { running: boolean }, publishWalletActivity = false) {
+async function fullScanAndApply(wolletLocal: lwk.Wollet, scanState: { running: boolean }, notifyWalletStateChanged = false) {
     var updated = false
-    var walletActivity = false
 
     if (!scanState.running) {
         setScanRunning(true)
@@ -3312,7 +3312,6 @@ async function fullScanAndApply(wolletLocal: lwk.Wollet, scanState: { running: b
 
             if (update instanceof lwk.Update) {
                 updated = true
-                walletActivity = !update.onlyTip()
                 const walletStatus = wolletLocal.status().toString()
                 const onlyTip = update.onlyTip()
                 wolletLocal.applyUpdate(update)
@@ -3347,11 +3346,10 @@ async function fullScanAndApply(wolletLocal: lwk.Wollet, scanState: { running: b
                 fetchRegistry()
             }
 
-            if (publishWalletActivity && walletActivity) {
-                publish('wallet-activity', null)
-                dismissWalletNotification("wallet-activity")
-                notifyInfo("Wallet activity detected", "Balance and transactions were updated.", {
-                    id: "wallet-activity",
+            if (notifyWalletStateChanged && updated) {
+                dismissWalletNotification("wallet-state-changed")
+                notifyInfo("Wallet state changed", "Balance and transactions were updated.", {
+                    id: "wallet-state-changed",
                 })
             }
 
