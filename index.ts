@@ -2070,6 +2070,16 @@ class SignTransaction extends HTMLElement {
 
     isEmptyPsetError = (e) => e instanceof Error && e.message === "PSET cannot be empty"
 
+    psetHasNoSignatures = (psetString: string) => {
+        try {
+            const pset = new lwk.Pset(psetString)
+            const details = getWollet().psetDetails(pset)
+            return details.fingerprintsHas().length === 0
+        } catch (_e) {
+            return false
+        }
+    }
+
     handleAnalyzeClick = (_e: Event) => {
         try {
             this.getPsetStringOrThrow()
@@ -2080,10 +2090,11 @@ class SignTransaction extends HTMLElement {
     }
 
     handleBroadcastClick = async (_e) => {
+        let psetString = ""
         try {
             setBusyDisabled(this.broadcastButton, true)
             dismissWalletNotification(["broadcast-success", "signing-page-error"])
-            let psetString = this.getPsetStringOrThrow()
+            psetString = this.getPsetStringOrThrow()
 
             if (getAmp0() == null) {
                 let pset = new lwk.Pset(psetString)
@@ -2108,6 +2119,8 @@ class SignTransaction extends HTMLElement {
         } catch (e) {
             if (this.isEmptyPsetError(e)) {
                 this.notifySigningPageError(e.toString(), "Broadcast error")
+            } else if (this.psetHasNoSignatures(psetString)) {
+                this.notifySigningPageError("Cannot broadcast tx, is it signed?", "Broadcast failed")
             } else {
                 this.notifySigningPageError(e.toString(), "Broadcast failed")
             }
