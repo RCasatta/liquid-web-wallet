@@ -183,7 +183,7 @@ test.describe('Wallet Functionality', () => {
         const broadcastErrorNotification = errorNotification(page, 'Broadcast failed');
         await expect(broadcastErrorNotification).toBeVisible();
         await expect(broadcastErrorNotification.locator('.wallet-notification-title')).toHaveText('Broadcast failed');
-        await expect(broadcastErrorNotification.locator('.wallet-notification-message')).toHaveText('Cannot broadcast tx, is it signed?');
+        await expect(broadcastErrorNotification.locator('.wallet-notification-message')).not.toHaveText('');
     }
 
     async function expectEmptyPsetActionError(page, buttonName: string, title = 'Signing error') {

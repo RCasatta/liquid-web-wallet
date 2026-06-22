@@ -2109,7 +2109,7 @@ class SignTransaction extends HTMLElement {
             if (this.isEmptyPsetError(e)) {
                 this.notifySigningPageError(e.toString(), "Broadcast error")
             } else {
-                this.notifySigningPageError("Cannot broadcast tx, is it signed?", "Broadcast failed")
+                this.notifySigningPageError(e.toString(), "Broadcast failed")
             }
             console.error(e)
         }
