@@ -1055,6 +1055,20 @@ class WalletTransactions extends HTMLElement {
         this.subscriptions.forEach(unsubscribe => unsubscribe());
     }
 
+    netBalanceChange(tx: lwk.TxDetails): string[] {
+        const balance = tx.balance().entries()
+        const changes: string[] = []
+
+        balance.forEach((value, asset) => {
+            const amount = BigInt(value.toString())
+            if (amount !== 0n) {
+                changes.push(formatBalanceChange(asset, amount))
+            }
+        })
+
+        return changes
+    }
+
     render = () => {
         const wollet = getWollet();
         if (!wollet || wollet.neverScanned()) {
@@ -1101,10 +1115,15 @@ class WalletTransactions extends HTMLElement {
             txid.innerHTML = `
                     <code><a href="${val.unblindedUrl(network.defaultExplorerUrl())}" target="_blank">${txid_truncated}</a></code>
                 `
-            let txType = document.createElement("td")
-            txType.innerHTML = `
-                    <span>${val.txType()}</span>
-                `
+            let txNetBalance = document.createElement("td")
+
+            const balanceChanges = this.netBalanceChange(val)
+            balanceChanges.forEach((change) => {
+                const balanceChangeNode = document.createElement("small")
+                balanceChangeNode.innerText = change
+                balanceChangeNode.setAttribute("style", "display:block; text-align:right; white-space:nowrap; margin-top:0.1rem")
+                txNetBalance.appendChild(balanceChangeNode)
+            })
             let heightCell = document.createElement("td")
 
             var timeAgo = (typeof val.timestamp() === 'undefined') ? "unconfirmed" : elapsedFrom(val.timestamp())
@@ -1114,7 +1133,7 @@ class WalletTransactions extends HTMLElement {
             heightCell.setAttribute("style", "text-align:right")
 
             newRow.appendChild(txid)
-            newRow.appendChild(txType)
+            newRow.appendChild(txNetBalance)
             newRow.appendChild(heightCell)
         })
 
@@ -3444,6 +3463,16 @@ function truncateIdentifier(identifier, prefixLength = 8, suffixLength = 8) {
         return identifier;
     }
     return `${identifier.slice(0, prefixLength)}...${identifier.slice(-suffixLength)}`;
+}
+
+function formatBalanceChange(assetHex, value) {
+    const prefix = value > 0n ? "+" : ""
+    return `${mapAssetTickerOrTruncatedId(assetHex)} ${prefix}${mapAssetPrecision(assetHex, value)}`
+}
+
+function mapAssetTickerOrTruncatedId(assetHex) {
+    const assetTicker = mapAssetTicker(assetHex)
+    return assetTicker === assetHex ? assetHex.slice(0, 8) : assetTicker
 }
 
 /// returns the Ticker if the asset id maps to featured ones
