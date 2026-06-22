@@ -186,6 +186,15 @@ test.describe('Wallet Functionality', () => {
         await expect(broadcastErrorNotification.locator('.wallet-notification-message')).toHaveText('Cannot broadcast tx, is it signed?');
     }
 
+    async function expectEmptyPsetActionError(page, buttonName: string, title = 'Signing error') {
+        await page.getByRole('button', { name: buttonName, exact: true }).click();
+
+        const psetErrorNotification = errorNotification(page, 'PSET cannot be empty');
+        await expect(psetErrorNotification).toBeVisible();
+        await expect(psetErrorNotification.locator('.wallet-notification-title')).toHaveText(title);
+        await expect(psetErrorNotification.locator('.wallet-notification-message')).toHaveText('Error: PSET cannot be empty');
+    }
+
     async function expectPsetSignatures(page, hasFingerprints: string[], missingFingerprints: string[]) {
         const signatureTable = page.locator('h3:has-text("Signatures")').locator('~div table').first();
         const hasRow = signatureTable.locator('tr:has(td:has-text("Has"))');
@@ -303,6 +312,18 @@ test.describe('Wallet Functionality', () => {
         const address = await page.getByRole('code').textContent();
         expect(address).not.toBeNull();
         expect(address).toMatch(/^el1/);
+    });
+
+    test('should show empty PSET errors on sign page actions', async ({ page }) => {
+        await loadWallet(page);
+
+        await page.getByRole('link', { name: 'Sign' }).click();
+        await expect(page.getByRole('heading', { name: 'Sign', exact: true })).toBeVisible();
+        await expect(page.locator('sign-transaction textarea').first()).toHaveValue('');
+
+        await expectEmptyPsetActionError(page, 'Analyze', 'Analyze error');
+        await expectEmptyPsetActionError(page, 'Sign');
+        await expectEmptyPsetActionError(page, 'Broadcast', 'Broadcast error');
     });
 
     test('should navigate to balance page', async ({ page }) => {

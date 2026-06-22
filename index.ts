@@ -2037,9 +2037,7 @@ class SignTransaction extends HTMLElement {
         this.proposalContainer = this.querySelector("div.proposal-container")
         this.proposalText = this.querySelector("textarea.proposal-text")
 
-        this.analyzeButton.addEventListener("click", (_e) => {
-            this.renderAnalyze()
-        })
+        this.analyzeButton.addEventListener("click", this.handleAnalyzeClick)
         this.signButton.addEventListener("click", this.handleSignClick)
         this.cosignButton.addEventListener("click", this.handleCosignClick)
         this.cosignAmp0Button.addEventListener("click", this.handleCosignAmp0Click)
@@ -2062,13 +2060,32 @@ class SignTransaction extends HTMLElement {
         this.renderAnalyze()
     }
 
+    getPsetStringOrThrow = () => {
+        const psetString = this.pset.value
+        if (!psetString.trim()) {
+            throw new Error("PSET cannot be empty")
+        }
+        return psetString
+    }
+
+    isEmptyPsetError = (e) => e instanceof Error && e.message === "PSET cannot be empty"
+
+    handleAnalyzeClick = (_e: Event) => {
+        try {
+            this.getPsetStringOrThrow()
+            this.renderAnalyze()
+        } catch (e) {
+            this.notifySigningPageError(e.toString(), "Analyze error")
+        }
+    }
+
     handleBroadcastClick = async (_e) => {
         try {
             setBusyDisabled(this.broadcastButton, true)
             dismissWalletNotification(["broadcast-success", "signing-page-error"])
+            let psetString = this.getPsetStringOrThrow()
 
             if (getAmp0() == null) {
-                let psetString = this.pset.value
                 let pset = new lwk.Pset(psetString)
                 let psetFinalized = getWollet().finalize(pset)
                 let tx = psetFinalized.extractTx().toString()
@@ -2081,7 +2098,7 @@ class SignTransaction extends HTMLElement {
 
                 this.broadcastContractIfAny()
             } else {
-                const tx = new lwk.Transaction(this.pset.value)
+                const tx = new lwk.Transaction(psetString)
                 let client = esploraClient()
                 let txid = await client.broadcastTx(tx)
                 this.notifyBroadcastSuccess(txid)
@@ -2089,7 +2106,11 @@ class SignTransaction extends HTMLElement {
             }
 
         } catch (e) {
-            this.notifySigningPageError("Cannot broadcast tx, is it signed?", "Broadcast failed")
+            if (this.isEmptyPsetError(e)) {
+                this.notifySigningPageError(e.toString(), "Broadcast error")
+            } else {
+                this.notifySigningPageError("Cannot broadcast tx, is it signed?", "Broadcast failed")
+            }
             console.error(e)
         }
         setBusyDisabled(this.broadcastButton, false)
@@ -2174,10 +2195,7 @@ class SignTransaction extends HTMLElement {
     handleSignClick = async (_e: Event) => {
         try {
             // Get the PSET string and parse it
-            let psetString = this.pset.value
-            if (!psetString.trim()) {
-                throw new Error("PSET cannot be empty")
-            }
+            let psetString = this.getPsetStringOrThrow()
             let pset = new lwk.Pset(psetString)
 
             // Set button to busy state at the beginning
