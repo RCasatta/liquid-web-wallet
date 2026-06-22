@@ -937,7 +937,7 @@ class AddressView extends HTMLElement {
         dismissWalletNotification("receive-address-warning")
         notifyWarning("Address generated without double checking without the hardware wallet are risky!", "", {
             id: "receive-address-warning",
-            closable: true
+            closable: false
         })
     }
 
