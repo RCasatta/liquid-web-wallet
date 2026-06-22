@@ -186,6 +186,16 @@ test.describe('Wallet Functionality', () => {
         await expect(broadcastErrorNotification.locator('.wallet-notification-message')).toHaveText('Cannot broadcast tx, is it signed?');
     }
 
+    async function expectPartiallySignedBroadcastError(page) {
+        await page.getByRole('button', { name: 'Broadcast', exact: true }).click();
+
+        const broadcastErrorNotification = errorNotification(page, 'Broadcast failed');
+        await expect(broadcastErrorNotification).toBeVisible();
+        await expect(broadcastErrorNotification.locator('.wallet-notification-title')).toHaveText('Broadcast failed');
+        await expect(broadcastErrorNotification.locator('.wallet-notification-message')).not.toHaveText('');
+        await expect(broadcastErrorNotification.locator('.wallet-notification-message')).not.toHaveText('Cannot broadcast tx, is it signed?');
+    }
+
     async function expectEmptyPsetActionError(page, buttonName: string, title = 'Signing error') {
         await page.getByRole('button', { name: buttonName, exact: true }).click();
 
@@ -868,6 +878,7 @@ test.describe('Wallet Functionality', () => {
         await jadePage.getByRole('button', { name: 'Sign', exact: true }).click();
         await expectPsetSignatures(jadePage, ['e3ebcc79'], ['73c5da0a']);
         const jadeSignedPset = await jadePage.locator('sign-transaction textarea').first().inputValue();
+        await expectPartiallySignedBroadcastError(jadePage);
 
         // Switch to abandon wallet and sign the same unsigned PSET with the abandon signer only
         await abandonPage.getByRole('link', { name: 'Sign' }).click();
