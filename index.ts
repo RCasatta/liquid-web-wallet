@@ -39,7 +39,7 @@ jsQRScript.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 document.head.appendChild(jsQRScript);
 
 // Network setup (remains global as it's a configuration not state)
-const network: lwk.Network = lwk.Network.regtestDefault()
+const network: lwk.Network = lwk.Network.testnet()
 
 // Reference to the main application container
 const app: HTMLElement | null = document.getElementById('app')
@@ -1109,7 +1109,7 @@ class WalletTransactions extends HTMLElement {
             let newRow = document.createElement("tr")
             table.appendChild(newRow)
             let txid_string = val.txid().toString()
-            let txid_truncated = txid_string.slice(0, 8) + "..." + txid_string.slice(-8)
+            let txid_truncated = txid_string.slice(0, 4) + "…" + txid_string.slice(-4)
 
             let txid = document.createElement("td")
             txid.innerHTML = `
@@ -1128,7 +1128,7 @@ class WalletTransactions extends HTMLElement {
 
             var timeAgo = (typeof val.timestamp() === 'undefined') ? "unconfirmed" : elapsedFrom(val.timestamp())
             heightCell.innerHTML = `
-                <em data-placement="left" data-tooltip="Block ${val.height()}">${timeAgo}</em>
+                <em data-placement="left" data-tooltip="${val.txType()} | Block ${val.height()}">${timeAgo}</em>
             `
             heightCell.setAttribute("style", "text-align:right")
 
