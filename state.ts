@@ -33,7 +33,6 @@ const _state: {
     amp0: lwk.Amp0 | null;
     amp0Pset: lwk.Amp0Pset | null;
     boltzSession: lwk.BoltzSession | null;
-    localStorageFullAlertShown: boolean;
     notifications: WalletNotification[];
 } = {
     // Page state
@@ -80,9 +79,6 @@ const _state: {
 
     // Boltz session state
     boltzSession: null, // lwk.BoltzSession instance
-
-    // LocalStorage state
-    localStorageFullAlertShown: false, // Whether the localStorage full alert has been shown
 
     // UI notifications
     notifications: []
@@ -479,16 +475,6 @@ export function setBoltzSession(boltzSession: lwk.BoltzSession | null): lwk.Bolt
     _state.boltzSession = boltzSession;
     publish('boltz-session-changed', boltzSession);
     return _state.boltzSession;
-}
-
-// LocalStorage state management
-export function getLocalStorageFull(): boolean {
-    return _state.localStorageFullAlertShown;
-}
-
-export function setLocalStorageFull(shown: boolean): boolean {
-    _state.localStorageFullAlertShown = shown === true;
-    return _state.localStorageFullAlertShown;
 }
 
 // Swap storage management

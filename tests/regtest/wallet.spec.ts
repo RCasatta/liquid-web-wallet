@@ -411,6 +411,19 @@ test.describe('Wallet Functionality', () => {
         // Verify there is at least one transaction in the table
         const transactionCount = await page.locator('wallet-transactions table tr').count();
         expect(transactionCount).toBeGreaterThan(0);
+
+        const storageSummary = await page.evaluate(() => {
+            const storeKeys = Object.keys(localStorage).filter((key) => key.startsWith('wollet-store-v2:'));
+            return {
+                hasUpdate: storeKeys.some((key) => /:\d{12}$/.test(key)),
+                hasTxids: storeKeys.some((key) => key.endsWith(':wollet:txids')),
+                rawTxKeys: storeKeys.filter((key) => key.includes(':wollet:tx:')),
+            };
+        });
+
+        expect(storageSummary.hasUpdate).toBe(true);
+        expect(storageSummary.hasTxids).toBe(true);
+        expect(storageSummary.rawTxKeys).toEqual([]);
     });
 
     test('should reload the same wallet from a saved random mnemonic', async ({ page }) => {
