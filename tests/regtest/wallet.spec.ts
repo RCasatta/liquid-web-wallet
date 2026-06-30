@@ -230,8 +230,8 @@ test.describe('Wallet Functionality', () => {
     }
 
     async function waitForTransactionToAppear(page, txid) {
-        // Get the first 8 characters of the txid to search for
         const txidPrefix = txid.substring(0, 8);
+        const txidTruncated = `${txid.substring(0, 4)}…${txid.substring(txid.length - 4)}`;
         const deadline = Date.now() + transactionSyncTimeout;
 
         while (Date.now() < deadline) {
@@ -245,8 +245,9 @@ test.describe('Wallet Functionality', () => {
             // Get the transactions list content
             const transactionsContent = await page.locator('wallet-transactions table').textContent() ?? '';
 
-            // Check if the txid prefix is in the transactions list
-            if (transactionsContent.includes(txidPrefix)) {
+            // Check if the txid is in the transactions list. The UI currently renders txids
+            // in truncated form, while older versions rendered a longer prefix.
+            if (transactionsContent.includes(txidPrefix) || transactionsContent.includes(txidTruncated)) {
                 // console.log(`Transaction ${txidPrefix}... found on attempt ${attempt + 1}`);
                 return true;
             }
