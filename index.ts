@@ -39,7 +39,7 @@ jsQRScript.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 document.head.appendChild(jsQRScript);
 
 // Network setup (remains global as it's a configuration not state)
-const network: lwk.Network = lwk.Network.testnet()
+const network: lwk.Network = lwk.Network.regtestDefault()
 
 // Reference to the main application container
 const app: HTMLElement | null = document.getElementById('app')
@@ -231,15 +231,8 @@ async function init(): Promise<void> {
 
             let wollet = new lwk.Wollet(network, desc)
             console.log("wollet", wollet)
-            stopWalletSync()
             setLedger(ledger)
-            setWollet(wollet)
-            setBoltzSession(await createBoltzSession(wollet))
-            setWolletSelected("Ledger")
-            setScanRunning(false)
-            loadPersisted(wollet)
-            await fullScanAndApply(wollet, getScanState())
-            startWalletSync()
+            await activateWollet(wollet, "Ledger")
 
         } catch (e) {
             console.error("Error getting descriptor:", e)
@@ -387,15 +380,7 @@ async function handleWatchOnlyClick(_e?: Event): Promise<void> {
         }
 
         const wollet = new lwk.Wollet(network, descriptor)
-        stopWalletSync()
-        setWollet(wollet)
-        setBoltzSession(await createBoltzSession(wollet))
-        setWolletSelected("Descriptor")
-        setScanRunning(false)
-        loadPersisted(wollet)
-
-        await fullScanAndApply(wollet, getScanState())
-        startWalletSync()
+        await activateWollet(wollet, "Descriptor")
     } catch (e) {
         dismissWalletNotification("watch-only-descriptor")
         notifyError("Watch-only descriptor failed", e.toString(), {
@@ -442,15 +427,7 @@ async function handleAmp0Login(_e: Event) {
         })
         const wollet = amp0.wollet()
 
-        stopWalletSync()
-        setWollet(wollet)
-        setBoltzSession(await createBoltzSession(wollet))
-        setWolletSelected("Amp0")
-        setScanRunning(false)
-        loadPersisted(wollet)
-
-        await fullScanAndApply(wollet, getScanState())
-        startWalletSync()
+        await activateWollet(wollet, "Amp0")
 
     } catch (e) {
         dismissWalletNotification("amp0-login-error")
@@ -800,14 +777,7 @@ class WalletSelector extends HTMLElement {
         }
         console.log(descriptor.toString())
         const wollet = new lwk.Wollet(network, descriptor)
-        stopWalletSync()
-        setWollet(wollet)
-        setBoltzSession(await createBoltzSession(wollet))
-        setScanRunning(false)
-        loadPersisted(wollet)
-
-        await fullScanAndApply(wollet, getScanState())
-        startWalletSync()
+        await activateWollet(wollet, getWolletSelected())
     }
 }
 
@@ -3163,7 +3133,24 @@ function mapToTable(map, add_icon = false) {
     return div
 }
 
-async function createBoltzSession(wolletLocal: lwk.Wollet): Promise<lwk.BoltzSession> {
+async function activateWollet(wolletLocal: lwk.Wollet, selected: string | null): Promise<void> {
+    stopWalletSync()
+    setWollet(wolletLocal)
+
+    const boltzSessionPromise = createBoltzSession(wolletLocal)
+
+    setScanRunning(false)
+    loadPersisted(wolletLocal)
+    const fullScanPromise = fullScanAndApply(wolletLocal, getScanState())
+
+    setBoltzSession(await boltzSessionPromise)
+    setWolletSelected(selected)
+
+    await fullScanPromise
+    startWalletSync()
+}
+
+async function createBoltzSession(wolletLocal: lwk.Wollet): Promise<lwk.BoltzSession | null> {
     const dwid = wolletLocal.dwid();
     const mnemonicKey = `mnemonic-${dwid}`;
 
