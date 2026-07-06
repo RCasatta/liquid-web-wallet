@@ -39,7 +39,7 @@ jsQRScript.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 document.head.appendChild(jsQRScript);
 
 // Network setup (remains global as it's a configuration not state)
-const network: lwk.Network = lwk.Network.mainnet()
+const network: lwk.Network = lwk.Network.regtestDefault()
 
 // Reference to the main application container
 const app: HTMLElement | null = document.getElementById('app')
@@ -2469,6 +2469,23 @@ type WalletSyncHandle = {
     attempt: number;
 };
 
+type WaterfallsSubscriptionEvent = {
+    type?: string;
+    tip?: {
+        height?: number;
+        block_hash?: string;
+    };
+};
+
+function parseWaterfallsSubscriptionEvent(data: string): WaterfallsSubscriptionEvent | null {
+    try {
+        return JSON.parse(data)
+    } catch (e) {
+        console.error("Invalid Waterfalls SSE update event:", data, e)
+        return null
+    }
+}
+
 async function startWalletSync(reconnectAttempt = 0) {
     const wollet = getWollet()
     if (wollet == null) {
@@ -2500,13 +2517,24 @@ async function startWalletSync(reconnectAttempt = 0) {
         console.log("Waterfalls SSE subscription opened")
     }
 
-    source.addEventListener("changed", async (event) => {
-        if (handle.stopped || handle.syncing || getWalletSync() !== handle) {
+    source.addEventListener("update", async (event) => {
+        if (handle.stopped || getWalletSync() !== handle) {
+            return
+        }
+
+        const data = (event as MessageEvent).data
+        const updateEvent = parseWaterfallsSubscriptionEvent(data)
+        if (updateEvent?.type === "tip") {
+            console.log("Waterfalls SSE tip event:", data)
+            return
+        }
+
+        if (handle.syncing) {
             return
         }
 
         handle.syncing = true
-        console.log("Waterfalls SSE changed event:", (event as MessageEvent).data)
+        console.log(`Waterfalls SSE ${updateEvent?.type ?? "update"} event:`, data)
         await fullScanAndApply(wollet, getScanState(), true)
         window.dispatchEvent(new CustomEvent("reload-page"))
 
