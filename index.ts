@@ -2474,6 +2474,7 @@ type WaterfallsSubscriptionEvent = {
     tip?: {
         height?: number;
         block_hash?: string;
+        timestamp?: number;
     };
 };
 
