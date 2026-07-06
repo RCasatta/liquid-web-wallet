@@ -39,7 +39,7 @@ jsQRScript.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 document.head.appendChild(jsQRScript);
 
 // Network setup (remains global as it's a configuration not state)
-const network: lwk.Network = lwk.Network.regtestDefault()
+const network: lwk.Network = lwk.Network.mainnet()
 
 // Reference to the main application container
 const app: HTMLElement | null = document.getElementById('app')
@@ -49,6 +49,8 @@ const AMP2_DATA_KEY_PREFIX: string = "amp2_data_v2_"
 const AMP2_REGTEST_URL = "http://127.0.0.1:5000"
 const AMP2_TESTNET_FINGERPRINT = "3d970d04"
 const AMP2_REGTEST_FINGERPRINT = "18778d8c"
+let boltzSessionPromise: Promise<lwk.BoltzSession | null> | null = null
+let boltzSessionGeneration = 0
 
 /// Re-enables initially disabled buttons, and add listener to buttons on the first page
 /// First page doesn't use components because we want to be loaded before the wasm is loaded, which takes time
@@ -2897,6 +2899,26 @@ class LightningPage extends HTMLElement {
         this.receiveForm.addEventListener("submit", this.handleReceiveInvoice.bind(this));
         this.sendForm.addEventListener("submit", this.handleSendPayment.bind(this));
         this.downloadRescueButton.addEventListener("click", this.handleDownloadRescue.bind(this));
+
+        this.prepareBoltzSession();
+    }
+
+    prepareBoltzSession = async () => {
+        setBusyDisabled(this.invoiceButton, true);
+        setBusyDisabled(this.sendButton, true);
+        setBusyDisabled(this.downloadRescueButton, true);
+
+        try {
+            await waitForBoltzSession();
+        } catch (e) {
+            notifyError("Boltz session failed", e.toString(), {
+                id: "boltz-session-error"
+            });
+        } finally {
+            setBusyDisabled(this.invoiceButton, false);
+            setBusyDisabled(this.sendButton, false);
+            setBusyDisabled(this.downloadRescueButton, false);
+        }
     }
 
     handleReceiveInvoice = async (e: Event) => {
@@ -2910,7 +2932,8 @@ class LightningPage extends HTMLElement {
             const description = this.descriptionInput.value;
             const claimAddress = getWollet().address(null).address();
             console.log("asking invoice");
-            const invoice = await getBoltzSession().invoice(amount, description, claimAddress);
+            const boltzSession = await waitForBoltzSession();
+            const invoice = await boltzSession.invoice(amount, description, claimAddress);
 
             saveSwap(invoice);
 
@@ -2956,7 +2979,8 @@ class LightningPage extends HTMLElement {
             let pset: lwk.Pset;
 
             try {
-                const swap = await getBoltzSession().preparePay(payment, refundAddress);
+                const boltzSession = await waitForBoltzSession();
+                const swap = await boltzSession.preparePay(payment, refundAddress);
 
                 saveSwap(swap);
 
@@ -3004,10 +3028,12 @@ class LightningPage extends HTMLElement {
         }
     }
 
-    handleDownloadRescue = (e: Event) => {
+    handleDownloadRescue = async (e: Event) => {
         e.preventDefault();
         try {
-            const rescueFile = getBoltzSession().rescueFile();
+            setBusyDisabled(this.downloadRescueButton, true);
+            const boltzSession = await waitForBoltzSession();
+            const rescueFile = boltzSession.rescueFile();
             const blob = new Blob([rescueFile], { type: "text/plain" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
@@ -3022,6 +3048,8 @@ class LightningPage extends HTMLElement {
             notifyError("Error downloading rescue file", e.toString(), {
                 id: "lightning-rescue-error"
             });
+        } finally {
+            setBusyDisabled(this.downloadRescueButton, false);
         }
     }
 }
@@ -3136,18 +3164,56 @@ function mapToTable(map, add_icon = false) {
 async function activateWollet(wolletLocal: lwk.Wollet, selected: string | null): Promise<void> {
     stopWalletSync()
     setWollet(wolletLocal)
-
-    const boltzSessionPromise = createBoltzSession(wolletLocal)
+    startBoltzSession(wolletLocal)
 
     setScanRunning(false)
     loadPersisted(wolletLocal)
     const fullScanPromise = fullScanAndApply(wolletLocal, getScanState())
 
-    setBoltzSession(await boltzSessionPromise)
     setWolletSelected(selected)
 
     await fullScanPromise
     startWalletSync()
+}
+
+function startBoltzSession(wolletLocal: lwk.Wollet): Promise<lwk.BoltzSession | null> {
+    const generation = ++boltzSessionGeneration
+    setBoltzSession(null)
+
+    boltzSessionPromise = createBoltzSession(wolletLocal).catch((e) => {
+        console.error("Error initializing Boltz session:", e)
+        return null
+    })
+
+    boltzSessionPromise.then((session) => {
+        if (generation === boltzSessionGeneration && getWollet() === wolletLocal) {
+            setBoltzSession(session)
+        }
+    })
+
+    return boltzSessionPromise
+}
+
+async function waitForBoltzSession(): Promise<lwk.BoltzSession> {
+    const currentSession = getBoltzSession()
+    if (currentSession != null) {
+        return currentSession
+    }
+
+    if (boltzSessionPromise == null) {
+        const wollet = getWollet()
+        if (wollet == null) {
+            throw new Error("No wallet available for Boltz session")
+        }
+        startBoltzSession(wollet)
+    }
+
+    const session = await boltzSessionPromise
+    if (session == null) {
+        throw new Error("Boltz session is not available")
+    }
+
+    return session
 }
 
 async function createBoltzSession(wolletLocal: lwk.Wollet): Promise<lwk.BoltzSession | null> {
