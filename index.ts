@@ -5,7 +5,7 @@ import {
     getLedger, setLedger,
     getXpub, getMultiWallets,
     getWollet, setWollet, getWolletSelected, setWolletSelected,
-    getScanState, setScanRunning, getWalletSync, setWalletSync,
+    getScanState, setScanRunning, getWalletSync, setWalletSync, getWalletTip, setWalletTip,
     getSwSigner, setSwSigner, getPset, setPset, getContract, setContract,
     getRegistry, setRegistry,
     getDevMode, setDevMode,
@@ -939,6 +939,7 @@ class WalletBalance extends HTMLElement {
         // Subscribe to scan state changes instead of using document events
         this.subscriptions.push(
             subscribe('scan-update', this.render),
+            subscribe('wallet-tip-changed', this.render),
             subscribe('registry-fetched', this.render),
             subscribe('persist-loaded', this.render),
         );
@@ -1015,7 +1016,8 @@ class WalletTransactions extends HTMLElement {
 
         // Subscribe to scan state changes instead of using document events
         this.subscriptions.push(
-            subscribe('scan-state-changed', this.render)
+            subscribe('scan-state-changed', this.render),
+            subscribe('wallet-tip-changed', this.render),
         );
 
         this.render()
@@ -2478,6 +2480,17 @@ type WaterfallsSubscriptionEvent = {
     };
 };
 
+function formatWaterfallsSubscriptionTip(tip: WaterfallsSubscriptionEvent["tip"]): string {
+    if (tip == null) {
+        return "unknown tip"
+    }
+
+    const height = tip.height ?? "unknown height"
+    const blockHash = tip.block_hash ?? "unknown block hash"
+    const timestamp = tip.timestamp ?? "unknown timestamp"
+    return `height=${height}, block_hash=${blockHash}, timestamp=${timestamp}`
+}
+
 function parseWaterfallsSubscriptionEvent(data: string): WaterfallsSubscriptionEvent | null {
     try {
         return JSON.parse(data)
@@ -2526,7 +2539,8 @@ async function startWalletSync(reconnectAttempt = 0) {
         const data = (event as MessageEvent).data
         const updateEvent = parseWaterfallsSubscriptionEvent(data)
         if (updateEvent?.type === "tip") {
-            console.log("Waterfalls SSE tip event:", data)
+            setWalletTip(updateEvent.tip ?? null)
+            console.log(`Waterfalls SSE tip event: ${formatWaterfallsSubscriptionTip(updateEvent.tip)}`)
             return
         }
 
@@ -3364,8 +3378,17 @@ function createMessage(message, invalid, helper) {
 
 function updatedAt(wolletLocal, node) {
     if (node) {
-        const unix_ts = wolletLocal.tip().timestamp()
-        node.innerText = "updated at " + new Date(unix_ts * 1000).toLocaleString()
+        const wolletTip = wolletLocal.tip()
+        const walletTip = getWalletTip()
+        let unix_ts = wolletTip.timestamp()
+
+        if (walletTip?.timestamp != null && (unix_ts == null || walletTip.timestamp > unix_ts)) {
+            unix_ts = walletTip.timestamp
+        }
+
+        if (unix_ts != null) {
+            node.innerText = "updated at " + new Date(unix_ts * 1000).toLocaleString()
+        }
     }
 }
 

@@ -22,6 +22,27 @@ test.describe('Wallet Functionality', () => {
         await expect(notification(page, text)).toBeVisible(options);
     }
 
+    function tipEventCount(consoleMessages: string[]) {
+        return consoleMessages.filter((message) => message.includes('Waterfalls SSE tip event:')).length;
+    }
+
+    async function waitForConsoleMessage(consoleMessages: string[], text: string, timeout = 15000) {
+        await expect.poll(() => consoleMessages.some((message) => message.includes(text)), { timeout }).toBe(true);
+    }
+
+    function parseUpdatedAtTimestamp(text: string | null) {
+        const match = text?.match(/^updated at (.+)$/);
+        expect(match, `Expected updated at timestamp, got: ${text}`).not.toBeNull();
+
+        const timestamp = Date.parse(match![1]);
+        expect(Number.isNaN(timestamp), `Expected parseable updated at date, got: ${match![1]}`).toBe(false);
+        return timestamp;
+    }
+
+    async function updatedAtTimestamp(locator) {
+        return parseUpdatedAtTimestamp(await locator.textContent());
+    }
+
     async function loadWallet(page) {
         // Open options section if it is not already open
         const options = page.locator('main details').first();
@@ -348,6 +369,34 @@ test.describe('Wallet Functionality', () => {
         const balanceContent = await page.locator('wallet-balance').textContent();
         expect(balanceContent).toContain('rLBTC');
         expect(balanceContent).not.toContain('0.00000000');
+    });
+
+    test('should refresh updated at from tip subscription events for funded abandon wallet', async ({ page }) => {
+        const consoleMessages: string[] = [];
+        page.on('console', (message) => consoleMessages.push(message.text()));
+
+        await loadWallet(page);
+        await waitForConsoleMessage(consoleMessages, 'Waterfalls SSE subscription opened');
+
+        const balanceContent = await page.locator('wallet-balance').textContent();
+        expect(balanceContent).toContain('rLBTC');
+        expect(balanceContent).not.toContain('0.00000000');
+
+        const balanceUpdatedAt = page.locator('wallet-balance hgroup p');
+        const initialBalanceUpdatedAt = await updatedAtTimestamp(balanceUpdatedAt);
+        const initialTipEventCount = tipEventCount(consoleMessages);
+
+        await expect.poll(() => tipEventCount(consoleMessages), { timeout: 15000 }).toBeGreaterThan(initialTipEventCount);
+        await expect.poll(async () => await updatedAtTimestamp(balanceUpdatedAt), { timeout: 5000 }).toBeGreaterThan(initialBalanceUpdatedAt);
+
+        await openTransactionsPage(page);
+
+        const transactionsUpdatedAt = page.locator('wallet-transactions hgroup p');
+        const initialTransactionsUpdatedAt = await updatedAtTimestamp(transactionsUpdatedAt);
+        const transactionsTipEventCount = tipEventCount(consoleMessages);
+
+        await expect.poll(() => tipEventCount(consoleMessages), { timeout: 15000 }).toBeGreaterThan(transactionsTipEventCount);
+        await expect.poll(async () => await updatedAtTimestamp(transactionsUpdatedAt), { timeout: 5000 }).toBeGreaterThan(initialTransactionsUpdatedAt);
     });
 
     test('should navigate to transactions page', async ({ page }) => {

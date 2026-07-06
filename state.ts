@@ -2,6 +2,12 @@
 
 import * as lwk from "lwk_wasm"
 
+export interface WalletTip {
+    height?: number;
+    block_hash?: string;
+    timestamp?: number;
+}
+
 /**
  * Private state object containing all application state
  */
@@ -17,6 +23,7 @@ const _state: {
     swSigner: lwk.Signer | null;
     scan: { running: boolean };
     walletSync: any;
+    walletTip: WalletTip | null;
     pset: lwk.Pset | null;
     contract: lwk.RegistryPost | null;
     registry: lwk.Registry | null;
@@ -51,6 +58,7 @@ const _state: {
     // Scanning and subscription state
     scan: { running: false },
     walletSync: null, // Active wallet SSE subscription handle
+    walletTip: null, // Latest tip observed from wallet sync without a full scan
 
     // Transaction state
     pset: null, // Current PSET being worked on
@@ -250,6 +258,7 @@ export function getWollet(): lwk.Wollet | null {
 
 export function setWollet(wollet: lwk.Wollet | null): lwk.Wollet | null {
     _state.wollet = wollet;
+    _state.walletTip = null;
     publish('wollet-changed', wollet);
     return _state.wollet;
 }
@@ -282,6 +291,16 @@ export function getWalletSync(): any {
 export function setWalletSync(handle: any): any {
     _state.walletSync = handle;
     return _state.walletSync;
+}
+
+export function getWalletTip(): WalletTip | null {
+    return _state.walletTip;
+}
+
+export function setWalletTip(tip: WalletTip | null): WalletTip | null {
+    _state.walletTip = tip;
+    publish('wallet-tip-changed', tip);
+    return _state.walletTip;
 }
 
 // Jade state management
