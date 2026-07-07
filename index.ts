@@ -2554,6 +2554,9 @@ async function startWalletSync(reconnectAttempt = 0) {
         window.dispatchEvent(new CustomEvent("reload-page"))
 
         if (!handle.stopped && getWalletSync() === handle) {
+            // Waterfalls subscriptions watch the range known when the SSE stream is opened.
+            // The scan above may increase the descriptor's highest used index, so reopen the
+            // stream to subscribe to the expanded max_used_index + GAP_LIMIT address range.
             startWalletSync(0)
         }
     })
