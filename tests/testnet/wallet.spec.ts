@@ -33,6 +33,13 @@ test.describe('Wallet Functionality', () => {
     }
 
     test('should show wallet navigation options', async ({ page }) => {
+        const consoleErrors: string[] = [];
+        page.on('console', msg => {
+            if (msg.type() === 'error') {
+                consoleErrors.push(msg.text());
+            }
+        });
+
         await loadWallet(page);
 
         // Check navigation links
@@ -41,6 +48,8 @@ test.describe('Wallet Functionality', () => {
         await expect(page.getByRole('link', { name: 'Create' })).toBeVisible();
         await expect(page.getByRole('link', { name: 'Sign' })).toBeVisible();
         await expect(page.getByRole('link', { name: 'Receive' })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Lightning' })).toBeHidden();
+        expect(consoleErrors.filter(message => message.toLowerCase().includes('boltz'))).toEqual([]);
     });
 
     test('should register AMP2 wallet', async ({ page }) => {

@@ -3207,7 +3207,11 @@ function mapToTable(map, add_icon = false) {
 async function activateWollet(wolletLocal: lwk.Wollet, selected: string | null): Promise<void> {
     stopWalletSync()
     setWollet(wolletLocal)
-    startBoltzSession(wolletLocal)
+    if (isBoltzSessionAvailable()) {
+        startBoltzSession(wolletLocal)
+    } else {
+        resetBoltzSession()
+    }
 
     setScanRunning(false)
     loadPersisted(wolletLocal)
@@ -3219,7 +3223,22 @@ async function activateWollet(wolletLocal: lwk.Wollet, selected: string | null):
     startWalletSync()
 }
 
+function isBoltzSessionAvailable(): boolean {
+    return !network.isTestnet()
+}
+
+function resetBoltzSession(): void {
+    boltzSessionGeneration++
+    boltzSessionPromise = null
+    setBoltzSession(null)
+}
+
 function startBoltzSession(wolletLocal: lwk.Wollet): Promise<lwk.BoltzSession | null> {
+    if (!isBoltzSessionAvailable()) {
+        resetBoltzSession()
+        return Promise.resolve(null)
+    }
+
     const generation = ++boltzSessionGeneration
     setBoltzSession(null)
 
@@ -3238,6 +3257,10 @@ function startBoltzSession(wolletLocal: lwk.Wollet): Promise<lwk.BoltzSession | 
 }
 
 async function waitForBoltzSession(): Promise<lwk.BoltzSession> {
+    if (!isBoltzSessionAvailable()) {
+        throw new Error("Boltz session is not available on testnet")
+    }
+
     const currentSession = getBoltzSession()
     if (currentSession != null) {
         return currentSession
