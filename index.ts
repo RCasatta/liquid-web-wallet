@@ -1274,13 +1274,13 @@ class CreateTransaction extends HTMLElement {
 
     constructor() {
         super();
-        const selects = this.querySelectorAll("select") as NodeListOf<HTMLSelectElement>;
+        const selects = this.querySelectorAll<HTMLSelectElement>("select");
         this.selectAssetInRecipient = selects[0];
         this.div = this.querySelector("div") as HTMLElement;
         this.createButton = this.querySelector("button.create") as HTMLButtonElement;
         if (this.createButton) this.createButton.addEventListener("click", this.handleCreate.bind(this));
         this.busy = this.querySelector("article")
-        const inputs = this.querySelectorAll("input") as NodeListOf<HTMLInputElement>;
+        const inputs = this.querySelectorAll<HTMLInputElement>("input");
         this.addressInput = inputs[0];
         this.satoshisInput = inputs[1];
         this.addRecipient = inputs[2];
@@ -1870,7 +1870,7 @@ class CreateTransaction extends HTMLElement {
         const content = this.template.content.cloneNode(true) as DocumentFragment
 
         const el = content.querySelector("fieldset") as HTMLElement
-        const inputs = content.querySelectorAll("input") as NodeListOf<HTMLInputElement>
+        const inputs = content.querySelectorAll<HTMLInputElement>("input")
         inputs[0].value = "BURN"
         inputs[1].value = this.amountBurn.value
         inputs[2].value = mapAssetTicker(this.selectAssetInBurn.value) // value seen
@@ -1937,7 +1937,7 @@ class CreateTransaction extends HTMLElement {
         const content = this.template.content.cloneNode(true) as DocumentFragment
 
         const el = content.querySelector("fieldset") as HTMLElement
-        const inputs = content.querySelectorAll("input") as NodeListOf<HTMLInputElement>
+        const inputs = content.querySelectorAll<HTMLInputElement>("input")
         inputs[0].value = this.addressInput.value
         inputs[1].value = this.satoshisInput.value
         inputs[2].value = mapAssetTicker(this.selectAssetInRecipient.value) // value seen
@@ -2791,15 +2791,15 @@ class WalletAmp2 extends HTMLElement {
 
 
 class WalletXpubs extends HTMLElement {
-    textareas!: NodeListOf<HTMLTextAreaElement>;
-    labels!: NodeListOf<HTMLLabelElement>;
+    textareas!: HTMLTextAreaElement[];
+    labels!: HTMLLabelElement[];
     bips!: lwk.Bip[];
 
     constructor() {
         super()
 
-        this.textareas = this.querySelectorAll("textarea")
-        this.labels = this.querySelectorAll("label")
+        this.textareas = Array.from(this.querySelectorAll<HTMLTextAreaElement>("textarea"))
+        this.labels = Array.from(this.querySelectorAll<HTMLLabelElement>("label"))
         this.bips = [lwk.Bip.bip49(), lwk.Bip.bip84(), lwk.Bip.bip87()];
 
         if (jadeOrSwSigner() == null) {
@@ -2920,7 +2920,7 @@ class RegisterWallet extends HTMLElement {
             inputsValid = false
         }
 
-        const participants = Array.from(this.querySelectorAll("input.participant") as NodeListOf<HTMLInputElement>).map((s) => s.value)
+        const participants = Array.from(this.querySelectorAll<HTMLInputElement>("input.participant")).map((s) => s.value)
         if (participants.length > 0) {
             this.keyoriginXpub.removeAttribute("aria-invalid")
         } else {
@@ -2962,7 +2962,7 @@ class RegisterWallet extends HTMLElement {
     addValidParticipant = (keyoriginXpub) => {
         const content = this.templatePart.content.cloneNode(true) as DocumentFragment
         const el = content.querySelector("fieldset") as HTMLElement
-        const inputs = content.querySelectorAll("input") as NodeListOf<HTMLInputElement>
+        const inputs = content.querySelectorAll<HTMLInputElement>("input")
         inputs[0].value = keyoriginXpub
         inputs[1].addEventListener("click", (_e) => {
             this.listDiv.removeChild(el)
