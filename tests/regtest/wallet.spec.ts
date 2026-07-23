@@ -399,6 +399,30 @@ test.describe('Wallet Functionality', () => {
         await expect.poll(async () => await updatedAtTimestamp(transactionsUpdatedAt), { timeout: 5000 }).toBeGreaterThan(initialTransactionsUpdatedAt);
     });
 
+    test('should ignore a subscription rejected with TooManyScripts', async ({ page }) => {
+        let subscriptionRequests = 0;
+        await page.route('**/v1/subscribe?**', async (route) => {
+            subscriptionRequests++;
+            await route.fulfill({
+                status: 400,
+                contentType: 'text/plain',
+                body: 'TooManyScripts',
+            });
+        });
+
+        await loadWallet(page);
+
+        const balanceContent = await page.locator('wallet-balance').textContent();
+        expect(balanceContent).toContain('rLBTC');
+        expect(balanceContent).not.toContain('0.00000000');
+        await expectNotification(page, 'This wallet is not subscribed to new events.');
+        await expect.poll(() => subscriptionRequests).toBe(1);
+
+        // The old behavior retried after one second, including another full scan.
+        await page.waitForTimeout(2000);
+        expect(subscriptionRequests).toBe(1);
+    });
+
     test('should navigate to transactions page', async ({ page }) => {
         await loadWallet(page);
 

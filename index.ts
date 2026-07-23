@@ -56,7 +56,7 @@ jsQRScript.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
 document.head.appendChild(jsQRScript);
 
 // Network setup (remains global as it's a configuration not state)
-const network: lwk.Network = lwk.Network.regtestDefault()
+const network: lwk.Network = lwk.Network.testnet()
 
 // Reference to the main application container
 const app: HTMLElement | null = document.getElementById('app')
@@ -2548,6 +2548,7 @@ type WalletSyncHandle = {
     source: EventSource;
     reconnectTimer: ReturnType<typeof setTimeout> | null;
     stopped: boolean;
+    opened: boolean;
     syncing: boolean;
     attempt: number;
 };
@@ -2601,6 +2602,7 @@ async function startWalletSync(reconnectAttempt = 0) {
         source,
         reconnectTimer: null,
         stopped: false,
+        opened: false,
         syncing: false,
         attempt: reconnectAttempt,
     }
@@ -2608,6 +2610,7 @@ async function startWalletSync(reconnectAttempt = 0) {
     setWalletSync(handle)
 
     source.onopen = () => {
+        handle.opened = true
         handle.attempt = 0
         console.log("Waterfalls SSE subscription opened")
     }
@@ -2644,6 +2647,24 @@ async function startWalletSync(reconnectAttempt = 0) {
 
     source.onerror = (event) => {
         if (handle.stopped || handle.reconnectTimer != null || getWalletSync() !== handle) {
+            return
+        }
+
+        // Large descriptors can be rejected with TooManyScripts before the stream opens.
+        // The wallet was already fully scanned on login, so continue without live updates.
+        if (!handle.opened) {
+            handle.stopped = true
+            source.close()
+            setWalletSync(null)
+            dismissWalletNotification("wallet-subscription-unavailable")
+            notifyWarning(
+                "Live wallet updates unavailable",
+                "This wallet is not subscribed to new events. It will be synced again when you log in.",
+                {
+                    id: "wallet-subscription-unavailable",
+                    closable: true,
+                }
+            )
             return
         }
 
