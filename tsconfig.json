@@ -10,15 +10,13 @@
         "forceConsistentCasingInFileNames": true,
         "outDir": "./dist",
         "rootDir": "./",
-        "allowJs": true,
-        "checkJs": false,
+        "allowJs": false,
         "types": [
             "node"
         ]
     },
     "include": [
-        "*.ts",
-        "*.js"
+        "*.ts"
     ],
     "exclude": [
         "node_modules",
