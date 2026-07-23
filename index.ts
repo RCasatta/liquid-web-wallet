@@ -90,24 +90,25 @@ function createLocalStorageStore(prefix: string): JsStorage {
     }
 }
 
-function getLocalStorageStorePrefix(descriptor: lwk.WolletDescriptor): string {
+function getLocalStorageStorePrefix(descriptor: lwk.WolletDescriptor, utxoOnly: boolean): string {
     const dwid = new lwk.Wollet(network, descriptor).dwid()
-    const namespace = `${network.toString()}:${getUtxoOnly()}:${dwid}`
+    const namespace = `${network.toString()}:${utxoOnly}:${dwid}`
     return getStoragePrefix(namespace)
 }
 
 function buildStoredWollet(descriptor: lwk.WolletDescriptor): lwk.Wollet {
-    const prefix = getLocalStorageStorePrefix(descriptor)
+    const utxoOnly = getUtxoOnly()
+    const prefix = getLocalStorageStorePrefix(descriptor, utxoOnly)
     debugRemoteStore("build stored wollet", {
         dwid: new lwk.Wollet(network, descriptor).dwid(),
         prefix,
         network: network.toString(),
-        utxoOnly: getUtxoOnly(),
+        utxoOnly,
     })
     const updatesStore = createLocalStorageStore(prefix)
     const txsStore = createRemoteTxsStore(esploraBaseUrl(), prefix)
     const wollet = new lwk.WolletBuilder(network, descriptor)
-        .utxoOnly(getUtxoOnly())
+        .utxoOnly(utxoOnly)
         .withExperimentalStore(updatesStore)
         .withTxsStore(txsStore)
         .setEncryptionTxsStore(false)
