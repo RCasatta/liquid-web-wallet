@@ -34,9 +34,20 @@ import {
     JsStorage
 } from "./txs-store"
 
-// Type declaration for jsQR global function
+type JsQrResult = {
+    data: string;
+}
+
+// Type declaration for the jsQR browser global
 declare global {
-    function jsQR(imageData: Uint8ClampedArray, width: number, height: number, options?: any): any;
+    interface Window {
+        jsQR?: (
+            imageData: Uint8ClampedArray,
+            width: number,
+            height: number,
+            options?: { inversionAttempts?: string },
+        ) => JsQrResult | null;
+    }
 }
 
 // Import the jsQR library for QR code scanning
@@ -1375,8 +1386,6 @@ class CreateTransaction extends HTMLElement {
             liquidexTakerSection.hidden = false
         }
 
-        // Map forms
-        const liquidexForms = this.querySelectorAll("form")
         this.makerForm = liquidexMakerSection.querySelector("form")
         this.takerForm = liquidexTakerSection.querySelector("form")
 
@@ -1418,7 +1427,8 @@ class CreateTransaction extends HTMLElement {
             this.currentScanTarget = targetField;
 
             // Make sure jsQR is loaded
-            if (typeof jsQR !== 'function') {
+            const decodeQr = window.jsQR
+            if (typeof decodeQr !== 'function') {
                 dismissWalletNotification("create-qr-scan")
                 notifyWarning("QR code scanner is not ready yet", "Please try again in a moment.", {
                     id: "create-qr-scan"
@@ -1456,7 +1466,7 @@ class CreateTransaction extends HTMLElement {
                     canvasContext.drawImage(this.qrVideo, 0, 0, canvas.width, canvas.height);
 
                     const imageData = canvasContext.getImageData(0, 0, canvas.width, canvas.height);
-                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    const code = decodeQr(imageData.data, imageData.width, imageData.height, {
                         inversionAttempts: "dontInvert",
                     });
 
