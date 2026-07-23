@@ -426,6 +426,46 @@ test.describe('Wallet Functionality', () => {
         expect(storageSummary.rawTxKeys).toEqual([]);
     });
 
+    test('should restore funded wallet transactions through TxsStore on second login', async ({ page }) => {
+        const normalizedRows = async (selector: string) => {
+            const rows = await page.locator(selector).allTextContents();
+            return rows.map((row) => row.replace(/\s+/g, ' ').trim()).sort();
+        };
+
+        await loadWallet(page);
+        const initialBalanceRows = await normalizedRows('wallet-balance table tr');
+
+        await openTransactionsPage(page);
+        const initialTransactionCount = await getTransactionCountFromHeading(page);
+        const initialTransactionRows = await normalizedRows('wallet-transactions table tr');
+        expect(initialTransactionCount).toBeGreaterThan(0);
+        expect(initialTransactionRows.length).toBeGreaterThan(0);
+
+        await page.getByRole('link', { name: 'Disconnect' }).click();
+        await page.waitForLoadState('networkidle');
+
+        const rawTransactionUrls = new Set<string>();
+        page.on('request', (request) => {
+            const requestUrl = new URL(request.url());
+            if (/\/tx\/[0-9a-f]{64}\/raw$/.test(requestUrl.pathname)) {
+                rawTransactionUrls.add(request.url());
+            }
+        });
+
+        await loadWallet(page);
+        expect(await normalizedRows('wallet-balance table tr')).toEqual(initialBalanceRows);
+
+        await openTransactionsPage(page);
+        expect(await getTransactionCountFromHeading(page)).toBe(initialTransactionCount);
+        expect(await normalizedRows('wallet-transactions table tr')).toEqual(initialTransactionRows);
+        expect(rawTransactionUrls.size).toBeGreaterThan(0);
+
+        const rawTxKeys = await page.evaluate(() =>
+            Object.keys(localStorage).filter((key) => key.includes(':wollet:tx:'))
+        );
+        expect(rawTxKeys).toEqual([]);
+    });
+
     test('should reload the same wallet from a saved random mnemonic', async ({ page }) => {
         await page.getByRole('button', { name: 'Options' }).click();
         await page.getByRole('button', { name: 'Random mnemonic' }).click();
