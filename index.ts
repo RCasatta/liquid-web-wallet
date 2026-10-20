@@ -903,6 +903,22 @@ class AddressView extends HTMLElement {
         this.addressQR.hidden = false
     }
 
+    hideAddress() {
+        this.addressCode.textContent = ""
+        this.addressText.hidden = true
+        this.addressLink.removeAttribute("href")
+        this.addressImage.removeAttribute("src")
+        this.addressQR.hidden = true
+    }
+
+    // Throws (handled by handleShow) if the hardware wallet returned a different address
+    checkDeviceAddress(device: string, deviceAddress: string, localAddress: string) {
+        if (deviceAddress !== localAddress) {
+            this.hideAddress()
+            throw new Error(`Address mismatch: ${device} returned ${deviceAddress} but the wallet computed ${localAddress}. Do not use this address.`)
+        }
+    }
+
     handleShow = async (_e) => {
         try {
             // Set button to busy state at the beginning
@@ -939,7 +955,7 @@ class AddressView extends HTMLElement {
         let ledger = getLedger()
         let addressLedger = await ledger.getReceiveAddressSingle(index)
 
-        console.assert(addressLedger == address.address().toString(), "local and ledger address are different!")
+        this.checkDeviceAddress("Ledger", addressLedger, address.address().toString())
 
         dismissWalletNotification("receive-address-prompt")
 
@@ -975,7 +991,7 @@ class AddressView extends HTMLElement {
             jadeAddress = await getJade().getReceiveAddressMulti(getWolletSelected(), new Uint32Array([0, index]))
         }
 
-        console.assert(jadeAddress == address.address().toString(), "local and jade address are different!")
+        this.checkDeviceAddress("Jade", jadeAddress, address.address().toString())
         dismissWalletNotification("receive-address-prompt")
     }
 
