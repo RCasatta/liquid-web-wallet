@@ -983,12 +983,13 @@ class AddressView extends HTMLElement {
         var jadeAddress
         if (getWolletSelected() === "Wpkh" || getWolletSelected() === "ShWpkh") {
             // FIXME it breakes if someone call his registered wallet "Wpkh" or "ShWpkh"
-            let fullPath = getWollet().addressFullPath(index)
+            let fullPath = new lwk.DerivationPath(getWollet().addressFullPathStr(index))
             let variant = lwk.Singlesig.from(getWolletSelected())
-            jadeAddress = await getJade().getReceiveAddressSingle(variant, fullPath)
+            jadeAddress = await getJade().getReceiveAddressSingleWithPath(variant, fullPath)
         } else {
             // 0 means external chain
-            jadeAddress = await getJade().getReceiveAddressMulti(getWolletSelected(), new Uint32Array([0, index]))
+            const path = lwk.DerivationPath.fromVec(new Uint32Array([0, index]))
+            jadeAddress = await getJade().getReceiveAddressMultiWithPath(getWolletSelected(), path)
         }
 
         this.checkDeviceAddress("Jade", jadeAddress, address.address().toString())
