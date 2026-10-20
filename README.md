@@ -16,14 +16,19 @@ Based on [LWK wasm](https://github.com/Blockstream/lwk/tree/master/lwk_wasm)
 Requirements:
 
 * npm
-* wasm-pack
 
 With nix install those with `nix-shell`
 
-Execute once (and every time to update lwk_wasm dep):
+Execute once:
 
 ```shell
 $ npm install
+```
+
+`lwk_wasm` is pinned to a release from npm. To develop against a local [LWK](https://github.com/Blockstream/lwk) build (requires `wasm-pack`), build `lwk_wasm/pkg` in a sibling `lwk` checkout and link it without committing the change to `package.json`/`package-lock.json`:
+
+```shell
+$ npm install --no-save ../lwk/lwk_wasm/pkg
 ```
 
 Then
