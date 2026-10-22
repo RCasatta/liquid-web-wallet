@@ -679,8 +679,7 @@ class MyFooter extends HTMLElement {
 
         footer += `<span> | </span><span>${network}</span>`
         if (getJade() != null) {
-            const jadeIdentifier = (getXpub() as any).fingerprint()
-            footer += `<span> | </span><span><code>${jadeIdentifier}</code></span>`
+            footer += `<span> | </span><span><code class="jade-fingerprint"></code></span>`
         }
         if (getWolletSelected() != null) {
             footer += `<span> | </span><a href="#" id="wallet">Wallet</a>`
@@ -691,6 +690,10 @@ class MyFooter extends HTMLElement {
             footer += `<span> | </span><a href="/">Switch to Mainnet</a>`
         }
         this.footer.innerHTML = footer
+        const fingerprint = this.footer.querySelector(".jade-fingerprint")
+        if (fingerprint) {
+            fingerprint.textContent = (getXpub() as any).fingerprint()
+        }
         let id = this.querySelector("#wallet")
         if (id) {
             id.addEventListener("click", this.handleClick)
@@ -1185,9 +1188,13 @@ class WalletTransactions extends HTMLElement {
             let txid_truncated = txid_string.slice(0, 4) + "…" + txid_string.slice(-4)
 
             let txid = document.createElement("td")
-            txid.innerHTML = `
-                    <code><a href="${val.unblindedUrl(network.defaultExplorerUrl())}" target="_blank">${txid_truncated}</a></code>
-                `
+            const txidCode = document.createElement("code")
+            const txidLink = document.createElement("a")
+            txidLink.href = val.unblindedUrl(network.defaultExplorerUrl())
+            txidLink.target = "_blank"
+            txidLink.textContent = txid_truncated
+            txidCode.appendChild(txidLink)
+            txid.appendChild(txidCode)
             let txNetBalance = document.createElement("td")
 
             const balanceChanges = this.netBalanceChange(val)
@@ -1200,9 +1207,11 @@ class WalletTransactions extends HTMLElement {
             let heightCell = document.createElement("td")
 
             var timeAgo = (typeof val.timestamp() === 'undefined') ? "unconfirmed" : elapsedFrom(val.timestamp())
-            heightCell.innerHTML = `
-                <em data-placement="left" data-tooltip="${val.txType()} | Block ${val.height()}">${timeAgo}</em>
-            `
+            const heightEm = document.createElement("em")
+            heightEm.dataset.placement = "left"
+            heightEm.dataset.tooltip = `${val.txType()} | Block ${val.height()}`
+            heightEm.textContent = timeAgo
+            heightCell.appendChild(heightEm)
             heightCell.setAttribute("style", "text-align:right")
 
             newRow.appendChild(txid)
@@ -1629,7 +1638,7 @@ class CreateTransaction extends HTMLElement {
             setPset(reissuePsetWithContracts)
 
         } catch (e) {
-            this.messageReissuance.innerHTML = warning(e)
+            this.messageReissuance.replaceChildren(warning(e))
             return
         }
     }
@@ -1689,7 +1698,7 @@ class CreateTransaction extends HTMLElement {
             setContract(postedContract)
             setPset(pset)
         } catch (e) {
-            this.messageIssuance.innerHTML = warning(e)
+            this.messageIssuance.replaceChildren(warning(e))
             return
         }
     }
@@ -1796,13 +1805,13 @@ class CreateTransaction extends HTMLElement {
         try {
             const inputsEmpty = this.checkEmptynessRecipient(false)
             if (inputsEmpty.length == 0) {
-                this.messageCreate.innerHTML = warning("Click '+' to add the output")
+                this.messageCreate.replaceChildren(warning("Click '+' to add the output"))
                 return
             }
 
             const recipients = Array.from(this.querySelectorAll("fieldset.recipients"))
             if (recipients.length == 0) {
-                this.messageCreate.innerHTML = warning("Cannot create a transaction with no recipients")
+                this.messageCreate.replaceChildren(warning("Cannot create a transaction with no recipients"))
                 return
             }
 
@@ -1832,7 +1841,7 @@ class CreateTransaction extends HTMLElement {
             setPset(psetWithContracts)
 
         } catch (e) {
-            this.messageCreate.innerHTML = warning(e)
+            this.messageCreate.replaceChildren(warning(e))
             return
         } finally {
             setBusyDisabled(this.createButton, false)
@@ -1866,7 +1875,7 @@ class CreateTransaction extends HTMLElement {
 
         const inputsEmpty = this.checkEmptynessBurn(true)
         if (inputsEmpty.length > 0) {
-            this.messageBurn.innerHTML = warning(inputsEmpty.join(", ") + " cannot be empty")
+            this.messageBurn.replaceChildren(warning(inputsEmpty.join(", ") + " cannot be empty"))
             return
         }
 
@@ -1887,7 +1896,7 @@ class CreateTransaction extends HTMLElement {
         }
 
         if (inputsValid != "") {
-            this.messageBurn.innerHTML = warning(inputsValid)
+            this.messageBurn.replaceChildren(warning(inputsValid))
             return
         }
 
@@ -1925,7 +1934,7 @@ class CreateTransaction extends HTMLElement {
 
         const inputsEmpty = this.checkEmptynessRecipient(true)
         if (inputsEmpty.length > 0) {
-            this.message.innerHTML = warning(inputsEmpty.join(", ") + " cannot be empty")
+            this.message.replaceChildren(warning(inputsEmpty.join(", ") + " cannot be empty"))
             return
         }
 
@@ -1955,7 +1964,7 @@ class CreateTransaction extends HTMLElement {
         }
 
         if (inputsValid != "") {
-            this.message.innerHTML = warning(inputsValid)
+            this.message.replaceChildren(warning(inputsValid))
             return
         }
         // end other validations
@@ -3246,17 +3255,23 @@ function mapBalance(map) {
 }
 
 // We want number or hexes to be monospace
-function useCodeIfNecessary(value) {
+// Values may be registry tickers (issuer controlled): build nodes, never HTML.
+function useCodeIfNecessary(value): Node {
+    const code = document.createElement("code")
+    code.textContent = String(value)
     if (!isNaN(Number(value))) {
-        return `<code>${value}</code>`
+        return code
     } else {
         try {
             new lwk.AssetId(value)
             // Asset hex is 64 characters - wrap in div with word-break for line wrapping
             // while keeping it selectable as one unit
-            return `<div style="word-break: break-word"><code>${value}</code></div>`
+            const div = document.createElement("div")
+            div.setAttribute("style", "word-break: break-word")
+            div.appendChild(code)
+            return div
         } catch (_e) {
-            return value
+            return document.createTextNode(String(value))
         }
     }
 }
@@ -3313,12 +3328,12 @@ function mapToTable(map, add_icon = false) {
             }
 
             let asset = document.createElement("td")
-            asset.innerHTML = useCodeIfNecessary(mapAssetTicker(key))
+            asset.appendChild(useCodeIfNecessary(mapAssetTicker(key)))
             newRow.appendChild(asset)
 
             let secondCell = document.createElement("td")
             secondCell.setAttribute("style", "text-align:right")
-            secondCell.innerHTML = useCodeIfNecessary(val)
+            secondCell.appendChild(useCodeIfNecessary(val))
 
             newRow.appendChild(secondCell)
         })
@@ -3487,14 +3502,25 @@ function spawnCompletePay(swap: Completable): void {
     }, 0);
 }
 
-function createMessage(message, invalid, helper) {
+// Returns nodes (not an HTML string) so that messages, which often contain
+// error text or user input, are never parsed as HTML.
+function createMessage(message, invalid, helper): DocumentFragment {
+    const fragment = document.createDocumentFragment()
+    const input = document.createElement("input")
+    input.type = "text"
+    input.value = String(message)
+    input.setAttribute("aria-invalid", String(invalid))
+    input.readOnly = true
+    fragment.appendChild(input)
     if (helper) {
         const id = Math.random().toString()
-        return `<input type="text" value="${message}" aria-invalid="${invalid}" aria-describedby="${id}" readonly><small id="${id}">${helper}</small>`
-    } else {
-        return `<input type="text" value="${message}" aria-invalid="${invalid}" readonly>`
-
+        input.setAttribute("aria-describedby", id)
+        const small = document.createElement("small")
+        small.id = id
+        small.textContent = helper
+        fragment.appendChild(small)
     }
+    return fragment
 }
 
 function updatedAt(wolletLocal, node) {
