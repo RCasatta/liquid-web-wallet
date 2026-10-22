@@ -455,13 +455,16 @@ test.describe('Wallet Functionality', () => {
             const rows = await page.locator(selector).allTextContents();
             return rows.map((row) => row.replace(/\s+/g, ' ').trim()).sort();
         };
+        // Drop the elapsed time ("50 seconds ago", "now"), it changes between the two logins
+        const transactionRows = async () =>
+            (await normalizedRows('wallet-transactions table tr')).map((row) => row.replace(/ (\d+ \w+ ago|now)$/, ''));
 
         await loadWallet(page);
         const initialBalanceRows = await normalizedRows('wallet-balance table tr');
 
         await openTransactionsPage(page);
         const initialTransactionCount = await getTransactionCountFromHeading(page);
-        const initialTransactionRows = await normalizedRows('wallet-transactions table tr');
+        const initialTransactionRows = await transactionRows();
         expect(initialTransactionCount).toBeGreaterThan(0);
         expect(initialTransactionRows.length).toBeGreaterThan(0);
 
@@ -481,7 +484,7 @@ test.describe('Wallet Functionality', () => {
 
         await openTransactionsPage(page);
         expect(await getTransactionCountFromHeading(page)).toBe(initialTransactionCount);
-        expect(await normalizedRows('wallet-transactions table tr')).toEqual(initialTransactionRows);
+        expect(await transactionRows()).toEqual(initialTransactionRows);
         expect(rawTransactionUrls.size).toBeGreaterThan(0);
 
         const rawTxKeys = await page.evaluate(() =>
