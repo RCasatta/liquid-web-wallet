@@ -1,5 +1,15 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// Use system chromium on NixOS. Drop LD_LIBRARY_PATH from its environment:
+// the Nix chromium wrapper sets up its own libraries, and an inherited path to
+// libraries built against a different glibc prevents it from starting.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const { LD_LIBRARY_PATH, ...chromiumEnv } = process.env;
+const launchOptions = {
+    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+    env: chromiumEnv,
+};
+
 export default defineConfig({
     testDir: './tests',
     fullyParallel: true,
@@ -19,10 +29,7 @@ export default defineConfig({
             testDir: './tests/regtest',
             use: {
                 ...devices['Desktop Chrome'],
-                // Use system chromium on NixOS
-                launchOptions: {
-                    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
-                },
+                launchOptions,
             },
         },
         {
@@ -30,10 +37,7 @@ export default defineConfig({
             testDir: './tests/testnet',
             use: {
                 ...devices['Desktop Chrome'],
-                // Use system chromium on NixOS
-                launchOptions: {
-                    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
-                },
+                launchOptions,
             },
         },
         {
@@ -42,10 +46,7 @@ export default defineConfig({
             use: {
                 ...devices['Desktop Chrome'],
                 baseURL: 'http://localhost:8383',
-                // Use system chromium on NixOS
-                launchOptions: {
-                    executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
-                },
+                launchOptions,
             },
         },
     ],
