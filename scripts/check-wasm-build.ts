@@ -8,9 +8,10 @@
 const fs = require('fs');
 const path = require('path');
 
-// Path to the lwk_wasm package
+// Path to the installed lwk_wasm package (the one webpack bundles).
+// If a local build was linked with `npm install --no-save ../lwk/lwk_wasm/pkg`,
+// this is a symlink to it and gets resolved below.
 const packagePath = path.resolve(__dirname, '../node_modules/lwk_wasm');
-const localPath = path.resolve(__dirname, '../../lwk/lwk_wasm/pkg');
 
 // Function to check if the build is a debug build based on file size
 function isDebugBuild(directoryPath) {
@@ -44,19 +45,12 @@ function isDebugBuild(directoryPath) {
 
 // Main function
 function main() {
-    let directoryToCheck;
-
-    // Determine which path to check
-    if (fs.existsSync(localPath)) {
-        directoryToCheck = localPath;
-        console.log('Checking local lwk_wasm package at:', localPath);
-    } else if (fs.existsSync(packagePath)) {
-        directoryToCheck = packagePath;
-        console.log('Checking installed lwk_wasm package at:', packagePath);
-    } else {
-        console.error('Error: Could not find lwk_wasm package');
+    if (!fs.existsSync(packagePath)) {
+        console.error('Error: Could not find installed lwk_wasm package at', packagePath);
         process.exit(1);
     }
+    const directoryToCheck = fs.realpathSync(packagePath);
+    console.log('Checking installed lwk_wasm package at:', directoryToCheck);
 
     // Check if it's a debug build
     if (isDebugBuild(directoryToCheck)) {
