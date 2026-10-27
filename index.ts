@@ -74,6 +74,8 @@ const AMP2_DATA_KEY_PREFIX: string = "amp2_data_v2_"
 const AMP2_REGTEST_URL = "http://127.0.0.1:5000"
 const AMP2_TESTNET_FINGERPRINT = "3d970d04"
 const AMP2_REGTEST_FINGERPRINT = "18778d8c"
+// Lightning (Boltz) is temporarily disabled because Boltz is not working at the moment
+const LIGHTNING_ENABLED = false
 let boltzSessionPromise: Promise<lwk.BoltzSession | null> | null = null
 let boltzSessionGeneration = 0
 const WOLLET_STORE_PREFIX: string = "wollet-store-v2:"
@@ -807,7 +809,7 @@ class MyNav extends HTMLElement {
 
     render = async (_e?: Event) => {
         if (getWolletSelected() != null) {
-            const lightningLink = network.isTestnet()
+            const lightningLink = !isBoltzSessionAvailable()
                 ? ''
                 : `<a href="#" id="lightning-page">Lightning</a> |`;
             this.innerHTML = `
@@ -3369,7 +3371,7 @@ async function activateWollet(wolletLocal: lwk.Wollet, selected: string | null):
 }
 
 function isBoltzSessionAvailable(): boolean {
-    return !network.isTestnet()
+    return LIGHTNING_ENABLED && !network.isTestnet()
 }
 
 function resetBoltzSession(): void {
