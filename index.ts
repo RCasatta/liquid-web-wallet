@@ -3520,13 +3520,10 @@ function isWaterfallsEnabled(): boolean {
 }
 
 function esploraBaseUrl(): string {
-    const urlParams = new URLSearchParams(window.location.search);
-    const overrideUrl = urlParams.get('esploraUrl');
-
     const mainnetUrl = "https://waterfalls.liquidwebwallet.org/liquid/api"
     const testnetUrl = "https://waterfalls.liquidwebwallet.org/liquidtestnet/api"
     const regtestUrl = "http://localhost:3000/"
-    return overrideUrl ?? (network.isMainnet() ? mainnetUrl : network.isTestnet() ? testnetUrl : regtestUrl)
+    return network.isMainnet() ? mainnetUrl : network.isTestnet() ? testnetUrl : regtestUrl
 }
 
 function joinUrl(base: string, path: string): string {
