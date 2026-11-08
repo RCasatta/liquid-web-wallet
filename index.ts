@@ -3798,6 +3798,10 @@ const TICKER_CACHE = {};
 // Check if a ticker is already in use in the current network
 async function checkTickerAvailability(ticker) {
     console.log("check ticker");
+    if (network.isRegtest()) {
+        // No external ticker list exists for regtest
+        return true;
+    }
     try {
         // Determine current network
         const networkKey = network.toString();
