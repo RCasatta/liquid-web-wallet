@@ -1,4 +1,5 @@
 const CopyWebpackPlugin = require("copy-webpack-plugin");
+const { Compilation, sources } = require("webpack");
 const fs = require("fs");
 const path = require('path');
 
@@ -77,6 +78,37 @@ function contentSecurityPolicy(network) {
   ].join("; ");
 }
 
+// index.html references the entry as "./bootstrap.js"; point it to the content-hashed
+// file webpack emitted, so a new index.html never runs a cached old entry.
+class HashedEntryInHtmlPlugin {
+  apply(compiler) {
+    compiler.hooks.thisCompilation.tap("HashedEntryInHtmlPlugin", (compilation) => {
+      compilation.hooks.processAssets.tap(
+        // After the real content hashes are in the file names
+        { name: "HashedEntryInHtmlPlugin", stage: Compilation.PROCESS_ASSETS_STAGE_REPORT },
+        () => {
+          const entryFiles = [...compilation.entrypoints.get("main").getFiles()].filter((f) => f.endsWith(".js"));
+          if (entryFiles.length !== 1) {
+            throw new Error(`Expected one entry JS file, found: ${entryFiles.join(", ")}`);
+          }
+          const html = compilation.getAsset("index.html");
+          if (!html) {
+            return;
+          }
+          const content = html.source.source().toString();
+          const reference = 'src="./bootstrap.js"';
+          if (!content.includes(reference)) {
+            throw new Error(`index.html does not contain ${reference}`);
+          }
+          compilation.updateAsset("index.html", new sources.RawSource(
+            content.replace(reference, `src="./${entryFiles[0]}"`)
+          ));
+        }
+      );
+    });
+  }
+}
+
 module.exports = (_env, argv) => {
   const mode = argv.mode || "development";
   extraConnectSrc(); // fail early on a malformed EXTRA_CONNECT_SRC
@@ -84,7 +116,11 @@ module.exports = (_env, argv) => {
     entry: "./bootstrap.ts",
     output: {
       path: path.resolve(__dirname, "dist"),
-      filename: "bootstrap.js",
+      // Every JS and WASM file name contains a hash of its content, so it can be cached
+      // forever. Only index.html (and the other unhashed static files) must be revalidated.
+      // See "Caching" in the README.
+      filename: "bootstrap.[contenthash].js",
+      chunkFilename: "[id].[contenthash].js",
     },
     mode,
     // The development default ("eval") needs 'unsafe-eval'; use separate source map files instead.
@@ -100,7 +136,8 @@ module.exports = (_env, argv) => {
           "pico.min.css",
           "favicon.webp",
         ]
-      })
+      }),
+      new HashedEntryInHtmlPlugin(),
     ],
     experiments: {
       asyncWebAssembly: true,
