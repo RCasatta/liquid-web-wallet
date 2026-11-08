@@ -83,4 +83,21 @@ test.describe('Content-Security-Policy and SRI', () => {
         expect(result.fetchFailed).toBe(true);
         expect(result.blocked).toEqual(expect.arrayContaining(['script-src-elem', 'connect-src']));
     });
+
+    test('a blocked custom Jade pinserver is explained to the user', async ({ page }) => {
+        await mockBackends(page);
+        await page.goto('/');
+        await expect(page.locator('#connect-jade-button')).toBeEnabled();
+
+        // Not a pinserver request: blocked without the pinserver message
+        await page.evaluate(() => fetch('https://example.com/').catch(() => { }));
+        await page.waitForTimeout(500);
+        await expect(page.locator('wallet-notifications')).not.toContainText('Custom Jade pinserver');
+        // What lwk does when a Jade configured with a custom pinserver unlocks
+        await page.evaluate(() => fetch('https://pin.example.com/start_handshake', { method: 'POST' }).catch(() => { }));
+
+        const notice = page.locator('wallet-notifications');
+        await expect(notice).toContainText('Custom Jade pinserver not allowed');
+        await expect(notice).toContainText('EXTRA_CONNECT_SRC="https://pin.example.com"');
+    });
 });
