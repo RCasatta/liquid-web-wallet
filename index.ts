@@ -50,9 +50,17 @@ declare global {
     }
 }
 
-// Import the jsQR library for QR code scanning
+// Import the jsQR library for QR code scanning.
+// This is the unmodified dist/jsQR.js from the npm tarball jsqr@1.4.0 (jsDelivr's
+// generated .min.js is not stable enough for SRI). The browser refuses to run it
+// if the bytes do not match the hash. To verify or update:
+//   npm pack jsqr@1.4.0 && tar xzf jsqr-1.4.0.tgz
+//   openssl dgst -sha384 -binary package/dist/jsQR.js | base64
+// Keep the URL in sync with script-src in webpack.config.js.
 const jsQRScript = document.createElement('script');
-jsQRScript.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+jsQRScript.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+jsQRScript.integrity = 'sha384-b5Ya4Bq3qCyz39m2ISh+4DxjAIljdeFwK/BsXLuj9gugaNwAcj/ia15fxNZL9Nlx';
+jsQRScript.crossOrigin = 'anonymous';
 document.head.appendChild(jsQRScript);
 
 // Network setup (remains global as it's a configuration not state)
