@@ -1094,7 +1094,7 @@ class WalletBalance extends HTMLElement {
         const balance = wollet.balance().entries()
 
         const lbtc = balance.get(network.policyAsset().toString())
-        if (lbtc == 0 && !network.isMainnet()) {
+        if (lbtc == 0 && network.isTestnet()) {
             this.faucetRequest.hidden = false
         }
 
