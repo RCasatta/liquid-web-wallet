@@ -144,6 +144,25 @@ function publishPersistLoadedIfNeeded(wolletLocal: lwk.Wollet): void {
     }
 }
 
+// A Jade configured with a custom pinserver sends its PIN requests to an origin the CSP does not
+// allow: explain it instead of the generic "error sending request" from lwk.
+document.addEventListener("securitypolicyviolation", (e: SecurityPolicyViolationEvent) => {
+    if (e.effectiveDirective !== "connect-src") return
+    let url: URL
+    try {
+        url = new URL(e.blockedURI)
+    } catch {
+        return
+    }
+    if (!/^\/(start_handshake|set_pin|get_pin)$/.test(url.pathname)) return
+    notifyError(
+        "Custom Jade pinserver not allowed",
+        `Your Jade uses the pinserver ${url.origin}, which this site does not allow. ` +
+        `To use it, host the wallet yourself, built with EXTRA_CONNECT_SRC="${url.origin}" (see the README).`,
+        { id: "pinserver-blocked" }
+    )
+})
+
 /// Re-enables initially disabled buttons, and add listener to buttons on the first page
 /// First page doesn't use components because we want to be loaded before the wasm is loaded, which takes time
 async function init(): Promise<void> {

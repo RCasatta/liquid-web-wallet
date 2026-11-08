@@ -46,6 +46,14 @@ $ npm run build
 
 Copy `dist` folder to the web server
 
+### Custom Jade pinserver
+
+The Content-Security-Policy only allows the default Jade pinservers. If your Jade is configured with your own pinserver, build and host the wallet yourself with that origin added to the policy (space separated for more than one):
+
+```shell
+$ EXTRA_CONNECT_SRC="https://pin.example.com" npm run build
+```
+
 ## Avoid ids
 
 When possible avoid ids, use web components as "namespace" and querySelector on html elements, in case of multiple elements use querySelectorAll and maps in the js class
