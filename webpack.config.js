@@ -19,7 +19,7 @@ const CONNECT_SRC = {
     "https://assets.blockstream.info",
     "https://green-liquid-mainnet.blockstream.com", "wss://green-liquid-mainnet.blockstream.com",
     "https://api.boltz.exchange", "wss://api.boltz.exchange",
-    "https://jadepin.blockstream.com",
+    "https://jadepin.blockstream.com", "https://j8d.io",
   ],
   testnet: [
     "https://waterfalls.liquidwebwallet.org",
@@ -27,11 +27,11 @@ const CONNECT_SRC = {
     "https://green-liquid-testnet.blockstream.com", "wss://green-liquid-testnet.blockstream.com",
     "https://amp2.testnet.blockstream.com",
     "https://liquidtestnet.com",
-    "https://jadepin.blockstream.com",
+    "https://jadepin.blockstream.com", "https://j8d.io",
   ],
   regtest: [
     "http://localhost:*", "ws://localhost:*", "http://127.0.0.1:*", "ws://127.0.0.1:*",
-    "https://jadepin.blockstream.com",
+    "https://jadepin.blockstream.com", "https://j8d.io",
   ],
 };
 
