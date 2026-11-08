@@ -66,7 +66,6 @@ function contentSecurityPolicy(network) {
 
 module.exports = (_env, argv) => {
   const mode = argv.mode || "development";
-  const network = selectedNetwork();
   return {
     entry: "./bootstrap.ts",
     output: {
@@ -81,7 +80,8 @@ module.exports = (_env, argv) => {
         patterns: [
           {
             from: "index.html",
-            transform: (content) => content.toString().replace("__CSP__", contentSecurityPolicy(network)),
+            // Read the network on every build: the dev server keeps running when an npm script switches it.
+            transform: (content) => content.toString().replace("__CSP__", contentSecurityPolicy(selectedNetwork())),
           },
           "pico.min.css",
           "favicon.webp",
