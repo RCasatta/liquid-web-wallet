@@ -46,6 +46,35 @@ $ npm run build
 
 Copy `dist` folder to the web server
 
+### Caching
+
+`npm run build` gives every JS and WASM file a name containing a hash of its content (`bootstrap.<hash>.js`, `<id>.<hash>.js`, `<hash>.module.wasm`), and writes the entry name into `dist/index.html`. `npm run check-build-output` checks this; the deploy scripts run it.
+
+So the web server should:
+
+- revalidate `index.html` (and the other unhashed files) on every load, otherwise a browser can keep an old page;
+- cache the hashed files forever;
+- keep the files of previous deploys (the sync scripts use rsync without `--delete`): a tab already open, or a page still in a browser cache, may load them.
+
+nginx example for the site root (mainnet), `/testnet/` and `/regtest/`:
+
+```nginx
+# Unhashed files: index.html, directory URLs, pico.min.css, favicon.webp,
+# and bootstrap.js / <id>.bootstrap.js from deploys before hashed names.
+location / {
+    add_header Cache-Control "no-cache" always;
+}
+
+# Content-hashed files: never change.
+location ~ "\.[0-9a-f]{20}\.(js|wasm)$" {
+    add_header Cache-Control "public, max-age=31536000, immutable" always;
+}
+```
+
+`no-cache` means "revalidate", not "do not store": with `Last-Modified`/`ETag` an unchanged file costs a `304`. Keep these `add_header` lines in the same block as any other `add_header`, since nginx drops inherited ones when a block sets its own.
+
+Moving from the old 7-day `bootstrap.js` caching: a browser that cached `bootstrap.js` keeps it, but the new `index.html` no longer references it, so it is not used. A browser that still has an old `index.html` in its cache (until it revalidates) keeps running the old deploy, whose files stay on the server.
+
 ### Custom Jade pinserver
 
 The Content-Security-Policy only allows the default Jade pinservers. If your Jade is configured with your own pinserver, build and host the wallet yourself with that origin added to the policy (space separated for more than one):
