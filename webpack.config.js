@@ -48,6 +48,19 @@ const SCRIPT_SRC = [
   "https://plausible.casatta.it/js/script.js",
 ];
 
+// Extra origins for connect-src, e.g. a custom Jade pinserver for a self-hosted deployment:
+//   EXTRA_CONNECT_SRC="https://pin.example.com" npm run build
+// Space separated; each entry must be a plain https origin.
+function extraConnectSrc() {
+  const entries = (process.env.EXTRA_CONNECT_SRC || "").split(/\s+/).filter(Boolean);
+  for (const entry of entries) {
+    if (!/^https:\/\/[a-z0-9.-]+(:[0-9]{1,5})?$/.test(entry)) {
+      throw new Error(`EXTRA_CONNECT_SRC: "${entry}" is not an https origin like https://pin.example.com`);
+    }
+  }
+  return entries;
+}
+
 function contentSecurityPolicy(network) {
   return [
     "default-src 'none'",
@@ -56,7 +69,7 @@ function contentSecurityPolicy(network) {
     // 'unsafe-inline' is needed for the style attributes in index.html and index.ts.
     "style-src 'self' 'unsafe-inline'",
     ["img-src 'self' data:", ...IMG_SRC[network]].join(" "),
-    ["connect-src 'self'", ...CONNECT_SRC[network], "https://plausible.casatta.it"].join(" "),
+    ["connect-src 'self'", ...CONNECT_SRC[network], ...extraConnectSrc(), "https://plausible.casatta.it"].join(" "),
     "manifest-src 'self'",
     "object-src 'none'",
     "base-uri 'none'",
@@ -66,6 +79,7 @@ function contentSecurityPolicy(network) {
 
 module.exports = (_env, argv) => {
   const mode = argv.mode || "development";
+  extraConnectSrc(); // fail early on a malformed EXTRA_CONNECT_SRC
   return {
     entry: "./bootstrap.ts",
     output: {
