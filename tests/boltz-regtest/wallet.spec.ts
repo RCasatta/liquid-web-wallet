@@ -61,7 +61,12 @@ async function payInvoiceLnd(invoice: string): Promise<void> {
 
 test.describe('Wallet Functionality', () => {
     test.beforeEach(async ({ page }) => {
-        await page.goto('/?esploraUrl=http://127.0.0.1:4003/api/&waterfalls=false');
+        // The app always uses its built-in regtest Esplora URL; send it to the Boltz env's Esplora.
+        await page.route('http://localhost:3000/**', async (route) => {
+            const url = route.request().url().replace('http://localhost:3000/', 'http://127.0.0.1:4003/api/');
+            await route.fulfill({ response: await route.fetch({ url }) });
+        });
+        await page.goto('/?waterfalls=false');
         await page.waitForLoadState('networkidle');
     });
 
