@@ -64,7 +64,7 @@ jsQRScript.crossOrigin = 'anonymous';
 document.head.appendChild(jsQRScript);
 
 // Network setup (remains global as it's a configuration not state)
-const network: lwk.Network = lwk.Network.regtestDefault()
+const network: lwk.Network = lwk.Network.testnet()
 
 // Reference to the main application container
 const app: HTMLElement | null = document.getElementById('app')
